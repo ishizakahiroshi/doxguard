@@ -1,0 +1,262 @@
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+};
+
+use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
+use anyhow::{Context, Result, anyhow};
+
+use crate::config::{ColumnSpec, Config, WatchlistSource};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WatchlistItem {
+    pub needle: String,
+    pub source: String,
+}
+
+#[derive(Debug)]
+pub struct WatchlistMatcher {
+    items: Vec<WatchlistItem>,
+    matcher: Option<AhoCorasick>,
+}
+
+impl WatchlistMatcher {
+    pub fn new(items: Vec<WatchlistItem>) -> Result<Self> {
+        let matcher = if items.is_empty() {
+            None
+        } else {
+            Some(
+                AhoCorasickBuilder::new()
+                    .match_kind(MatchKind::Standard)
+                    .build(items.iter().map(|item| item.needle.as_str()))?,
+            )
+        };
+        Ok(Self { items, matcher })
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn matches<'a>(&'a self, line: &'a str) -> impl Iterator<Item = &'a WatchlistItem> {
+        let mut seen = HashSet::new();
+        self.matcher
+            .as_ref()
+            .into_iter()
+            .flat_map(move |matcher| matcher.find_overlapping_iter(line))
+            .filter_map(move |found| {
+                let index = found.pattern().as_usize();
+                seen.insert(index).then(|| &self.items[index])
+            })
+    }
+}
+
+#[derive(Debug)]
+pub struct LoadedWatchlists {
+    pub matcher: WatchlistMatcher,
+    pub warnings: Vec<String>,
+}
+
+fn expand_path(
+    template: &str,
+    cwd: &Path,
+    env: &HashMap<String, String>,
+) -> std::result::Result<PathBuf, String> {
+    let variable = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}").expect("static regex");
+    let mut missing = Vec::new();
+    let expanded = variable.replace_all(template, |captures: &regex::Captures<'_>| {
+        let name = &captures[1];
+        match env.get(name) {
+            Some(value) if !value.is_empty() => value.clone(),
+            _ => {
+                missing.push(name.to_owned());
+                String::new()
+            }
+        }
+    });
+    if !missing.is_empty() {
+        missing.sort();
+        missing.dedup();
+        return Err(format!(
+            "WARN: {} not set; skipped watchlist {template}",
+            missing.join(", ")
+        ));
+    }
+    let path = PathBuf::from(expanded.as_ref());
+    Ok(if path.is_absolute() {
+        path
+    } else {
+        cwd.join(path)
+    })
+}
+
+fn is_short_kana(value: &str) -> bool {
+    value.chars().count() <= 2
+        && value
+            .chars()
+            .all(|character| matches!(character, '\u{3041}'..='\u{3096}' | 'ー'))
+}
+
+fn should_skip(value: &str, source: &WatchlistSource, config: &Config) -> bool {
+    if value.chars().count() < config.noise.min_needle_length {
+        return true;
+    }
+    let looks_like_given_name = match source {
+        WatchlistSource::Csv { column, label, .. } => {
+            let descriptor = match column {
+                ColumnSpec::Name(name) => {
+                    format!("{} {name}", label.as_deref().unwrap_or_default())
+                }
+                ColumnSpec::Index(index) => {
+                    format!("{} {index}", label.as_deref().unwrap_or_default())
+                }
+            };
+            descriptor.to_ascii_lowercase().contains("given")
+        }
+        WatchlistSource::Lines { label, .. } => label
+            .as_deref()
+            .unwrap_or_default()
+            .to_ascii_lowercase()
+            .contains("given"),
+    };
+    config.noise.skip_short_kana_given_names && looks_like_given_name && is_short_kana(value)
+}
+
+fn expand_variants(value: &str, paren_variants: bool) -> Vec<String> {
+    let mut values = vec![value.to_owned()];
+    if paren_variants {
+        let stripped = value.split(['(', '（']).next().unwrap_or(value).trim();
+        if !stripped.is_empty() && stripped != value {
+            values.push(stripped.to_owned());
+        }
+    }
+    values
+}
+
+fn read_values(source: &WatchlistSource, path: &Path) -> Result<Vec<String>> {
+    match source {
+        WatchlistSource::Lines { .. } => Ok(fs::read_to_string(path)?
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .map(str::to_owned)
+            .collect()),
+        WatchlistSource::Csv { column, .. } => {
+            let mut reader = csv::Reader::from_path(path)?;
+            let headers = reader.headers()?.clone();
+            let index = match column {
+                ColumnSpec::Name(name) => headers
+                    .iter()
+                    .position(|header| header == name)
+                    .ok_or_else(|| anyhow!("column `{name}` not found"))?,
+                ColumnSpec::Index(index) => index - 1,
+            };
+            reader
+                .records()
+                .map(|record| {
+                    let record = record?;
+                    Ok(record.get(index).unwrap_or_default().trim().to_owned())
+                })
+                .filter(|result: &Result<String>| {
+                    result
+                        .as_ref()
+                        .map(|value| !value.is_empty())
+                        .unwrap_or(true)
+                })
+                .collect()
+        }
+    }
+}
+
+pub fn load(
+    config: &Config,
+    cwd: &Path,
+    env: &HashMap<String, String>,
+) -> Result<LoadedWatchlists> {
+    let mut warnings = Vec::new();
+    let mut items = Vec::new();
+    let mut seen = HashSet::new();
+    let allowed: HashSet<&str> = config.allow.names.iter().map(String::as_str).collect();
+
+    for source in &config.watchlists {
+        let path = match expand_path(source.path(), cwd, env) {
+            Ok(path) => path,
+            Err(warning) => {
+                warnings.push(warning);
+                continue;
+            }
+        };
+        if !path.exists() {
+            warnings.push(format!(
+                "WARN: watchlist not found; skipped {}",
+                source.path()
+            ));
+            continue;
+        }
+        let values = match read_values(source, &path)
+            .with_context(|| format!("failed to read watchlist {}", source.path()))
+        {
+            Ok(values) => values,
+            Err(error) => {
+                warnings.push(format!("WARN: {error:#}"));
+                continue;
+            }
+        };
+        let paren_variants = matches!(
+            source,
+            WatchlistSource::Csv {
+                paren_variants: true,
+                ..
+            }
+        );
+        for value in values {
+            for needle in expand_variants(value.trim(), paren_variants) {
+                if should_skip(&needle, source, config)
+                    || allowed.contains(needle.as_str())
+                    || !seen.insert(needle.clone())
+                {
+                    continue;
+                }
+                items.push(WatchlistItem {
+                    needle,
+                    source: source.label(),
+                });
+            }
+        }
+    }
+
+    Ok(LoadedWatchlists {
+        matcher: WatchlistMatcher::new(items)?,
+        warnings,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_needles_are_all_reported_once() {
+        let matcher = WatchlistMatcher::new(vec![
+            WatchlistItem {
+                needle: "Acme".to_owned(),
+                source: "fixture".to_owned(),
+            },
+            WatchlistItem {
+                needle: "Acme Labs".to_owned(),
+                source: "fixture".to_owned(),
+            },
+        ])
+        .unwrap();
+        let matches: Vec<_> = matcher
+            .matches("Acme Labs and Acme")
+            .map(|item| item.needle.as_str())
+            .collect();
+        assert_eq!(matches, ["Acme", "Acme Labs"]);
+    }
+}

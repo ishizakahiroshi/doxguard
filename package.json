@@ -1,0 +1,42 @@
+{
+  "name": "doxguard",
+  "version": "0.1.0",
+  "description": "Keep personal identity data out of public repositories.",
+  "type": "module",
+  "bin": {
+    "doxguard": "bin/doxguard.js"
+  },
+  "files": [
+    "bin/doxguard.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "optionalDependencies": {
+    "@ishizakahiroshi/doxguard-darwin-arm64": "0.1.0",
+    "@ishizakahiroshi/doxguard-darwin-x64": "0.1.0",
+    "@ishizakahiroshi/doxguard-linux-arm64": "0.1.0",
+    "@ishizakahiroshi/doxguard-linux-x64": "0.1.0",
+    "@ishizakahiroshi/doxguard-win32-arm64": "0.1.0",
+    "@ishizakahiroshi/doxguard-win32-x64": "0.1.0"
+  },
+  "keywords": [
+    "privacy",
+    "pre-commit",
+    "scanner",
+    "doxxing",
+    "watchlist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ishizakahiroshi/doxguard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ishizakahiroshi/doxguard/issues"
+  },
+  "homepage": "https://github.com/ishizakahiroshi/doxguard#readme",
+  "license": "MIT",
+  "author": "Hiroshi Ishizaka (ishizakahiroshi)"
+}

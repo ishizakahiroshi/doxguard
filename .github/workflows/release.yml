@@ -1,0 +1,264 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag (for npm-only recovery)"
+        required: true
+        type: string
+      npm_only:
+        description: "Republish missing npm packages from the canonical release"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  actions: read
+  id-token: write
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+jobs:
+  preflight:
+    name: Release preflight
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Verify version single-source agreement
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]
+          version="${RELEASE_TAG#v}"
+          test "$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')" = "$version"
+          test "$(node -p "require('./package.json').version")" = "$version"
+          for manifest in npm/platforms/*/package.json; do
+            test "$(node -p "require('./$manifest').version")" = "$version"
+          done
+      - name: Require a green Validate run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          conclusion=$(gh run list --workflow Validate --limit 50 --json headSha,conclusion \
+            --jq ".[] | select(.headSha == \"$GITHUB_SHA\") | .conclusion" | head -n 1)
+          test "$conclusion" = success
+      - name: Test
+        run: cargo test --all-targets --locked
+      - name: Structural content gate
+        run: cargo run --release --locked -- scan --all-tracked --block
+
+  build:
+    name: Build ${{ matrix.slug }}
+    needs: preflight
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            slug: win32-x64
+            binary: doxguard.exe
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            slug: win32-arm64
+            binary: doxguard.exe
+          - runner: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            slug: linux-x64
+            binary: doxguard
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            slug: linux-arm64
+            binary: doxguard
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            slug: darwin-x64
+            binary: doxguard
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            slug: darwin-arm64
+            binary: doxguard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Install musl toolchain
+        if: ${{ contains(matrix.target, 'linux-musl') }}
+        run: sudo apt-get update && sudo apt-get install --yes musl-tools
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Stage canonical binary
+        shell: bash
+        run: |
+          mkdir -p "staging/${{ matrix.slug }}"
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "staging/${{ matrix.slug }}/${{ matrix.binary }}"
+          if [[ "${{ matrix.binary }}" != *.exe ]]; then
+            chmod +x "staging/${{ matrix.slug }}/${{ matrix.binary }}"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.slug }}
+          path: staging
+          if-no-files-found: error
+
+  github-release:
+    name: GitHub Release
+    needs: build
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: artifacts
+          merge-multiple: true
+      - name: Create archives and checksums
+        run: |
+          set -euo pipefail
+          mkdir release
+          for dir in artifacts/*; do
+            slug=$(basename "$dir")
+            if [[ -f "$dir/doxguard.exe" ]]; then
+              (cd "$dir" && zip -q "../../release/doxguard-${slug}.zip" doxguard.exe)
+            else
+              tar -C "$dir" -czf "release/doxguard-${slug}.tar.gz" doxguard
+            fi
+          done
+          (cd release && sha256sum doxguard-* > SHA256SUMS.txt)
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$RELEASE_TAG"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" release/* --clobber
+          else
+            gh release create "$tag" release/* --generate-notes --title "$tag"
+          fi
+          gh release view "$tag" --json body -q .body \
+            | awk '/^## SHA256 checksums/{exit} {print}' > release-notes.md
+          {
+            printf '\n## SHA256 checksums\n\n```text\n'
+            cat release/SHA256SUMS.txt
+            printf '```\n'
+          } >> release-notes.md
+          gh release edit "$tag" --notes-file release-notes.md
+
+  npm-publish:
+    name: Publish npm packages
+    needs: [build, github-release]
+    if: ${{ always() && (needs.github-release.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.npm_only)) }}
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Check npm publish credential
+        id: npm-token
+        run: |
+          if [[ -n "$NPM_TOKEN" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "NPM_TOKEN is not configured; npm channel skipped"
+          fi
+      - uses: actions/checkout@v4
+        if: ${{ steps.npm-token.outputs.available == 'true' }}
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: actions/setup-node@v4
+        if: ${{ steps.npm-token.outputs.available == 'true' }}
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Download and verify canonical release
+        if: ${{ steps.npm-token.outputs.available == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]
+          mkdir canonical artifacts
+          gh release download "$RELEASE_TAG" --dir canonical
+          (cd canonical && sha256sum --check SHA256SUMS.txt)
+          for slug in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            mkdir -p "artifacts/$slug"
+            tar -C "artifacts/$slug" -xzf "canonical/doxguard-$slug.tar.gz"
+          done
+          for slug in win32-x64 win32-arm64; do
+            mkdir -p "artifacts/$slug"
+            unzip -q "canonical/doxguard-$slug.zip" -d "artifacts/$slug"
+          done
+      - name: Validate version and stage platform packages
+        if: ${{ steps.npm-token.outputs.available == 'true' }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          package_version=$(node -p "require('./package.json').version")
+          test "$version" = "$package_version"
+          for slug in win32-x64 win32-arm64 linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            mkdir -p "npm/platforms/$slug/bin"
+            cp README.md LICENSE "npm/platforms/$slug/"
+          done
+          cp artifacts/win32-x64/doxguard.exe npm/platforms/win32-x64/bin/
+          cp artifacts/win32-arm64/doxguard.exe npm/platforms/win32-arm64/bin/
+          for slug in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            cp "artifacts/$slug/doxguard" "npm/platforms/$slug/bin/"
+            chmod +x "npm/platforms/$slug/bin/doxguard"
+          done
+      - name: Scan npm package contents with native doxguard
+        if: ${{ steps.npm-token.outputs.available == 'true' }}
+        run: |
+          chmod +x artifacts/linux-x64/doxguard
+          artifacts/linux-x64/doxguard scan --packaged --block
+      - name: Publish platform packages, then root
+        if: ${{ steps.npm-token.outputs.available == 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          dist_tag=latest
+          case "$version" in *-*) dist_tag=next ;; esac
+          publish_once() {
+            dir="$1"
+            name=$(node -p "require('./$dir/package.json').name")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "already published: $name@$version"
+            else
+              for attempt in 1 2 3 4 5; do
+                if npm publish "$dir" --access public --provenance --tag "$dist_tag" 2>publish.log; then
+                  return 0
+                fi
+                if ! grep -Eqi '429|rate.?limit' publish.log || [[ "$attempt" == 5 ]]; then
+                  cat publish.log >&2
+                  return 1
+                fi
+                delay=$((attempt * attempt * 15))
+                echo "npm rate limit for $name; retrying in ${delay}s"
+                sleep "$delay"
+              done
+            fi
+          }
+          for slug in win32-x64 win32-arm64 linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            publish_once "npm/platforms/$slug"
+          done
+          publish_once "."

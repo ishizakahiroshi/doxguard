@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# doxguard dogfooding: prefer the cached native binary installed into the git dir.
+git_dir=$(git rev-parse --git-dir) || exit 2
+if [ -x "$git_dir/doxguard/hooks/pre-commit" ]; then
+  "$git_dir/doxguard/hooks/pre-commit"
+elif command -v doxguard >/dev/null 2>&1; then
+  doxguard scan --staged --block
+else
+  cargo run --quiet -- scan --staged --block
+fi

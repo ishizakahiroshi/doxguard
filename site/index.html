@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<!--docsweep-meta
+type: design
+status: done
+tags: [doxguard, onboarding, ux]
+owner: ishizakahiroshi
+related: [../README.md]
+last_reviewed: 2026-07-16
+docsweep_policy: archive_with_release
+-->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="doxguardのインストール、非公開watchlistの設定、Git commit時の利用体験を図で説明するユーザーガイド。">
+  <meta name="theme-color" content="#f7f3ea">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="doxguard ユーザー導入ガイド">
+  <meta property="og:description" content="自分の情報を公開リポジトリへ出す前に、Rust製の高速ローカルゲートで止める。">
+  <meta property="og:url" content="https://ishizakahiroshi.github.io/doxguard/">
+  <link rel="canonical" href="https://ishizakahiroshi.github.io/doxguard/">
+  <title>doxguard ユーザー導入ガイド — 2026-07-16</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f3ea;
+      --ink: #241f1a;
+      --ink-soft: #837a6c;
+      --line: rgba(36, 31, 26, 0.12);
+      --accent: #ff7a3d;
+      --card: #fffdf8;
+      --ok: #2e7d4f;
+      --warn: #b8860b;
+      --bad: #b3261e;
+      --blue: #326b8c;
+      --purple: #765589;
+      --shadow: 0 16px 42px rgba(36, 31, 26, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: "Zen Maru Gothic", sans-serif;
+      line-height: 1.75;
+    }
+
+    button, code, pre { font: inherit; }
+
+    button { cursor: pointer; }
+
+    a { color: inherit; }
+
+    .page {
+      width: min(1080px, 92vw);
+      margin: 0 auto;
+      padding: 24px 0 88px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--ink);
+      font-family: "Baloo 2", sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--ink);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .brand-mark svg { width: 20px; height: 20px; }
+
+    .nav {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav a {
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255, 253, 248, 0.72);
+      border: 1px solid var(--line);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: clamp(28px, 6vw, 68px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      right: -80px;
+      top: -90px;
+      border: 30px solid rgba(255, 122, 61, 0.14);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 14px;
+      padding: 5px 11px;
+      border: 1px solid rgba(255, 122, 61, 0.35);
+      border-radius: 999px;
+      color: #a53f13;
+      background: rgba(255, 122, 61, 0.09);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .eyebrow-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      position: relative;
+      z-index: 1;
+      max-width: 800px;
+      margin-bottom: 18px;
+      font-size: clamp(34px, 6vw, 66px);
+      line-height: 1.12;
+      letter-spacing: -0.035em;
+    }
+
+    h1 em {
+      color: var(--accent);
+      font-style: normal;
+      text-decoration: underline;
+      text-decoration-thickness: 8px;
+      text-decoration-color: rgba(255, 122, 61, 0.22);
+      text-underline-offset: -2px;
+    }
+
+    .lead {
+      max-width: 760px;
+      margin-bottom: 28px;
+      color: #534a40;
+      font-size: clamp(16px, 2.2vw, 20px);
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: -4px 0 26px;
+    }
+
+    .hero-actions a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 9px 16px;
+      border: 2px solid var(--ink);
+      border-radius: 12px;
+      color: white;
+      background: var(--ink);
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 3px 3px 0 var(--accent);
+    }
+
+    .hero-actions a.secondary {
+      color: var(--ink);
+      background: var(--card);
+      box-shadow: none;
+    }
+
+    .answer-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 15px;
+      align-items: start;
+      max-width: 820px;
+      padding: 18px;
+      border: 2px solid var(--ink);
+      border-radius: 18px;
+      background: #fff7e8;
+      box-shadow: 5px 5px 0 var(--ink);
+    }
+
+    .answer-no {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--ink);
+      color: white;
+      font-family: "Baloo 2", sans-serif;
+      font-size: 23px;
+      font-weight: 700;
+    }
+
+    .answer-card strong { font-size: 18px; }
+    .answer-card p { margin: 3px 0 0; }
+
+    .quick-map {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    .quick-map article {
+      min-height: 138px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(247, 243, 234, 0.62);
+    }
+
+    .quick-map b {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 16px;
+    }
+
+    .quick-map p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 14px;
+    }
+
+    .mini-icon {
+      width: 34px;
+      height: 34px;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+
+    section { margin-top: 72px; scroll-margin-top: 20px; }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 62px 1fr;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 24px;
+    }
+
+    .section-no {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      border-radius: 17px;
+      color: white;
+      background: var(--ink);
+      font-family: "Baloo 2", sans-serif;
+      font-size: 26px;
+      font-weight: 700;
+      box-shadow: 4px 4px 0 var(--accent);
+    }
+
+    h2 {
+      margin-bottom: 5px;
+      font-size: clamp(26px, 4vw, 40px);
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head p { margin: 0; color: var(--ink-soft); }
+
+    .panel {
+      padding: clamp(18px, 3vw, 30px);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .diagram {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .diagram text { font-family: "Zen Maru Gothic", sans-serif; fill: var(--ink); }
+    .diagram .muted { fill: var(--ink-soft); }
+    .diagram .white { fill: white; }
+    .diagram .label { font-size: 14px; font-weight: 700; }
+    .diagram .small { font-size: 11px; }
+    .diagram .tiny { font-size: 9.5px; }
+    .diagram .node { transition: transform 160ms ease, filter 160ms ease; transform-origin: center; }
+    .diagram .node:hover { filter: drop-shadow(0 6px 6px rgba(36,31,26,0.16)); }
+
+    .legend {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    .path-choice {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .choice-card {
+      position: relative;
+      padding: 24px;
+      border: 2px solid var(--line);
+      border-radius: 20px;
+      background: var(--card);
+    }
+
+    .choice-card.recommended { border-color: var(--accent); }
+
+    .tag {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      color: white;
+      background: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tag.private { background: var(--purple); }
+
+    .choice-card h3 { margin-bottom: 5px; font-size: 21px; }
+    .choice-card > p { color: var(--ink-soft); }
+
+    .mini-flow {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+      margin: 18px 0;
+    }
+
+    .mini-flow div {
+      padding: 12px;
+      border-radius: 13px;
+      background: var(--bg);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mini-flow b { color: var(--accent); font-size: 19px; }
+
+    .plain-list {
+      margin: 14px 0 0;
+      padding-left: 21px;
+      font-size: 14px;
+    }
+
+    .plain-list li + li { margin-top: 6px; }
+
+    .install-tabs, .os-tabs, .result-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      padding: 8px 13px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      color: var(--ink-soft);
+      background: var(--card);
+      font-weight: 700;
+    }
+
+    .tab.active {
+      color: white;
+      border-color: var(--ink);
+      background: var(--ink);
+    }
+
+    .codebox {
+      position: relative;
+      overflow: auto;
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 16px;
+      background: #241f1a;
+      color: #fff8ed;
+    }
+
+    .codebox pre {
+      min-width: max-content;
+      margin: 0;
+      padding: 22px 88px 22px 22px;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .copy {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 6px 10px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 9px;
+      color: white;
+      background: rgba(255,255,255,0.08);
+      font-size: 12px;
+    }
+
+    .copy.done { background: var(--ok); }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .file-card {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+    }
+
+    .file-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #f0eadf;
+      font-weight: 700;
+    }
+
+    .file-title small { color: var(--ink-soft); font-weight: 500; }
+
+    .file-body {
+      margin: 0;
+      padding: 18px;
+      white-space: pre-wrap;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .callout {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: start;
+      margin-top: 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(46,125,79,0.25);
+      border-radius: 16px;
+      background: rgba(46,125,79,0.07);
+    }
+
+    .callout.warn {
+      border-color: rgba(184,134,11,0.28);
+      background: rgba(184,134,11,0.08);
+    }
+
+    .callout-mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: white;
+      background: var(--ok);
+      font-weight: 700;
+    }
+
+    .warn .callout-mark { background: var(--warn); }
+    .callout p { margin: 0; }
+
+    .config-map {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .key-question {
+      display: grid;
+      align-content: center;
+      padding: 28px;
+      border: 2px solid var(--ink);
+      border-radius: 20px;
+      background: #fff7e8;
+      box-shadow: 5px 5px 0 var(--accent);
+    }
+
+    .key-question .big {
+      margin-bottom: 8px;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .key-question .big span { color: var(--accent); }
+
+    .terminal {
+      overflow: hidden;
+      border: 2px solid var(--ink);
+      border-radius: 18px;
+      background: #1f1c19;
+      box-shadow: 6px 6px 0 rgba(36,31,26,0.18);
+    }
+
+    .terminal-head {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.11);
+      background: #302b26;
+    }
+
+    .terminal-head i { width: 10px; height: 10px; border-radius: 50%; background: #6c6258; }
+    .terminal-head i:first-child { background: #e76255; }
+    .terminal-head i:nth-child(2) { background: #dca93a; }
+    .terminal-head i:nth-child(3) { background: #5aa56f; }
+
+    .terminal-body {
+      min-height: 230px;
+      padding: 20px;
+      color: #f8f2e8;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+
+    .terminal-body .pass { color: #7ed79c; }
+    .terminal-body .fail { color: #ff8c82; }
+    .terminal-body .dim { color: #a69c91; }
+
+    .daily-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 18px;
+    }
+
+    .branch-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .branch {
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--card);
+    }
+
+    .branch strong { display: flex; align-items: center; gap: 8px; }
+    .branch p { margin: 5px 0 0; color: var(--ink-soft); font-size: 14px; }
+
+    .status-pill {
+      padding: 2px 7px;
+      border-radius: 999px;
+      color: white;
+      background: var(--ok);
+      font-size: 11px;
+    }
+
+    .status-pill.bad { background: var(--bad); }
+
+    .responsibility {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      overflow: hidden;
+      border: 2px solid var(--ink);
+      border-radius: 20px;
+      background: var(--card);
+    }
+
+    .lane { padding: 24px; }
+    .lane + .lane { border-left: 2px dashed var(--line); }
+    .lane h3 { display: flex; align-items: center; gap: 10px; }
+
+    .lane-badge {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      color: white;
+      background: var(--blue);
+      font-family: "Baloo 2", sans-serif;
+      font-size: 18px;
+    }
+
+    .lane:nth-child(2) .lane-badge { background: var(--purple); }
+
+    .checklist {
+      list-style: none;
+      margin: 16px 0 0;
+      padding: 0;
+    }
+
+    .checklist li {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 8px;
+      margin-top: 9px;
+      font-size: 14px;
+    }
+
+    .checklist li::before {
+      content: "✓";
+      display: grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      color: white;
+      background: var(--ok);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .no-list li::before { content: "—"; background: var(--ink-soft); }
+
+    .finish {
+      padding: clamp(26px, 5vw, 52px);
+      border: 2px solid var(--ink);
+      border-radius: 24px;
+      background: var(--accent);
+      box-shadow: 8px 8px 0 var(--ink);
+    }
+
+    .finish h2 { max-width: 800px; font-size: clamp(30px, 5vw, 50px); }
+    .finish p { max-width: 760px; }
+
+    .finish-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 25px;
+    }
+
+    .finish-steps div {
+      padding: 15px;
+      border: 2px solid var(--ink);
+      border-radius: 15px;
+      background: var(--card);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .finish-steps span {
+      display: block;
+      color: var(--accent);
+      font-family: "Baloo 2", sans-serif;
+      font-size: 22px;
+    }
+
+    .footnote {
+      margin-top: 28px;
+      color: rgba(36,31,26,0.72);
+      font-size: 12px;
+      text-align: center;
+    }
+
+    @media (max-width: 800px) {
+      .quick-map, .path-choice, .two-col, .config-map, .daily-grid, .finish-steps { grid-template-columns: 1fr; }
+      .responsibility { grid-template-columns: 1fr; }
+      .lane + .lane { border-left: 0; border-top: 2px dashed var(--line); }
+      .nav { display: none; }
+      .diagram.wide { min-width: 820px; }
+      .scroll-x { overflow-x: auto; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 2.8 19 5.7v5.6c0 4.5-2.8 8-7 9.9-4.2-1.9-7-5.4-7-9.9V5.7L12 2.8Z" fill="#fffdf8" stroke="#241f1a" stroke-width="1.8"/>
+            <path d="m8.8 12 2.1 2.1 4.4-4.7" stroke="#241f1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        doxguard
+      </div>
+      <nav class="nav" aria-label="ページ内ナビゲーション">
+        <a href="#journey">全体像</a>
+        <a href="#words">監視語</a>
+        <a href="#install">導入</a>
+        <a href="#daily">日常UX</a>
+        <a href="#privacy">プライバシー</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <p class="eyebrow"><span class="eyebrow-dot"></span> USER JOURNEY / v0.1.0</p>
+      <h1>公開前に、<em>自分の情報</em>を<br>ローカルで止める。</h1>
+      <p class="lead">
+        doxguard は、氏名・顧客名・社内ホスト名などを「あなたのPCだけにある監視語リスト」と照合し、
+        Gitコミット直前に漏えいを止めるRust製ゲートです。
+      </p>
+
+      <div class="hero-actions">
+        <a href="https://github.com/ishizakahiroshi/doxguard">GitHubで見る</a>
+        <a class="secondary" href="https://www.npmjs.com/package/doxguard">npmパッケージ</a>
+      </div>
+
+      <div class="answer-card">
+        <div class="answer-no">A</div>
+        <div>
+          <strong>対象の単語はどこで設定する？</strong>
+          <p><b>リポジトリ外の <code>names.txt</code> または CSV</b> に書きます。<code>doxguard.config.json</code> には、実語ではなくそのファイルへの環境変数参照だけを書きます。</p>
+        </div>
+      </div>
+
+      <div class="quick-map">
+        <article>
+          <svg class="mini-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <rect x="5" y="8" width="30" height="24" rx="5" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M11 16h18M11 22h12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <b>1. 監視語を書く</b>
+          <p>一行一語のテキスト、または既存台帳のCSV列を使う。</p>
+        </article>
+        <article>
+          <svg class="mini-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M20 4 33 9.5v10.2c0 8.1-5.3 13.6-13 16.3C12.3 33.3 7 27.8 7 19.7V9.5L20 4Z" stroke="currentColor" stroke-width="2.5"/>
+            <path d="m13.5 20 4 4 9-9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <b>2. initでつなぐ</b>
+          <p>設定・高速なpre-commit・構造検査CIをまとめて用意。</p>
+        </article>
+        <article>
+          <svg class="mini-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+            <path d="M7 12h26v19H7z" stroke="currentColor" stroke-width="2.5"/>
+            <path d="m12 18 4 4-4 4M20 26h8" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <b>3. あとは普通にcommit</b>
+          <p>PASSなら続行。検出時だけファイルと行を示して停止。</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="journey">
+      <div class="section-head">
+        <div class="section-no">01</div>
+        <div>
+          <h2>まず全体像：初回だけ6ステップ</h2>
+          <p>オレンジがユーザーの操作、緑がdoxguardの自動処理です。</p>
+        </div>
+      </div>
+
+      <div class="panel scroll-x">
+        <svg class="diagram wide" viewBox="0 0 1000 330" role="img" aria-label="doxguard導入から日常利用までの6ステップ">
+          <defs>
+            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L0,6 L9,3 z" fill="#837a6c"/>
+            </marker>
+          </defs>
+          <path d="M150 135H205M315 135h55M480 135h55M645 135h55M810 135h55" stroke="#837a6c" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
+
+          <g class="node">
+            <circle cx="95" cy="135" r="55" fill="#ff7a3d" stroke="#241f1a" stroke-width="2.5"/>
+            <path d="M72 127h46v33H72zM79 118h31l8 9H72l7-9Z" fill="#fffdf8" stroke="#241f1a" stroke-width="2" stroke-linejoin="round"/>
+            <text x="95" y="216" text-anchor="middle" class="label">1. インストール</text>
+            <text x="95" y="237" text-anchor="middle" class="small muted">npm / pnpm / bun</text>
+          </g>
+
+          <g class="node">
+            <circle cx="260" cy="135" r="55" fill="#ff7a3d" stroke="#241f1a" stroke-width="2.5"/>
+            <rect x="232" y="105" width="56" height="62" rx="5" fill="#fffdf8" stroke="#241f1a" stroke-width="2"/>
+            <path d="M242 121h36M242 134h28M242 147h33" stroke="#241f1a" stroke-width="2" stroke-linecap="round"/>
+            <text x="260" y="216" text-anchor="middle" class="label">2. 監視語を作る</text>
+            <text x="260" y="237" text-anchor="middle" class="small muted">リポジトリの外</text>
+          </g>
+
+          <g class="node">
+            <circle cx="425" cy="135" r="55" fill="#ff7a3d" stroke="#241f1a" stroke-width="2.5"/>
+            <rect x="394" y="109" width="62" height="46" rx="6" fill="#241f1a"/>
+            <path d="m405 121 7 7-7 7M420 137h23" stroke="#fffdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="425" y="216" text-anchor="middle" class="label">3. doxguard init</text>
+            <text x="425" y="237" text-anchor="middle" class="small muted">hookとCIを自動生成</text>
+          </g>
+
+          <g class="node">
+            <circle cx="590" cy="135" r="55" fill="#ff7a3d" stroke="#241f1a" stroke-width="2.5"/>
+            <path d="M561 119h58v35h-58z" fill="#fffdf8" stroke="#241f1a" stroke-width="2"/>
+            <text x="590" y="141" text-anchor="middle" style="font-size:14px;font-weight:700">ENV</text>
+            <text x="590" y="216" text-anchor="middle" class="label">4. パスを接続</text>
+            <text x="590" y="237" text-anchor="middle" class="small muted">環境変数を設定</text>
+          </g>
+
+          <g class="node">
+            <circle cx="755" cy="135" r="55" fill="#2e7d4f" stroke="#241f1a" stroke-width="2.5"/>
+            <path d="M727 139c7-18 20-28 39-29M726 139c8 15 20 23 39 23" stroke="#fffdf8" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="772" cy="109" r="6" fill="#fffdf8"/>
+            <circle cx="772" cy="163" r="6" fill="#fffdf8"/>
+            <text x="755" y="216" text-anchor="middle" class="label">5. 初回スキャン</text>
+            <text x="755" y="237" text-anchor="middle" class="small muted">意図どおりか確認</text>
+          </g>
+
+          <g class="node">
+            <circle cx="920" cy="135" r="55" fill="#2e7d4f" stroke="#241f1a" stroke-width="2.5"/>
+            <path d="M920 101 947 112v21c0 17-11 28-27 34-16-6-27-17-27-34v-21l27-11Z" fill="#fffdf8" stroke="#241f1a" stroke-width="2"/>
+            <path d="m907 133 9 9 18-20" stroke="#2e7d4f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="920" y="216" text-anchor="middle" class="label">6. いつものcommit</text>
+            <text x="920" y="237" text-anchor="middle" class="small muted">毎回、自動で守る</text>
+          </g>
+
+          <rect x="350" y="280" width="430" height="34" rx="17" fill="#f0eadf"/>
+          <text x="565" y="302" text-anchor="middle" class="small">初回セットアップ後は、ステップ6だけが日常になる</text>
+        </svg>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--accent)"></i>ユーザーが一度設定</span>
+          <span><i class="dot" style="background:var(--ok)"></i>doxguardが日常的に実行</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="words">
+      <div class="section-head">
+        <div class="section-no">02</div>
+        <div>
+          <h2>監視語は「秘密の別ファイル」に置く</h2>
+          <p>ここが最重要です。設定JSONに本名や社名を直接書きません。</p>
+        </div>
+      </div>
+
+      <div class="panel scroll-x">
+        <svg class="diagram wide" viewBox="0 0 1000 500" role="img" aria-label="公開リポジトリとローカル秘密領域の分離図">
+          <defs>
+            <marker id="arrow2" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+              <path d="M0,0 L0,6 L9,3 z" fill="#241f1a"/>
+            </marker>
+          </defs>
+
+          <rect x="30" y="60" width="430" height="380" rx="24" fill="#fffdf8" stroke="#326b8c" stroke-width="3"/>
+          <rect x="540" y="60" width="430" height="380" rx="24" fill="#fffdf8" stroke="#765589" stroke-width="3"/>
+          <rect x="52" y="30" width="202" height="52" rx="15" fill="#326b8c"/>
+          <text x="153" y="63" text-anchor="middle" class="label white">公開リポジトリ / Git</text>
+          <rect x="562" y="30" width="226" height="52" rx="15" fill="#765589"/>
+          <text x="675" y="63" text-anchor="middle" class="label white">あなたのPCだけ / 非公開</text>
+
+          <g class="node">
+            <rect x="70" y="118" width="350" height="128" rx="16" fill="#f7f3ea" stroke="#241f1a" stroke-width="1.5"/>
+            <path d="M96 145h36l10 10v58H96z" fill="#fffdf8" stroke="#241f1a" stroke-width="2"/>
+            <text x="160" y="153" class="label">doxguard.config.json</text>
+            <text x="160" y="181" class="small">実データではなく、参照だけ</text>
+            <text x="160" y="210" class="small" style="font-family:Consolas,monospace;fill:#a53f13">${DOXGUARD_WATCHLIST_DIR}/names.txt</text>
+          </g>
+
+          <g class="node">
+            <rect x="70" y="275" width="350" height="117" rx="16" fill="#f7f3ea" stroke="#241f1a" stroke-width="1.5"/>
+            <path d="M97 309h29v42H97zM104 319h15M104 328h15M104 337h10" fill="none" stroke="#241f1a" stroke-width="2"/>
+            <text x="155" y="310" class="label">ソースコード / README / fixture</text>
+            <text x="155" y="337" class="small">スキャンされる対象</text>
+            <text x="155" y="361" class="small muted">公開してよい内容だけ</text>
+          </g>
+
+          <g class="node">
+            <rect x="580" y="118" width="350" height="128" rx="16" fill="#f4edf7" stroke="#241f1a" stroke-width="1.5"/>
+            <path d="M606 145h36l10 10v58h-46z" fill="#fffdf8" stroke="#241f1a" stroke-width="2"/>
+            <text x="670" y="153" class="label">names.txt</text>
+            <text x="670" y="181" class="small">氏名・会社名・顧客名など</text>
+            <text x="670" y="207" class="small muted">一行に一語。Gitには入れない。</text>
+          </g>
+
+          <g class="node">
+            <rect x="580" y="275" width="350" height="117" rx="16" fill="#f4edf7" stroke="#241f1a" stroke-width="1.5"/>
+            <path d="M606 308h46v43h-46zM606 321h46M621 308v43M637 308v43" fill="#fffdf8" stroke="#241f1a" stroke-width="2"/>
+            <text x="670" y="310" class="label">systems.csv</text>
+            <text x="670" y="337" class="small">既存台帳の特定列も利用可能</text>
+            <text x="670" y="361" class="small muted">display_name列などを指定</text>
+          </g>
+
+          <path d="M421 181C500 181 500 181 579 181" stroke="#241f1a" stroke-width="3" stroke-dasharray="7 7" marker-end="url(#arrow2)"/>
+          <text x="500" y="164" text-anchor="middle" class="small">環境変数で接続</text>
+          <path d="M755 247v27" stroke="#765589" stroke-width="3" stroke-dasharray="6 6"/>
+          <circle cx="755" cy="423" r="12" fill="#2e7d4f"/>
+          <path d="m749 423 4 4 8-9" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <text x="776" y="428" class="small">外部送信なし・read-only</text>
+        </svg>
+      </div>
+
+      <div class="two-col" style="margin-top:18px">
+        <article class="file-card">
+          <div class="file-title"><span>names.txt</span><small>一番簡単</small></div>
+          <pre class="file-body"># 1行に1つ。# はコメント
+Northwind Harbor
+Contoso Works
+internal-host-fixture</pre>
+        </article>
+        <article class="file-card">
+          <div class="file-title"><span>systems.csv</span><small>既存台帳を流用</small></div>
+          <pre class="file-body">id,display_name,kind
+1,Northwind Harbor,customer
+2,internal-host-fixture,host</pre>
+        </article>
+      </div>
+
+      <div class="callout">
+        <div class="callout-mark">✓</div>
+        <p><b>答え：</b>追加・削除したい監視語は <code>names.txt</code> または指定したCSV列で管理します。設定JSONは「どのファイルの、どの列を読むか」だけを担当します。</p>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="section-head">
+        <div class="section-no">03</div>
+        <div>
+          <h2>インストール：試すか、常用するか</h2>
+          <p>日常利用ではグローバルインストール後に <code>doxguard init</code> を1回実行します。</p>
+        </div>
+      </div>
+
+      <div class="path-choice">
+        <article class="choice-card">
+          <span class="tag private">まず試す</span>
+          <h3>インストールを残さない</h3>
+          <p>既存リポジトリを一度だけ確認したいとき。</p>
+          <div class="mini-flow">
+            <div>npx</div><b>→</b><div>全trackedをscan</div>
+          </div>
+          <div class="codebox"><pre id="try-code">npx doxguard scan --all-tracked</pre><button class="copy" data-copy="try-code">コピー</button></div>
+        </article>
+        <article class="choice-card recommended">
+          <span class="tag">推奨：常用</span>
+          <h3>一度入れて、commitに組み込む</h3>
+          <p>ネイティブバイナリを直接起動する高速な日常動線。</p>
+          <div class="install-tabs" role="tablist" aria-label="パッケージマネージャー">
+            <button class="tab active" data-install="npm">npm</button>
+            <button class="tab" data-install="pnpm">pnpm</button>
+            <button class="tab" data-install="bun">bun</button>
+          </div>
+          <div class="codebox"><pre id="install-code">npm install --global doxguard
+doxguard init</pre><button class="copy" data-copy="install-code">コピー</button></div>
+        </article>
+      </div>
+
+      <div class="panel scroll-x" style="margin-top:18px">
+        <svg class="diagram wide" viewBox="0 0 1000 350" role="img" aria-label="doxguard initが作成するもの">
+          <defs>
+            <marker id="arrow3" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#837a6c"/></marker>
+          </defs>
+          <rect x="25" y="120" width="180" height="100" rx="20" fill="#ff7a3d" stroke="#241f1a" stroke-width="2.5"/>
+          <rect x="57" y="144" width="116" height="48" rx="8" fill="#241f1a"/>
+          <text x="115" y="174" text-anchor="middle" class="label white">doxguard init</text>
+
+          <path d="M205 170H280" stroke="#837a6c" stroke-width="3" marker-end="url(#arrow3)"/>
+          <path d="M280 170C305 170 300 65 340 65" stroke="#837a6c" stroke-width="2.5" fill="none" marker-end="url(#arrow3)"/>
+          <path d="M280 170H340" stroke="#837a6c" stroke-width="2.5" marker-end="url(#arrow3)"/>
+          <path d="M280 170C305 170 300 275 340 275" stroke="#837a6c" stroke-width="2.5" fill="none" marker-end="url(#arrow3)"/>
+
+          <g class="node">
+            <rect x="345" y="20" width="270" height="90" rx="16" fill="#f7f3ea" stroke="#241f1a" stroke-width="1.5"/>
+            <text x="370" y="53" class="label">doxguard.config.json</text>
+            <text x="370" y="79" class="small muted">環境変数参照のひな形</text>
+          </g>
+          <g class="node">
+            <rect x="345" y="125" width="270" height="90" rx="16" fill="#f7f3ea" stroke="#241f1a" stroke-width="1.5"/>
+            <text x="370" y="158" class="label">Git pre-commit</text>
+            <text x="370" y="184" class="small muted">.git内のネイティブ高速経路</text>
+          </g>
+          <g class="node">
+            <rect x="345" y="230" width="270" height="90" rx="16" fill="#f7f3ea" stroke="#241f1a" stroke-width="1.5"/>
+            <text x="370" y="263" class="label">GitHub Actions</text>
+            <text x="370" y="289" class="small muted">構造パターンだけをCI検査</text>
+          </g>
+
+          <path d="M615 65H690M615 170H690M615 275H690" stroke="#2e7d4f" stroke-width="2.5" marker-end="url(#arrow3)"/>
+          <rect x="700" y="70" width="270" height="200" rx="22" fill="#eef7f0" stroke="#2e7d4f" stroke-width="2.5"/>
+          <path d="M835 99 871 114v29c0 22-14 37-36 46-22-9-36-24-36-46v-29l36-15Z" fill="#fffdf8" stroke="#2e7d4f" stroke-width="2.5"/>
+          <path d="m819 143 11 11 22-25" fill="none" stroke="#2e7d4f" stroke-width="3" stroke-linecap="round"/>
+          <text x="835" y="222" text-anchor="middle" class="label">守られたリポジトリ</text>
+          <text x="835" y="246" text-anchor="middle" class="small muted">既存ファイルは上書きしない</text>
+        </svg>
+      </div>
+    </section>
+
+    <section id="connect">
+      <div class="section-head">
+        <div class="section-no">04</div>
+        <div>
+          <h2>接続：環境変数を1本通す</h2>
+          <p>リポジトリには抽象的な参照だけ。実際の保存場所はPC側で決めます。</p>
+        </div>
+      </div>
+
+      <div class="config-map">
+        <div class="key-question">
+          <div class="big">設定JSONは<br><span>地図</span>であって<br><span>名簿</span>ではない。</div>
+          <p>実語は外部ファイルに置き、JSONは読み込み元と検査方針だけを宣言します。</p>
+        </div>
+        <div class="panel">
+          <div class="os-tabs" role="tablist" aria-label="OS別の環境変数設定">
+            <button class="tab active" data-os="powershell">PowerShell</button>
+            <button class="tab" data-os="bash">macOS / Linux</button>
+          </div>
+          <div class="codebox"><pre id="env-code">$env:DOXGUARD_WATCHLIST_DIR = "D:/private/watchlists"</pre><button class="copy" data-copy="env-code">コピー</button></div>
+          <div class="callout warn">
+            <div class="callout-mark">!</div>
+            <p>これは現在のターミナル用です。常用するならOSのユーザー環境変数やシェル設定へ保存します。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel scroll-x" style="margin-top:18px">
+        <svg class="diagram wide" viewBox="0 0 1000 330" role="img" aria-label="設定ファイルからスキャンエンジンまでのデータ経路">
+          <defs>
+            <marker id="arrow4" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#241f1a"/></marker>
+          </defs>
+          <g class="node">
+            <rect x="30" y="90" width="210" height="145" rx="18" fill="#eef4f7" stroke="#326b8c" stroke-width="2"/>
+            <text x="135" y="126" text-anchor="middle" class="label">設定JSON</text>
+            <text x="135" y="154" text-anchor="middle" class="small">${WATCHLIST_DIR}</text>
+            <text x="135" y="178" text-anchor="middle" class="small muted">構造検査 ON/OFF</text>
+            <text x="135" y="202" text-anchor="middle" class="small muted">allow / 除外パス</text>
+          </g>
+          <g class="node">
+            <rect x="295" y="90" width="210" height="145" rx="18" fill="#f4edf7" stroke="#765589" stroke-width="2"/>
+            <text x="400" y="126" text-anchor="middle" class="label">PCの環境変数</text>
+            <text x="400" y="154" text-anchor="middle" class="small">WATCHLIST_DIR</text>
+            <text x="400" y="178" text-anchor="middle" class="small muted">↓</text>
+            <text x="400" y="202" text-anchor="middle" class="small muted">実際の非公開フォルダ</text>
+          </g>
+          <g class="node">
+            <rect x="560" y="90" width="180" height="145" rx="18" fill="#fff7e8" stroke="#ff7a3d" stroke-width="2"/>
+            <text x="650" y="126" text-anchor="middle" class="label">ローカル読込</text>
+            <text x="650" y="154" text-anchor="middle" class="small">TXT / CSV</text>
+            <text x="650" y="179" text-anchor="middle" class="small muted">重複・短語を整理</text>
+            <text x="650" y="203" text-anchor="middle" class="small muted">外部送信なし</text>
+          </g>
+          <g class="node">
+            <rect x="795" y="90" width="175" height="145" rx="18" fill="#eef7f0" stroke="#2e7d4f" stroke-width="2"/>
+            <text x="882" y="126" text-anchor="middle" class="label">Rust scanner</text>
+            <text x="882" y="154" text-anchor="middle" class="small">Aho–Corasick</text>
+            <text x="882" y="179" text-anchor="middle" class="small muted">全語を一括照合</text>
+            <text x="882" y="203" text-anchor="middle" class="small muted">結果だけ表示</text>
+          </g>
+          <path d="M240 162H295M505 162H560M740 162H795" stroke="#241f1a" stroke-width="3" marker-end="url(#arrow4)"/>
+          <text x="267" y="145" text-anchor="middle" class="tiny muted">展開</text>
+          <text x="532" y="145" text-anchor="middle" class="tiny muted">読込</text>
+          <text x="768" y="145" text-anchor="middle" class="tiny muted">構築</text>
+          <path d="M650 251v40H135v-40" stroke="#837a6c" stroke-width="2" stroke-dasharray="6 6" fill="none"/>
+          <text x="392" y="314" text-anchor="middle" class="small muted">監視語の中身は、このPC内の経路だけを通る</text>
+        </svg>
+      </div>
+
+      <div class="panel" style="margin-top:18px">
+        <h3 style="margin-bottom:6px">設定JSONには「読み方」を書く</h3>
+        <p style="color:var(--ink-soft)">TXTはファイル全体、CSVは対象列を指定できます。以下に実在の監視語は含まれていません。</p>
+        <div class="codebox"><pre id="config-code">{
+  "watchlists": [
+    {
+      "type": "lines",
+      "path": "${DOXGUARD_WATCHLIST_DIR}/names.txt",
+      "label": "private names"
+    },
+    {
+      "type": "csv",
+      "path": "${DOXGUARD_WATCHLIST_DIR}/systems.csv",
+      "column": "display_name",
+      "label": "internal systems",
+      "parenVariants": true
+    }
+  ],
+  "structural": {
+    "windowsPath": true,
+    "posixHome": true,
+    "privateIp": true,
+    "email": true,
+    "custom": []
+  }
+}</pre><button class="copy" data-copy="config-code">コピー</button></div>
+      </div>
+
+      <div class="two-col" style="margin-top:18px">
+        <article class="choice-card recommended">
+          <span class="tag">通常構成</span>
+          <h3>設定JSONだけGit管理</h3>
+          <p>チームで検査方針を共有しつつ、各自が自分の監視語を接続します。</p>
+          <ul class="plain-list">
+            <li>Git: <code>doxguard.config.json</code></li>
+            <li>ローカル: <code>names.txt</code> / CSV</li>
+            <li>JSON内のパス: <code>${ENV_VAR}/...</code></li>
+          </ul>
+        </article>
+        <article class="choice-card">
+          <span class="tag private">最大限に非公開</span>
+          <h3>設定JSONもリポジトリ外</h3>
+          <p>監視元の構成すら公開したくない場合は、未追跡ファイルを明示します。</p>
+          <div class="codebox"><pre id="private-config-code">$env:DOXGUARD_CONFIG = "D:/private/doxguard/config.json"
+doxguard scan --all-tracked --dry-run</pre><button class="copy" data-copy="private-config-code">コピー</button></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="daily">
+      <div class="section-head">
+        <div class="section-no">05</div>
+        <div>
+          <h2>日常UX：いつも通りcommitするだけ</h2>
+          <p>スキャン操作を思い出す必要はありません。pre-commitが自動で実行します。</p>
+        </div>
+      </div>
+
+      <div class="panel scroll-x">
+        <svg class="diagram wide" viewBox="0 0 1000 310" role="img" aria-label="日常のコミットフローとPASS・BLOCK分岐">
+          <defs>
+            <marker id="arrow5" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#837a6c"/></marker>
+            <marker id="arrow5g" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#2e7d4f"/></marker>
+            <marker id="arrow5r" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3" fill="#b3261e"/></marker>
+          </defs>
+          <rect x="25" y="105" width="150" height="86" rx="18" fill="#fffdf8" stroke="#241f1a" stroke-width="2"/>
+          <text x="100" y="139" text-anchor="middle" class="label">コードを編集</text>
+          <text x="100" y="166" text-anchor="middle" class="small muted">git add</text>
+
+          <rect x="225" y="105" width="170" height="86" rx="18" fill="#ff7a3d" stroke="#241f1a" stroke-width="2"/>
+          <text x="310" y="139" text-anchor="middle" class="label">git commit</text>
+          <text x="310" y="166" text-anchor="middle" class="small">普段どおり</text>
+
+          <path d="M175 148h50M395 148h55" stroke="#837a6c" stroke-width="3" marker-end="url(#arrow5)"/>
+
+          <polygon points="530,76 610,148 530,220 450,148" fill="#241f1a"/>
+          <text x="530" y="141" text-anchor="middle" class="label white">監視語が</text>
+          <text x="530" y="165" text-anchor="middle" class="label white">含まれる？</text>
+
+          <path d="M610 148C660 148 650 70 700 70" stroke="#2e7d4f" stroke-width="3" fill="none" marker-end="url(#arrow5g)"/>
+          <text x="653" y="102" class="small" style="fill:#2e7d4f;font-weight:700">NO / PASS</text>
+          <rect x="710" y="28" width="250" height="86" rx="18" fill="#eef7f0" stroke="#2e7d4f" stroke-width="2.5"/>
+          <text x="835" y="62" text-anchor="middle" class="label" style="fill:#2e7d4f">コミット完了</text>
+          <text x="835" y="88" text-anchor="middle" class="small muted">追加操作なし</text>
+
+          <path d="M610 148C660 148 650 240 700 240" stroke="#b3261e" stroke-width="3" fill="none" marker-end="url(#arrow5r)"/>
+          <text x="653" y="212" class="small" style="fill:#b3261e;font-weight:700">YES / BLOCK</text>
+          <rect x="710" y="197" width="250" height="86" rx="18" fill="#fff0ee" stroke="#b3261e" stroke-width="2.5"/>
+          <text x="835" y="229" text-anchor="middle" class="label" style="fill:#b3261e">場所を表示して停止</text>
+          <text x="835" y="255" text-anchor="middle" class="small muted">直す → add → commitを再実行</text>
+        </svg>
+      </div>
+
+      <div class="daily-grid" style="margin-top:18px">
+        <div class="terminal" aria-live="polite">
+          <div class="terminal-head"><i></i><i></i><i></i></div>
+          <div class="terminal-body" id="terminal-output"><span class="dim">$ git commit -m "docs: update guide"</span>
+
+<span class="pass">PASS</span> doxguard scanned staged files
+  files: 4
+  needles: 82
+  findings: 0
+
+[main 4a15b2c] docs: update guide</div>
+        </div>
+        <div>
+          <div class="result-tabs">
+            <button class="tab active" data-result="pass">PASSの画面</button>
+            <button class="tab" data-result="block">BLOCKの画面</button>
+          </div>
+          <div class="branch-list">
+            <article class="branch">
+              <strong><span class="status-pill">PASS</span> 何も考えず続行</strong>
+              <p>検出0件なら、そのままコミットが完了します。</p>
+            </article>
+            <article class="branch">
+              <strong><span class="status-pill bad">BLOCK</span> 行番号を見て修正</strong>
+              <p>対象ファイル・行・種類・修正提案が表示されます。</p>
+            </article>
+            <article class="branch">
+              <strong>意図的な公開値なら allow</strong>
+              <p><code>// doxguard: allow Public</code> のように、その行だけ例外化できます。</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacy">
+      <div class="section-head">
+        <div class="section-no">06</div>
+        <div>
+          <h2>ローカルとCIは、守る範囲が違う</h2>
+          <p>秘密の監視語はCIへ送らず、CIは「形で分かる危険」だけを検査します。</p>
+        </div>
+      </div>
+
+      <div class="responsibility">
+        <article class="lane">
+          <h3><span class="lane-badge">PC</span> ローカル pre-commit</h3>
+          <p>あなた固有のデータまで照合する、本命の防御。</p>
+          <ul class="checklist">
+            <li>names.txt / CSV の監視語</li>
+            <li>Windows・POSIXの個人パス</li>
+            <li>プライベートIP・非公開メール</li>
+            <li>カスタム正規表現</li>
+          </ul>
+        </article>
+        <article class="lane">
+          <h3><span class="lane-badge">CI</span> GitHub Actions</h3>
+          <p>秘密を受け取らず、公開コードだけで成立する防御。</p>
+          <ul class="checklist">
+            <li>個人パスらしい文字列</li>
+            <li>プライベートIP</li>
+            <li>allow外のメール</li>
+          </ul>
+          <ul class="checklist no-list">
+            <li>個人のwatchlistは送信しない</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="panel scroll-x" style="margin-top:18px">
+        <svg class="diagram wide" viewBox="0 0 1000 315" role="img" aria-label="watchlistがユーザーマシンから出ないことを示す図">
+          <defs>
+            <marker id="arrow6" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#326b8c"/></marker>
+          </defs>
+          <rect x="35" y="45" width="390" height="225" rx="24" fill="#f4edf7" stroke="#765589" stroke-width="3"/>
+          <text x="230" y="82" text-anchor="middle" class="label">あなたのマシン</text>
+          <rect x="75" y="110" width="135" height="100" rx="15" fill="#fffdf8" stroke="#241f1a" stroke-width="1.5"/>
+          <text x="143" y="146" text-anchor="middle" class="label">watchlist</text>
+          <text x="143" y="174" text-anchor="middle" class="small muted">非公開</text>
+          <rect x="255" y="110" width="135" height="100" rx="15" fill="#fffdf8" stroke="#241f1a" stroke-width="1.5"/>
+          <text x="323" y="146" text-anchor="middle" class="label">scan engine</text>
+          <text x="323" y="174" text-anchor="middle" class="small muted">read-only</text>
+          <path d="M210 160h45" stroke="#765589" stroke-width="3"/>
+
+          <path d="M425 160H615" stroke="#326b8c" stroke-width="4" marker-end="url(#arrow6)"/>
+          <text x="520" y="139" text-anchor="middle" class="small">Git push</text>
+          <text x="520" y="187" text-anchor="middle" class="small muted">公開ファイルだけ</text>
+          <path d="M470 218 570 118M470 118l100 100" stroke="#b3261e" stroke-width="8" stroke-linecap="round" opacity="0.82"/>
+          <text x="520" y="247" text-anchor="middle" class="small" style="fill:#b3261e;font-weight:700">watchlistは通過しない</text>
+
+          <rect x="625" y="45" width="340" height="225" rx="24" fill="#eef4f7" stroke="#326b8c" stroke-width="3"/>
+          <text x="795" y="82" text-anchor="middle" class="label">GitHub / CI</text>
+          <rect x="675" y="110" width="240" height="100" rx="15" fill="#fffdf8" stroke="#241f1a" stroke-width="1.5"/>
+          <text x="795" y="146" text-anchor="middle" class="label">構造パターンだけ</text>
+          <text x="795" y="174" text-anchor="middle" class="small muted">path / IP / email</text>
+        </svg>
+      </div>
+    </section>
+
+    <section>
+      <div class="finish">
+        <h2>迷ったら、この4つだけ。</h2>
+        <p>監視語は外に置く。<code>init</code> でつなぐ。最初に全体スキャンする。その後は普通にコミットする。</p>
+        <div class="finish-steps">
+          <div><span>01</span>グローバルインストール</div>
+          <div><span>02</span>外部に names.txt</div>
+          <div><span>03</span>init + 環境変数</div>
+          <div><span>04</span>いつも通り commit</div>
+        </div>
+      </div>
+      <p class="footnote">doxguard v0.1.0 user journey / synthetic examples only / 2026-07-16</p>
+    </section>
+  </main>
+
+  <script>
+    const installCommands = {
+      npm: 'npm install --global doxguard\ndoxguard init',
+      pnpm: 'pnpm add --global doxguard\ndoxguard init',
+      bun: 'bun install --global doxguard\ndoxguard init'
+    };
+
+    const osCommands = {
+      powershell: '$env:DOXGUARD_WATCHLIST_DIR = "D:/private/watchlists"',
+      bash: 'export DOXGUARD_WATCHLIST_DIR="$HOME/private/watchlists"'
+    };
+
+    const terminalResults = {
+      pass: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="pass">PASS</span> doxguard scanned staged files\n  files: 4\n  needles: 82\n  findings: 0\n\n[main 4a15b2c] docs: update guide',
+      block: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="fail">BLOCK</span> doxguard found 1 match\n  docs/guide.md:42:17\n  kind: private names\n  match: Northwind Harbor\n  suggestion: replace with a generic example\n\ncommit stopped (exit 1)'
+    };
+
+    function wireTabs(selector, targetId, values, attribute) {
+      document.querySelectorAll(selector).forEach((button) => {
+        button.addEventListener('click', () => {
+          document.querySelectorAll(selector).forEach((item) => item.classList.remove('active'));
+          button.classList.add('active');
+          document.getElementById(targetId).textContent = values[button.dataset[attribute]];
+        });
+      });
+    }
+
+    wireTabs('[data-install]', 'install-code', installCommands, 'install');
+    wireTabs('[data-os]', 'env-code', osCommands, 'os');
+
+    document.querySelectorAll('[data-result]').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('[data-result]').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        document.getElementById('terminal-output').innerHTML = terminalResults[button.dataset.result];
+      });
+    });
+
+    document.querySelectorAll('[data-copy]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const source = document.getElementById(button.dataset.copy).textContent;
+        try {
+          await navigator.clipboard.writeText(source);
+          const original = button.textContent;
+          button.textContent = 'コピー済み';
+          button.classList.add('done');
+          setTimeout(() => {
+            button.textContent = original;
+            button.classList.remove('done');
+          }, 1400);
+        } catch (_) {
+          button.textContent = '選択してコピー';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
