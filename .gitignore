@@ -39,6 +39,10 @@ desktop.ini
 *.local.*
 *.local.md
 *.local.json
+# AI ツールのローカル追記（例: CLAUDE.local.md / AGENTS.local.md）
+# many-ai-cli の承認ルール注入は AGENTS.local.md 側へ。tracked の AGENTS.md は短いまま維持する。
+AGENTS.local.md
+CLAUDE.local.md
 scripts/local/
 
 # === 認証情報・secrets・鍵（public へ絶対に出さない） ===
