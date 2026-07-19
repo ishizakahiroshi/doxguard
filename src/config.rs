@@ -102,6 +102,9 @@ pub struct AllowConfig {
     pub emails: Vec<String>,
     #[serde(rename = "emailDomains")]
     pub email_domains: Vec<String>,
+    /// When true, bare `doxguard: allow` (no token) is ignored. Scoped allows still work.
+    #[serde(rename = "disallowBareAllow")]
+    pub disallow_bare_allow: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -111,6 +114,9 @@ pub struct NoiseConfig {
     pub min_needle_length: usize,
     #[serde(rename = "skipShortKanaGivenNames")]
     pub skip_short_kana_given_names: bool,
+    /// Match ASCII letters case-insensitively (needles and haystack lowercased).
+    #[serde(rename = "asciiCaseInsensitive")]
+    pub ascii_case_insensitive: bool,
 }
 
 impl Default for NoiseConfig {
@@ -118,6 +124,7 @@ impl Default for NoiseConfig {
         Self {
             min_needle_length: 2,
             skip_short_kana_given_names: true,
+            ascii_case_insensitive: false,
         }
     }
 }
@@ -137,6 +144,10 @@ pub struct Config {
     pub exempt_paths: Vec<String>,
     #[serde(rename = "maxFileSize")]
     pub max_file_size: u64,
+    /// When true with `--block`, coverage skips (oversize / non-UTF-8 / symlink / unreadable)
+    /// cause exit 1 so silent holes cannot pass a gate.
+    #[serde(rename = "failOnSkip")]
+    pub fail_on_skip: bool,
 }
 
 impl Default for Config {
@@ -151,15 +162,23 @@ impl Default for Config {
                     "example.com".to_owned(),
                     "users.noreply.github.com".to_owned(),
                 ],
+                disallow_bare_allow: false,
             },
             noise: NoiseConfig::default(),
             exempt_paths: Vec::new(),
             max_file_size: default_max_file_size(),
+            fail_on_skip: false,
         }
     }
 }
 
 impl Config {
+    /// Apply CLI `--strict`: bare allow off + fail on coverage skips.
+    pub fn apply_strict(&mut self) {
+        self.allow.disallow_bare_allow = true;
+        self.fail_on_skip = true;
+    }
+
     pub fn all_exempt_paths(&self) -> impl Iterator<Item = &str> {
         DEFAULT_EXEMPT_PATHS
             .iter()
@@ -173,6 +192,19 @@ impl Config {
         }
         if self.max_file_size == 0 {
             bail!("maxFileSize must be at least 1");
+        }
+        for exempt in &self.exempt_paths {
+            let trimmed = exempt.trim();
+            if trimmed.is_empty() || trimmed == "." || trimmed == "/" {
+                bail!("exemptPaths entries must be non-empty path fragments (got {exempt:?})");
+            }
+        }
+        for domain in &self.allow.email_domains {
+            if !is_multi_label_domain(domain) {
+                bail!(
+                    "allow.emailDomains entry must be a multi-label domain like example.com (got {domain:?})"
+                );
+            }
         }
         for source in &self.watchlists {
             if source.path().is_empty() {
@@ -189,11 +221,23 @@ impl Config {
             }
         }
         for custom in &self.structural.custom {
-            regex::Regex::new(&custom.regex)
+            regex::RegexBuilder::new(&custom.regex)
+                .size_limit(1 << 20)
+                .dfa_size_limit(1 << 20)
+                .build()
                 .with_context(|| format!("invalid custom regex `{}`", custom.name))?;
         }
         Ok(())
     }
+}
+
+fn is_multi_label_domain(domain: &str) -> bool {
+    let domain = domain.trim().trim_matches('.');
+    if domain.is_empty() || domain.contains('/') || domain.contains(' ') {
+        return false;
+    }
+    // Require at least one dot so bare TLDs like "com" cannot mute all emails.
+    domain.contains('.') && !domain.starts_with('.') && !domain.ends_with('.')
 }
 
 #[derive(Debug)]
@@ -206,6 +250,7 @@ pub struct LoadedConfig {
 
 pub fn load(cwd: &Path, requested_path: Option<&Path>) -> Result<LoadedConfig> {
     let env_path = std::env::var_os("DOXGUARD_CONFIG").map(PathBuf::from);
+    let explicit = requested_path.is_some() || env_path.is_some();
     let requested = requested_path
         .map(PathBuf::from)
         .or(env_path)
@@ -216,6 +261,9 @@ pub fn load(cwd: &Path, requested_path: Option<&Path>) -> Result<LoadedConfig> {
         cwd.join(requested)
     };
     if !path.exists() {
+        if explicit {
+            bail!("config not found: {}", path.display());
+        }
         return Ok(LoadedConfig {
             config: Config::default(),
             path,

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 
 use crate::config::Config;
 
@@ -64,7 +64,8 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
     if config.structural.windows_path {
         patterns.push(pattern(
             "Windows personal absolute path",
-            r"[A-Za-z]:[\\/](?:Users|dev)[\\/]",
+            // Case-insensitive Users/dev; allow JSON-style doubled backslashes.
+            r"(?i)[A-Za-z]:(?:\\+|/)(?:Users|dev)(?:\\+|/)",
             "Remove the personal absolute path or replace it with a placeholder",
             None,
         ));
@@ -96,7 +97,10 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
     for custom in &config.structural.custom {
         patterns.push(StructuralPattern {
             name: custom.name.clone(),
-            regex: Regex::new(&custom.regex)
+            regex: RegexBuilder::new(&custom.regex)
+                .size_limit(1 << 20)
+                .dfa_size_limit(1 << 20)
+                .build()
                 .with_context(|| format!("invalid custom regex `{}`", custom.name))?,
             suggestion: custom
                 .suggestion

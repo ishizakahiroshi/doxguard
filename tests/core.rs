@@ -116,20 +116,168 @@ fn detects_all_structural_kinds_and_honors_three_allow_mechanisms() {
 
 #[test]
 fn inline_directive_supports_scoped_bare_and_legacy_forms() {
+    let config = Config::default();
     assert!(allowed_by_directive(
         "Northwind Harbor // doxguard: allow Northwind",
-        "Northwind Harbor"
+        "Northwind Harbor",
+        &config
     ));
     assert!(allowed_by_directive(
         "192.168.50.9 # doxguard: allow",
-        "192.168.50.9"
+        "192.168.50.9",
+        &config
     ));
     assert!(allowed_by_directive(
         "Contoso Works <!-- secrets-scan: allow Contoso -->",
-        "Contoso Works"
+        "Contoso Works",
+        &config
     ));
     assert!(!allowed_by_directive(
         "Northwind Harbor // doxguard: allow Fabrikam",
-        "Northwind Harbor"
+        "Northwind Harbor",
+        &config
     ));
+    // allow* prefixes must not act as bare allow
+    assert!(!allowed_by_directive(
+        "private@sample.test // doxguard: allowlist note",
+        "private@sample.test",
+        &config
+    ));
+    // short tokens must not suppress (min length 4)
+    assert!(!allowed_by_directive(
+        "192.168.50.9 # doxguard: allow 168",
+        "192.168.50.9",
+        &config
+    ));
+    assert!(!allowed_by_directive(
+        "192.168.50.9 # doxguard: allow .",
+        "192.168.50.9",
+        &config
+    ));
+    let mut strict = Config::default();
+    strict.apply_strict();
+    assert!(
+        !allowed_by_directive("192.168.50.9 # doxguard: allow", "192.168.50.9", &strict),
+        "strict mode must reject bare allow"
+    );
+    assert!(allowed_by_directive(
+        "192.168.50.9 # doxguard: allow 192.168.50.9",
+        "192.168.50.9",
+        &strict
+    ));
+}
+
+#[test]
+fn path_exempt_uses_boundaries_not_raw_substring() {
+    use doxguard::scan::path_is_exempt;
+    assert!(path_is_exempt("tests/fixture.txt", "tests/"));
+    assert!(!path_is_exempt("mytests/fixture.txt", "tests/"));
+    assert!(path_is_exempt(
+        ".github/workflows/doxguard.yml",
+        ".github/workflows/doxguard"
+    ));
+    assert!(!path_is_exempt("src/main.rs", ""));
+    assert!(!path_is_exempt("any/path", ""));
+}
+
+#[test]
+fn staged_scan_reads_index_not_worktree() {
+    use std::process::Command;
+
+    let temp = tempdir().unwrap();
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    };
+    git(&["init", "-q"]);
+    git(&["config", "user.email", "fixture@example.com"]);
+    git(&["config", "user.name", "fixture"]);
+    fs::write(temp.path().join("leak.txt"), "192.168.50.9\n").unwrap();
+    git(&["add", "leak.txt"]);
+    // Clean worktree must not hide the staged blob.
+    fs::write(temp.path().join("leak.txt"), "safe\n").unwrap();
+
+    let config = Config::default();
+    let matcher = watchlist::WatchlistMatcher::new(Vec::new()).unwrap();
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::Staged,
+        vec!["leak.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    assert!(
+        result
+            .hits
+            .iter()
+            .any(|hit| hit.matched.contains("192.168")),
+        "expected staged private IP hit, got {:?}",
+        result.hits
+    );
+}
+
+#[test]
+fn ascii_case_insensitive_watchlist_matches_lower_haystack() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("names.txt"), "Contoso Works\n").unwrap();
+    let mut config = Config {
+        noise: doxguard::config::NoiseConfig {
+            ascii_case_insensitive: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    config.watchlists.push(WatchlistSource::Lines {
+        path: "${FIXTURE_ROOT}/names.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+    assert!(matcher.matches("contoso works").next().is_some());
+}
+
+#[test]
+fn oversize_file_emits_coverage_skip_warning() {
+    let temp = tempdir().unwrap();
+    let big = "x".repeat(64);
+    fs::write(temp.path().join("big.txt"), format!("192.168.50.9\n{big}")).unwrap();
+    let config = Config {
+        max_file_size: 16,
+        ..Default::default()
+    };
+    let matcher = watchlist::WatchlistMatcher::new(Vec::new()).unwrap();
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["big.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    assert_eq!(result.coverage_skips, 1);
+    assert!(
+        result
+            .warnings
+            .iter()
+            .any(|w| w.contains("skipped big.txt") && w.contains("oversize"))
+    );
+    assert!(result.hits.is_empty());
 }

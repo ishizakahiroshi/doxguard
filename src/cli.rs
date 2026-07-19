@@ -69,6 +69,9 @@ struct ScanArgs {
     /// Config path. DOXGUARD_CONFIG is used when this option is omitted.
     #[arg(long)]
     config: Option<PathBuf>,
+    /// Stricter gate: disallow bare `doxguard: allow`, and fail on coverage skips with `--block`.
+    #[arg(long, action = ArgAction::SetTrue)]
+    strict: bool,
 }
 
 fn mode(args: &ScanArgs) -> ScanMode {
@@ -128,7 +131,10 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
         anyhow::bail!("scan requires exactly one mode");
     }
     let cwd = std::env::current_dir()?;
-    let loaded = config::load(&cwd, args.config.as_deref())?;
+    let mut loaded = config::load(&cwd, args.config.as_deref())?;
+    if args.strict {
+        loaded.config.apply_strict();
+    }
     let watchlists = watchlist::load(&loaded.config, &cwd, &process_env())?;
     let patterns = patterns::build(&loaded.config)?;
     let mut warnings = loaded.warnings;
@@ -159,9 +165,10 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
             }
         }
     }
-    Ok(u8::from(
-        !result.hits.is_empty() && args.block && !args.dry_run,
-    ))
+    let blocked = args.block
+        && !args.dry_run
+        && (!result.hits.is_empty() || (loaded.config.fail_on_skip && result.coverage_skips > 0));
+    Ok(u8::from(blocked))
 }
 
 fn try_run(cli: Cli) -> Result<u8> {

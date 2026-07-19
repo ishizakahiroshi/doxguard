@@ -5,7 +5,7 @@ use std::{
 };
 
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result, anyhow, bail};
 
 use crate::config::{ColumnSpec, Config, WatchlistSource};
 
@@ -154,7 +154,16 @@ fn read_values(source: &WatchlistSource, path: &Path) -> Result<Vec<String>> {
                     .iter()
                     .position(|header| header == name)
                     .ok_or_else(|| anyhow!("column `{name}` not found"))?,
-                ColumnSpec::Index(index) => index - 1,
+                ColumnSpec::Index(index) => {
+                    let zero_based = index - 1;
+                    if zero_based >= headers.len() {
+                        bail!(
+                            "CSV column index {index} is out of range (headers: {})",
+                            headers.len()
+                        );
+                    }
+                    zero_based
+                }
             };
             reader
                 .records()
@@ -181,7 +190,17 @@ pub fn load(
     let mut warnings = Vec::new();
     let mut items = Vec::new();
     let mut seen = HashSet::new();
-    let allowed: HashSet<&str> = config.allow.names.iter().map(String::as_str).collect();
+    let allowed_owned: HashSet<String> = if config.noise.ascii_case_insensitive {
+        config
+            .allow
+            .names
+            .iter()
+            .map(|name| name.to_ascii_lowercase())
+            .collect()
+    } else {
+        config.allow.names.iter().cloned().collect()
+    };
+    let allowed: HashSet<&str> = allowed_owned.iter().map(String::as_str).collect();
 
     for source in &config.watchlists {
         let path = match expand_path(source.path(), cwd, env) {
@@ -198,15 +217,20 @@ pub fn load(
             ));
             continue;
         }
-        let values = match read_values(source, &path)
-            .with_context(|| format!("failed to read watchlist {}", source.path()))
-        {
-            Ok(values) => values,
-            Err(error) => {
-                warnings.push(format!("WARN: {error:#}"));
-                continue;
-            }
-        };
+        let meta = fs::metadata(&path)
+            .with_context(|| format!("failed to stat watchlist {}", source.path()))?;
+        if meta.len() > config.max_file_size {
+            bail!(
+                "watchlist {} is {} bytes (maxFileSize is {}); refuse to load unbounded lists",
+                source.path(),
+                meta.len(),
+                config.max_file_size
+            );
+        }
+        // Missing env / missing path stay soft-skip (CI structural-only). Once a path
+        // exists, read/parse failures must fail closed so protection cannot shrink silently.
+        let values = read_values(source, &path)
+            .with_context(|| format!("failed to read watchlist {}", source.path()))?;
         let paren_variants = matches!(
             source,
             WatchlistSource::Csv {
@@ -216,6 +240,11 @@ pub fn load(
         );
         for value in values {
             for needle in expand_variants(value.trim(), paren_variants) {
+                let needle = if config.noise.ascii_case_insensitive {
+                    needle.to_ascii_lowercase()
+                } else {
+                    needle
+                };
                 if should_skip(&needle, source, config)
                     || allowed.contains(needle.as_str())
                     || !seen.insert(needle.clone())

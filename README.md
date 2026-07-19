@@ -91,17 +91,22 @@ doxguard scan --diff --block
 doxguard scan --all-tracked --dry-run
 doxguard scan --packaged --block
 doxguard scan --all-tracked --format json
+doxguard scan --all-tracked --block --strict
 ```
 
 Exactly one mode is required:
 
-- `--staged`: added, copied, or modified files in the git index
+- `--staged`: added, copied, renamed, or modified files in the git index (reads index blobs, not the worktree)
 - `--diff`: working-tree changes compared with `HEAD`
 - `--all-tracked`: all files returned by `git ls-files`
 - `--packaged`: files returned by `npm pack --dry-run --json`
 
-Exit codes are stable: `0` means pass/report-only, `1` means a `--block` scan found matches, and `2`
-means usage or configuration error.
+`--strict` (or config `allow.disallowBareAllow` + `failOnSkip`) turns on a harder gate: bare
+`doxguard: allow` is ignored, and unscanned coverage skips (oversize / non-UTF-8 / symlink) fail
+when combined with `--block`. Prefer `--strict` in CI.
+
+Exit codes are stable: `0` means pass/report-only, `1` means a `--block` scan found matches (or
+coverage skips under strict/`failOnSkip`), and `2` means usage or configuration error.
 
 ## Configuration
 
@@ -139,14 +144,17 @@ means usage or configuration error.
   "allow": {
     "names": ["Public Product"],
     "emails": ["public@example.com"],
-    "emailDomains": ["example.com", "users.noreply.github.com"]
+    "emailDomains": ["example.com", "users.noreply.github.com"],
+    "disallowBareAllow": false
   },
   "noise": {
     "minNeedleLength": 2,
-    "skipShortKanaGivenNames": true
+    "skipShortKanaGivenNames": true,
+    "asciiCaseInsensitive": false
   },
   "exemptPaths": ["generated/"],
-  "maxFileSize": 1048576
+  "maxFileSize": 1048576,
+  "failOnSkip": false
 }
 ```
 
@@ -167,11 +175,12 @@ Use an exception only when the value is intentionally public:
 
 ```text
 Public Product // doxguard: allow Public
-fixture=192.168.50.9 # doxguard: allow
+fixture=192.168.50.9 # doxguard: allow 192.168.50.9
 ```
 
-`doxguard: allow WORD` exempts matching values containing `WORD`; bare `doxguard: allow` exempts all
-matches on that line. The former `secrets-scan: allow` spelling remains compatible for migration.
+`doxguard: allow WORD` exempts matching values containing `WORD` (WORD must be at least 4 characters).
+Bare `doxguard: allow` (no token) exempts all matches on that line unless `allow.disallowBareAllow`
+or `--strict` is enabled. The former `secrets-scan: allow` spelling remains compatible for migration.
 
 ## Hook upgrades
 
