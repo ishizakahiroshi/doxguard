@@ -2,31 +2,43 @@
 type: plan
 status: in-progress
 tags: [doxguard, secrets-scan, npm]
-owner: 
+owner: ishizakahiroshi
 review_status: draft
-related: [../../CLAUDE.md]
-last_reviewed: 2026-07-16
+related:
+  - ../../CLAUDE.md
+  - plan_doxguard-v0.2-history-and-followups.md
+  - manual_release-v0.1.0_2026-07-16.md
+  - report_bug_security_quality_audit_2026-07-19.md
+last_reviewed: 2026-07-19
 due: 2026-07-23
 ---
 
-# [計画] doxguard v0.1.0 — 個人 secrets-scan の汎用化と npm 公開
+# [実行中] doxguard v0.1.0 — 個人 secrets-scan の汎用化と npm 公開
 
 ## context配分
 
 | C | 内容 | 種別 | 並列 |
 |---|---|---|---|
-| C1 | コア移植と config 層（Rust 化・Aho–Corasick・watchlist ソース抽象化） | plan | — |
-| C2 | CLI 表面（scan 各モード・install-hooks・init スキャフォールド） | plan | — |
-| C3 | パッケージングと dogfooding（bin/files・pack 目視・自リポ置換・README 本文） | plan | — |
+| C1 | コア移植と config 層（Rust 化・Aho–Corasick・watchlist ソース抽象化） | fix | — |
+| C2 | CLI 表面（scan 各モード・install-hooks・init スキャフォールド） | fix | — |
+| C3 | パッケージングと dogfooding（bin/files・pack 目視・自リポ置換・README 本文） | fix | — |
 | C4 | リリース配線（CI workflow・release md 作成・v0.1.0 公開） | plan | — |
 
 実行順序: `C1 → C2 → C3 → C4`
 
-## 実施状況（2026-07-16）
+## 製品スコープ凍結（2026-07-19）
+
+**v0.1 の機能範囲は凍結。** 以降の機能（ローカル実行履歴 CLI 等）は  
+`plan_doxguard-v0.2-history-and-followups.md` へ。  
+本 plan の残りは **C4 = 外部公開オペのみ**（repo push / tag / Release / npm / Pages 実確認）。
+
+監査・strict・staged index 修正は v0.1 範囲に含めて凍結済み（2026-07-19）。
+
+## 実施状況（2026-07-16、更新 2026-07-19）
 
 - C1: 完了。Rust + Aho–Corasick + rayon、config/watchlist/構造検知、合成テストを実装
 - C2: 完了。scan 4 mode / init / install-hooks、Windows上の direct native hook 実commitテストを実装
-- C3: 完了。npm thin launcher + OS/arch別6 package、README、pack gate、自己dogfoodを実装
+- C3: 完了。npm thin launcher + OS/arch別6 package、README、pack gate、自己dogfoodを実装。監査後の fail-closed / `--strict` も v0.1 に含む
 - C4: workflow / release md / 中央台帳のローカル準備まで完了。GitHub repo作成・初回push・tag・外部publishはユーザー明示指示待ち
 - GitHub Pages: `site/index.html` と専用Pages workflow、README導線を準備済み。実デプロイは初回push後
 - 実測: Windows x64の direct native pre-commit 中央値 70.34ms（20回、staged 0件）
