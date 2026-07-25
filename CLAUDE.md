@@ -67,5 +67,5 @@ env 展開されたパス参照だけを書き、CI では構造パターン（�
 |---|---|
 | ユーザー向け README | `README.md` |
 | Codex/他 AI 用入口 | `AGENTS.md` |
-| v0.1.0 設計 plan | `docs/local/plan_doxguard-v0.1.0-generalization.md` |
+| ローカル作業ノート（非公開） | `docs/local/`（gitignore・存在する場合） |
 | 配布戦略（作者環境） | `~/.claude/guides/reference_cli-distribution.md` |

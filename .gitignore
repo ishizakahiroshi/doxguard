@@ -31,7 +31,8 @@ desktop.ini
 **/supabase/.temp/
 
 # === ローカル/プライベート追記（fresh public clone から除外） ===
-# docs/local/ は家標準で tracked（plan/bugfix を後日 grep するため）
+# docs/local/ は "local"（その環境限定・非公開）の名のとおり ignore する。
+# ローカル grep は追跡外でも効く。公開したい開発ドキュメントは docs/ 直下へ置く。
 .env
 .env.*
 !.env.example
@@ -44,6 +45,7 @@ desktop.ini
 AGENTS.local.md
 CLAUDE.local.md
 scripts/local/
+docs/local/
 
 # === 認証情報・secrets・鍵（public へ絶対に出さない） ===
 *.pem
