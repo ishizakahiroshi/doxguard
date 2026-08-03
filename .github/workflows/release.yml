@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       npm_only:
-        description: "Republish missing npm packages from the canonical release"
+        description: "true: republish npm from the canonical release / false: run the full release chain (fallback when the tag-push event was not delivered; dispatch on the tag ref)"
         required: true
         default: true
         type: boolean
@@ -24,7 +24,7 @@ env:
 jobs:
   preflight:
     name: Release preflight
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,7 +62,7 @@ jobs:
   build:
     name: Build ${{ matrix.slug }}
     needs: preflight
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -122,7 +122,7 @@ jobs:
   github-release:
     name: GitHub Release
     needs: build
-    if: ${{ github.event_name == 'push' }}
+    if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
