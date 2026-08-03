@@ -57,7 +57,7 @@ env 展開されたパス参照だけを書き、CI では構造パターン（�
 
 書く瞬間の責務（固有名詞の一般化・fixture は合成データ等）は上記「AI 作業共通ルール」の参照先に従う。このリポジトリ固有の配線は以下:
 
-- scanner: doxguard 自身（手動実行: `cargo run -- scan --staged --block`、release build 後は `target/release/doxguard`）
+- scanner: doxguard 自身（手動実行: `cargo run -- scan --staged --block --strict`、release build 後は `target/release/doxguard`）
 - layer 2: git dir 内の `doxguard/hooks/pre-commit`（Rust binary を hook として直接起動。`.githooks/pre-commit` は fallback）/ layer 3: `.github/workflows/validate.yml` / layer 4: `.github/workflows/release.yml`
 - 作者環境の full coverage は gitignored な `doxguard.local.json` を `DOXGUARD_CONFIG` で参照する。未設定環境では構造 regex のみで継続
 

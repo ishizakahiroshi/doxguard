@@ -16,9 +16,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write
-  actions: read
-  id-token: write
+  contents: read
 
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
@@ -28,6 +26,9 @@ jobs:
     name: Release preflight
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.85.0
@@ -56,7 +57,7 @@ jobs:
       - name: Test
         run: cargo test --all-targets --locked
       - name: Structural content gate
-        run: cargo run --release --locked -- scan --all-tracked --block
+        run: cargo run --release --locked -- scan --all-tracked --block --strict
 
   build:
     name: Build ${{ matrix.slug }}
@@ -123,6 +124,8 @@ jobs:
     needs: build
     if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -168,6 +171,9 @@ jobs:
     needs: [build, github-release]
     if: ${{ always() && (needs.github-release.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.npm_only)) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:

@@ -44,6 +44,14 @@ impl WatchlistMatcher {
     }
 
     pub fn matches<'a>(&'a self, line: &'a str) -> impl Iterator<Item = &'a WatchlistItem> {
+        self.matches_spanned(line).map(|(item, _)| item)
+    }
+
+    /// First occurrence per needle, with its byte range in the haystack.
+    pub fn matches_spanned<'a>(
+        &'a self,
+        line: &'a str,
+    ) -> impl Iterator<Item = (&'a WatchlistItem, std::ops::Range<usize>)> {
         let mut seen = HashSet::new();
         self.matcher
             .as_ref()
@@ -51,7 +59,8 @@ impl WatchlistMatcher {
             .flat_map(move |matcher| matcher.find_overlapping_iter(line))
             .filter_map(move |found| {
                 let index = found.pattern().as_usize();
-                seen.insert(index).then(|| &self.items[index])
+                seen.insert(index)
+                    .then(|| (&self.items[index], found.start()..found.end()))
             })
     }
 }
@@ -67,7 +76,10 @@ fn expand_path(
     cwd: &Path,
     env: &HashMap<String, String>,
 ) -> std::result::Result<PathBuf, String> {
-    let variable = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}").expect("static regex");
+    static VARIABLE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+    let variable = VARIABLE.get_or_init(|| {
+        regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}").expect("static regex")
+    });
     let mut missing = Vec::new();
     let expanded = variable.replace_all(template, |captures: &regex::Captures<'_>| {
         let name = &captures[1];

@@ -79,9 +79,15 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
         ));
     }
     if config.structural.private_ip {
+        // Real octets only (0-255, zero padding allowed) so version strings like
+        // 10.999.0.1 stay quiet while inventory-style 192.168.001.100 still hits.
+        const OCTET: &str = r"(?:25[0-5]|2[0-4]\d|[01]?\d?\d)";
+        let private_ip = format!(
+            r"\b(?:10\.{OCTET}\.{OCTET}\.{OCTET}|172\.(?:1[6-9]|2\d|3[01])\.{OCTET}\.{OCTET}|192\.168\.{OCTET}\.{OCTET})\b"
+        );
         patterns.push(pattern(
             "Private IPv4 (RFC1918)",
-            r"\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b",
+            &private_ip,
             "Generalize or remove the internal IP address",
             None,
         ));
@@ -115,6 +121,25 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn private_ip_requires_valid_octets() {
+        let config = Config::default();
+        let patterns = build(&config).unwrap();
+        let ip = patterns
+            .iter()
+            .find(|pattern| pattern.name.contains("RFC1918"))
+            .unwrap();
+        assert!(ip.regex.is_match("10.255.0.1"));
+        assert!(ip.regex.is_match("192.168.50.9"));
+        assert!(ip.regex.is_match("172.31.0.254"));
+        // Zero-padded octets appear in real inventories and exports.
+        assert!(ip.regex.is_match("192.168.001.100"));
+        assert!(ip.regex.is_match("10.01.2.3"));
+        assert!(!ip.regex.is_match("10.256.0.1"));
+        assert!(!ip.regex.is_match("192.168.300.1"));
+        assert!(!ip.regex.is_match("172.32.0.1"));
+    }
 
     #[test]
     fn email_allow_supports_exact_and_subdomains() {

@@ -271,6 +271,18 @@ pub fn load(cwd: &Path, requested_path: Option<&Path>) -> Result<LoadedConfig> {
             warnings: Vec::new(),
         });
     }
+    // Hard ceiling checked before the config is read, so `maxFileSize` cannot
+    // be the thing that protects loading the file that defines it.
+    const CONFIG_MAX_BYTES: u64 = 1 << 20;
+    let meta =
+        fs::metadata(&path).with_context(|| format!("failed to stat config {}", path.display()))?;
+    if meta.len() > CONFIG_MAX_BYTES {
+        bail!(
+            "config {} is {} bytes (limit is {CONFIG_MAX_BYTES}); refuse to load unbounded config",
+            path.display(),
+            meta.len()
+        );
+    }
     let text = fs::read_to_string(&path)
         .with_context(|| format!("failed to read config {}", path.display()))?;
     let config: Config = serde_json::from_str(&text)

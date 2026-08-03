@@ -12,6 +12,10 @@ jobs:
   quality:
     name: Rust quality
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # audit-check reports through the Checks API on push events.
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.85.0
@@ -22,6 +26,10 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Cargo audit (RustSec advisories)
+        uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   test:
     name: Test (${{ matrix.os }})
@@ -51,8 +59,8 @@ jobs:
           node-version: "20"
       - name: Build release binary
         run: cargo build --release --locked
-      - name: Scan repository (structural patterns only)
-        run: ./target/release/doxguard scan --all-tracked --block
+      - name: Scan repository (structural patterns only, strict)
+        run: ./target/release/doxguard scan --all-tracked --block --strict
       - name: Check npm launcher syntax
         run: node --check bin/doxguard.js
       - name: Verify npm package file list

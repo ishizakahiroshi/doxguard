@@ -143,6 +143,35 @@ fn inline_directive_supports_scoped_bare_and_legacy_forms() {
         "private@sample.test",
         &config
     ));
+    // hyphenated tokens are valid allow scopes
+    assert!(allowed_by_directive(
+        "Anne-Marie // doxguard: allow Anne-Marie",
+        "Anne-Marie",
+        &config
+    ));
+    // the HTML comment closer must not leak into the token
+    assert!(allowed_by_directive(
+        "Contoso-Labs <!-- doxguard: allow Contoso-Labs -->",
+        "Contoso-Labs",
+        &config
+    ));
+    assert!(allowed_by_directive(
+        "Contoso-Labs <!-- doxguard: allow Contoso-Labs-->",
+        "Contoso-Labs",
+        &config
+    ));
+    // a leading-hyphen token never matches an unrelated hit
+    assert!(!allowed_by_directive(
+        "some.watched.name # doxguard: allow -legacy",
+        "some.watched.name",
+        &config
+    ));
+    // bare allow written inside an HTML comment stays the bare form
+    assert!(allowed_by_directive(
+        "192.168.50.9 <!-- doxguard: allow -->",
+        "192.168.50.9",
+        &config
+    ));
     // short tokens must not suppress (min length 4)
     assert!(!allowed_by_directive(
         "192.168.50.9 # doxguard: allow 168",
@@ -249,6 +278,113 @@ fn ascii_case_insensitive_watchlist_matches_lower_haystack() {
     )]);
     let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
     assert!(matcher.matches("contoso works").next().is_some());
+}
+
+#[test]
+fn oversized_config_is_refused_before_parse() {
+    let temp = tempdir().unwrap();
+    let path = temp.path().join("doxguard.config.json");
+    fs::write(&path, "x".repeat((1 << 20) + 1)).unwrap();
+    let error = doxguard::config::load(temp.path(), Some(&path)).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("refuse to load unbounded config"),
+        "unexpected error: {error:#}"
+    );
+}
+
+#[test]
+fn oversize_staged_blob_is_coverage_skipped() {
+    use std::process::Command;
+
+    let temp = tempdir().unwrap();
+    let git = |args: &[&str]| {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(temp.path())
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    };
+    git(&["init", "-q"]);
+    git(&["config", "user.email", "fixture@example.com"]);
+    git(&["config", "user.name", "fixture"]);
+    fs::write(
+        temp.path().join("big.txt"),
+        format!("192.168.50.9\n{}", "x".repeat(64)),
+    )
+    .unwrap();
+    git(&["add", "big.txt"]);
+
+    let config = Config {
+        max_file_size: 16,
+        ..Default::default()
+    };
+    let matcher = watchlist::WatchlistMatcher::new(Vec::new()).unwrap();
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::Staged,
+        vec!["big.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    assert_eq!(result.coverage_skips, 1);
+    assert!(
+        result
+            .warnings
+            .iter()
+            .any(|w| w.contains("skipped big.txt") && w.contains("oversize staged blob"))
+    );
+    assert!(result.hits.is_empty());
+}
+
+#[test]
+fn case_insensitive_hits_report_original_line_casing() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("names.txt"), "Contoso Works\n").unwrap();
+    fs::write(temp.path().join("fixture.txt"), "brand=CONTOSO WORKS\n").unwrap();
+    let mut config = Config {
+        noise: doxguard::config::NoiseConfig {
+            ascii_case_insensitive: true,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    config.watchlists.push(WatchlistSource::Lines {
+        path: "${FIXTURE_ROOT}/names.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["fixture.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    let hit = result
+        .hits
+        .iter()
+        .find(|hit| hit.kind == HitKind::Watchlist)
+        .expect("expected a watchlist hit");
+    assert_eq!(hit.matched, "CONTOSO WORKS");
 }
 
 #[test]

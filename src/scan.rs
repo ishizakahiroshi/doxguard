@@ -11,11 +11,7 @@ use rayon::prelude::*;
 use regex::Regex;
 use serde::Serialize;
 
-use crate::{
-    config::Config,
-    patterns::StructuralPattern,
-    watchlist::{WatchlistItem, WatchlistMatcher},
-};
+use crate::{config::Config, patterns::StructuralPattern, watchlist::WatchlistMatcher};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -92,18 +88,43 @@ const SKIP_FILENAMES: &[&str] = &[
     "Pipfile.lock",
 ];
 
-fn run_command(program: &str, args: &[&str], cwd: &Path) -> Result<String> {
-    let output = Command::new(program)
-        .args(args)
-        .current_dir(cwd)
+/// Resolve a tool strictly from PATH directories, never the cwd, so a malicious
+/// repository cannot plant `.\git.exe` (Windows CreateProcess searches cwd first).
+fn cached_program(
+    name: &'static str,
+    cache: &'static OnceLock<Option<PathBuf>>,
+) -> Result<&'static Path> {
+    cache
+        .get_or_init(|| which::which_global(name).ok())
+        .as_deref()
+        .ok_or_else(|| anyhow!("could not find `{name}` on PATH"))
+}
+
+pub(crate) fn git_program() -> Result<&'static Path> {
+    static GIT: OnceLock<Option<PathBuf>> = OnceLock::new();
+    cached_program("git", &GIT)
+}
+
+fn npm_program() -> Result<&'static Path> {
+    static NPM: OnceLock<Option<PathBuf>> = OnceLock::new();
+    cached_program("npm", &NPM)
+}
+
+fn run_command(program: &Path, args: &[&str], cwd: &Path, strip_env: &[&str]) -> Result<String> {
+    let mut command = Command::new(program);
+    command.args(args).current_dir(cwd);
+    for variable in strip_env {
+        command.env_remove(variable);
+    }
+    let output = command
         .output()
-        .with_context(|| format!("failed to start {program}"))?;
+        .with_context(|| format!("failed to start {}", program.display()))?;
     if !output.status.success() {
         let message = String::from_utf8_lossy(&output.stderr).trim().to_owned();
         bail!(
             "{}",
             if message.is_empty() {
-                format!("{program} {} failed", args.join(" "))
+                format!("{} {} failed", program.display(), args.join(" "))
             } else {
                 message
             }
@@ -117,7 +138,7 @@ fn run_git(args: &[&str], cwd: &Path) -> Result<String> {
     full.push("-c");
     full.push("core.quotepath=false");
     full.extend_from_slice(args);
-    run_command("git", &full, cwd)
+    run_command(git_program()?, &full, cwd, &[])
 }
 
 fn lines(output: String) -> Vec<String> {
@@ -130,11 +151,14 @@ fn lines(output: String) -> Vec<String> {
 }
 
 fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
-    let npm = if cfg!(windows) { "npm.cmd" } else { "npm" };
+    // `--ignore-scripts` keeps the manifest under scan from running lifecycle
+    // scripts; stripping publish credentials guards the same boundary in case a
+    // future npm version runs anything anyway.
     let output = run_command(
-        npm,
+        npm_program()?,
         &["pack", "--dry-run", "--json", "--ignore-scripts"],
         cwd,
+        &["NPM_TOKEN", "NODE_AUTH_TOKEN"],
     )?;
     let packages: serde_json::Value =
         serde_json::from_str(&output).context("could not parse npm pack file list")?;
@@ -179,7 +203,9 @@ pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
 fn directive_regex() -> &'static Regex {
     static DIRECTIVE: OnceLock<Regex> = OnceLock::new();
     DIRECTIVE.get_or_init(|| {
-        Regex::new(r"(?i)(?:doxguard|secrets-scan):\s*allow\b(?:\s+([^\s\->]+))?")
+        // Tokens may contain `-` (Anne-Marie); the `-->` comment closer is cut
+        // off below because the regex crate has no lookahead to stop on it.
+        Regex::new(r"(?i)(?:doxguard|secrets-scan):\s*allow\b(?:\s+([^\s>]+))?")
             .expect("static directive regex")
     })
 }
@@ -190,7 +216,16 @@ pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool 
             // Bare `doxguard: allow` — optional hard-off for CI / --strict.
             return !config.allow.disallow_bare_allow;
         };
-        let target = target.as_str().to_ascii_lowercase();
+        let mut token = target.as_str();
+        // `allow token-->` captures `token--`; drop the HTML comment closer.
+        if line[target.end()..].starts_with('>') {
+            token = token.strip_suffix("--").unwrap_or(token);
+        }
+        if token.is_empty() {
+            // `<!-- doxguard: allow -->` is the bare form, not a token.
+            return !config.allow.disallow_bare_allow;
+        }
+        let target = token.to_ascii_lowercase();
         // Short tokens (e.g. "168", ".") over-suppress structural hits.
         if target.chars().count() < 4 {
             return false;
@@ -290,9 +325,15 @@ fn read_scan_content(
     if mode == ScanMode::Staged {
         // Index blob, not worktree — pre-commit must gate what will be committed.
         let spec = format!(":{path}");
+        let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
+        // Ask for the blob size first so an oversize blob is never loaded.
+        if let Ok(size) = run_git(&["cat-file", "-s", &spec], cwd) {
+            if size.trim().parse::<u64>().is_ok_and(|size| size > limit) {
+                return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
+            }
+        }
         match run_git(&["show", &spec], cwd) {
             Ok(content) => {
-                let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
                 if content.len() as u64 > limit {
                     return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
                 }
@@ -326,13 +367,15 @@ fn watchlist_hits(
         line.to_owned()
     };
     matcher
-        .matches(&haystack)
-        .filter(|item| !allowed_by_directive(line, &item.needle, config))
-        .map(|WatchlistItem { needle, source }| ScanHit {
+        .matches_spanned(&haystack)
+        .filter(|(item, _)| !allowed_by_directive(line, &item.needle, config))
+        .map(|(item, span)| ScanHit {
             file: path.to_owned(),
             line_number,
-            matched: needle.clone(),
-            source: source.clone(),
+            // Slice the original line so the report keeps its casing even when
+            // the haystack was lowercased (ASCII lowering preserves offsets).
+            matched: line[span].to_owned(),
+            source: item.source.clone(),
             kind: HitKind::Watchlist,
             suggestion: "Generalize or remove the watchlist-derived value".to_owned(),
         })
@@ -464,8 +507,4 @@ pub fn scan_paths(
         hits,
         warnings,
     })
-}
-
-pub fn resolve_paths(cwd: &Path, paths: &[String]) -> Vec<PathBuf> {
-    paths.iter().map(|path| cwd.join(path)).collect()
 }
