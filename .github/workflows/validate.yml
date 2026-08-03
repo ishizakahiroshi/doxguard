@@ -13,10 +13,6 @@ jobs:
   quality:
     name: Rust quality
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      # audit-check reports through the Checks API on push events.
-      checks: write
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.85.0
@@ -27,10 +23,14 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --all-targets --locked -- -D warnings
-      - name: Cargo audit (RustSec advisories)
-        uses: rustsec/audit-check@v2
+      # Prebuilt binary: independent of the pinned MSRV toolchain (building
+      # latest cargo-audit from source requires a newer rustc than 1.85).
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tool: cargo-audit
+      - name: Cargo audit (RustSec advisories)
+        run: cargo audit
 
   test:
     name: Test (${{ matrix.os }})
