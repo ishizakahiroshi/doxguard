@@ -88,6 +88,12 @@ fn mode(args: &ScanArgs) -> ScanMode {
 
 fn text_report(result: &ScanResult) -> String {
     if result.hits.is_empty() {
+        if result.coverage_skips > 0 {
+            return format!(
+                "INCOMPLETE: doxguard skipped {} file(s) that could not be scanned (scanned {} of {} files).\n",
+                result.coverage_skips, result.scanned, result.total_files
+            );
+        }
         return format!(
             "OK: doxguard passed (scanned {} files; {} needles + {} structural patterns)\n",
             result.scanned, result.watchlist_needles, result.structural_patterns
@@ -156,7 +162,7 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
         OutputFormat::Json => println!("{}", serde_json::to_string_pretty(&result)?),
         OutputFormat::Text => {
             let report = text_report(&result);
-            if result.hits.is_empty() {
+            if result.hits.is_empty() && result.coverage_skips == 0 {
                 print!("{report}");
                 io::stdout().flush()?;
             } else {

@@ -39,6 +39,33 @@ fn init_repo(cwd: &Path) {
     git(cwd, &["config", "user.email", "fixture@example.com"]);
 }
 
+fn assert_actions_are_commit_pinned(workflow: &str) {
+    let mut count = 0;
+    for line in workflow.lines() {
+        let trimmed = line.trim();
+        let Some(spec) = trimmed
+            .strip_prefix("- uses: ")
+            .or_else(|| trimmed.strip_prefix("uses: "))
+        else {
+            continue;
+        };
+        let spec = spec.split('#').next().unwrap().trim();
+        if spec.starts_with("./") {
+            continue;
+        }
+        count += 1;
+        let revision = spec
+            .rsplit_once('@')
+            .unwrap_or_else(|| panic!("action reference has no revision: {spec}"))
+            .1;
+        assert!(
+            revision.len() == 40 && revision.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "action must use a full commit SHA: {spec}"
+        );
+    }
+    assert!(count > 0, "expected at least one remote action reference");
+}
+
 #[test]
 fn init_scaffolds_and_reruns_idempotently() {
     let temp = tempdir().unwrap();
@@ -50,6 +77,9 @@ fn init_scaffolds_and_reruns_idempotently() {
     assert!(temp.path().join(".githooks/pre-commit").exists());
     assert!(temp.path().join(".github/workflows/doxguard.yml").exists());
     assert!(temp.path().join(".git/doxguard/hooks/pre-commit").exists());
+    assert_actions_are_commit_pinned(
+        &fs::read_to_string(temp.path().join(".github/workflows/doxguard.yml")).unwrap(),
+    );
     let hooks_path = Command::new("git")
         .args(["config", "--get", "core.hooksPath"])
         .current_dir(temp.path())
@@ -197,6 +227,102 @@ fn strict_blocks_on_coverage_skips_end_to_end() {
         "strict must fail closed on coverage skips; stderr: {}",
         String::from_utf8_lossy(&strict.stderr)
     );
+    assert!(!String::from_utf8_lossy(&strict.stdout).contains("OK:"));
+    assert!(String::from_utf8_lossy(&strict.stderr).contains("INCOMPLETE:"));
+}
+
+#[test]
+fn staged_scan_includes_type_changes() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::write(temp.path().join("fixture.txt"), "safe\n").unwrap();
+    git(temp.path(), &["add", "fixture.txt"]);
+    git(temp.path(), &["commit", "-q", "-m", "base"]);
+
+    let blob_source = temp.path().join("link-blob.txt");
+    fs::write(&blob_source, "192.168.50.9\n").unwrap();
+    let hash = Command::new("git")
+        .args(["hash-object", "-w", "link-blob.txt"])
+        .current_dir(temp.path())
+        .output()
+        .unwrap();
+    assert!(hash.status.success());
+    let hash = String::from_utf8(hash.stdout).unwrap();
+    let cache_info = format!("120000,{},fixture.txt", hash.trim());
+    git(temp.path(), &["update-index", "--cacheinfo", &cache_info]);
+
+    let blocked = run(binary(), temp.path(), &["scan", "--staged", "--block"]);
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "type-change blob must be scanned; stderr: {}",
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    assert!(String::from_utf8_lossy(&blocked.stderr).contains("RFC1918"));
+}
+
+#[test]
+fn staged_scan_preserves_leading_whitespace_in_filename() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let filename = " leading-space.txt";
+    fs::write(temp.path().join(filename), "server=192.168.50.9\n").unwrap();
+    git(temp.path(), &["add", filename]);
+
+    let blocked = run(binary(), temp.path(), &["scan", "--staged", "--block"]);
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "leading whitespace must remain part of the Git path; stderr: {}",
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    assert!(String::from_utf8_lossy(&blocked.stderr).contains("RFC1918"));
+}
+
+#[test]
+fn generated_hook_is_scanned_instead_of_implicitly_exempted() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let initialized = run(binary(), temp.path(), &["init"]);
+    assert!(initialized.status.success());
+
+    let hook_path = temp.path().join(".githooks/pre-commit");
+    let mut hook = fs::read_to_string(&hook_path).unwrap();
+    hook.push_str("# synthetic=192.168.50.9\n");
+    fs::write(&hook_path, hook).unwrap();
+    git(temp.path(), &["add", ".githooks/pre-commit"]);
+
+    let blocked = run(
+        binary(),
+        temp.path(),
+        &["scan", "--staged", "--block", "--strict"],
+    );
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "generated hook must not be a built-in exemption; stderr: {}",
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    assert!(String::from_utf8_lossy(&blocked.stderr).contains("RFC1918"));
+}
+
+#[cfg(unix)]
+#[test]
+fn staged_scan_handles_newline_in_git_filename() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let filename = "line\nbreak.txt";
+    fs::write(temp.path().join(filename), "server=192.168.50.9\n").unwrap();
+    git(temp.path(), &["add", filename]);
+
+    let blocked = run(binary(), temp.path(), &["scan", "--staged", "--block"]);
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "newline filename must remain one Git path; stderr: {}",
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    assert!(String::from_utf8_lossy(&blocked.stderr).contains("RFC1918"));
 }
 
 #[test]
@@ -261,7 +387,7 @@ fn cwd_planted_git_is_not_executed() {
 }
 
 #[test]
-fn hook_script_quotes_paths_with_shell_metacharacters() {
+fn generated_hook_is_portable_and_contains_no_repository_absolute_path() {
     let temp = tempdir().unwrap();
     // `"` is not a legal NTFS filename character, so it is exercised on Unix only.
     let name = if cfg!(windows) {
@@ -280,14 +406,9 @@ fn hook_script_quotes_paths_with_shell_metacharacters() {
         String::from_utf8_lossy(&output.stderr)
     );
     let script = fs::read_to_string(evil.join(".githooks/pre-commit")).unwrap();
-    let assignment = script
-        .lines()
-        .find(|line| line.starts_with("native_abs="))
-        .expect("hook must assign native_abs");
-    assert!(
-        assignment.starts_with("native_abs='") && assignment.ends_with('\''),
-        "native_abs must be single-quoted: {assignment}"
-    );
+    assert!(!script.contains("native_abs="));
+    assert!(!script.contains(evil.to_string_lossy().as_ref()));
+    assert!(script.contains("$git_dir/doxguard/hooks/pre-commit"));
 
     #[cfg(unix)]
     {
@@ -318,6 +439,47 @@ fn hook_script_quotes_paths_with_shell_metacharacters() {
             );
         }
     }
+}
+
+#[cfg(unix)]
+#[test]
+fn init_refuses_to_scaffold_through_parent_symlink() {
+    use std::os::unix::fs::symlink;
+
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    init_repo(temp.path());
+    symlink(outside.path(), temp.path().join(".github")).unwrap();
+
+    let output = run(binary(), temp.path(), &["init"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!outside.path().join("workflows/doxguard.yml").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn init_skips_dangling_leaf_symlink_without_creating_its_target() {
+    use std::os::unix::fs::symlink;
+
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::create_dir_all(temp.path().join(".github/workflows")).unwrap();
+    let external_target = outside.path().join("doxguard.yml");
+    symlink(
+        &external_target,
+        temp.path().join(".github/workflows/doxguard.yml"),
+    )
+    .unwrap();
+
+    let output = run(binary(), temp.path(), &["init"]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!external_target.exists());
+    assert!(String::from_utf8_lossy(&output.stdout).contains("SKIPPED"));
 }
 
 #[test]

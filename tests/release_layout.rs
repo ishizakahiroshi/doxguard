@@ -1,5 +1,33 @@
 use std::{fs, path::Path};
 
+fn assert_actions_are_commit_pinned(workflow: &str, path: &Path) -> usize {
+    let mut count = 0;
+    for line in workflow.lines() {
+        let trimmed = line.trim();
+        let Some(spec) = trimmed
+            .strip_prefix("- uses: ")
+            .or_else(|| trimmed.strip_prefix("uses: "))
+        else {
+            continue;
+        };
+        let spec = spec.split('#').next().unwrap().trim();
+        if spec.starts_with("./") {
+            continue;
+        }
+        count += 1;
+        let revision = spec
+            .rsplit_once('@')
+            .unwrap_or_else(|| panic!("{}: action has no revision: {spec}", path.display()))
+            .1;
+        assert!(
+            revision.len() == 40 && revision.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "{}: action must use a full commit SHA: {spec}",
+            path.display()
+        );
+    }
+    count
+}
+
 #[test]
 fn npm_platform_packages_match_root_optional_dependencies() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -8,13 +36,43 @@ fn npm_platform_packages_match_root_optional_dependencies() {
     let version = root_package["version"].as_str().unwrap();
     let optional = root_package["optionalDependencies"].as_object().unwrap();
 
-    for slug in [
-        "win32-x64",
-        "win32-arm64",
-        "linux-x64",
-        "linux-arm64",
-        "darwin-x64",
-        "darwin-arm64",
+    for (slug, expected_name, expected_os, expected_cpu) in [
+        (
+            "win32-x64",
+            "@ishizakahiroshi/doxguard-win32-x64",
+            "win32",
+            "x64",
+        ),
+        (
+            "win32-arm64",
+            "@ishizakahiroshi/doxguard-win32-arm64",
+            "win32",
+            "arm64",
+        ),
+        (
+            "linux-x64",
+            "@ishizakahiroshi/doxguard-linux-x64",
+            "linux",
+            "x64",
+        ),
+        (
+            "linux-arm64",
+            "@ishizakahiroshi/doxguard-linux-arm64",
+            "linux",
+            "arm64",
+        ),
+        (
+            "darwin-x64",
+            "@ishizakahiroshi/doxguard-darwin-x64",
+            "darwin",
+            "x64",
+        ),
+        (
+            "darwin-arm64",
+            "@ishizakahiroshi/doxguard-darwin-arm64",
+            "darwin",
+            "arm64",
+        ),
     ] {
         let package: serde_json::Value = serde_json::from_str(
             &fs::read_to_string(root.join("npm/platforms").join(slug).join("package.json"))
@@ -22,32 +80,24 @@ fn npm_platform_packages_match_root_optional_dependencies() {
         )
         .unwrap();
         let name = package["name"].as_str().unwrap();
+        assert_eq!(name, expected_name, "{slug}");
         assert_eq!(package["version"], version);
         assert_eq!(
             optional.get(name).and_then(|value| value.as_str()),
             Some(version)
         );
-        assert!(
-            package["os"]
-                .as_array()
-                .is_some_and(|values| values.len() == 1)
-        );
-        assert!(
-            package["cpu"]
-                .as_array()
-                .is_some_and(|values| values.len() == 1)
-        );
+        assert_eq!(package["os"], serde_json::json!([expected_os]), "{slug}");
+        assert_eq!(package["cpu"], serde_json::json!([expected_cpu]), "{slug}");
         let expected_bin = if slug.starts_with("win32") {
             "bin/doxguard.exe"
         } else {
             "bin/doxguard"
         };
         assert_eq!(package["bin"]["doxguard"], expected_bin, "{slug}");
-        assert!(
-            package["files"]
-                .as_array()
-                .is_some_and(|files| files.iter().any(|file| file == expected_bin)),
-            "{slug} files must ship {expected_bin}"
+        assert_eq!(
+            package["files"],
+            serde_json::json!([expected_bin, "README.md", "LICENSE"]),
+            "{slug} files must be strictly allowlisted"
         );
     }
 }
@@ -90,5 +140,35 @@ fn npm_root_package_is_strictly_allowlisted() {
     assert_eq!(
         package["files"],
         serde_json::json!(["bin/doxguard.js", "README.md", "LICENSE"])
+    );
+}
+
+#[test]
+fn tracked_github_actions_are_commit_pinned() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let workflows = root.join(".github/workflows");
+    let mut action_count = 0;
+    for entry in fs::read_dir(&workflows).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().and_then(|value| value.to_str()) != Some("yml") {
+            continue;
+        }
+        let workflow = fs::read_to_string(&path).unwrap();
+        action_count += assert_actions_are_commit_pinned(&workflow, &path);
+    }
+    assert!(
+        action_count > 0,
+        "expected at least one remote action reference"
+    );
+}
+
+#[test]
+fn manual_full_release_binds_the_input_tag_to_the_dispatch_commit() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let release = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();
+    assert!(release.contains("fetch-depth: 0"));
+    assert!(
+        release.contains(r#"test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$GITHUB_SHA""#),
+        "manual full release must refuse a tag that does not resolve to the dispatch commit"
     );
 }

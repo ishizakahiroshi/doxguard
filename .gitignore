@@ -76,3 +76,9 @@ coverage/
 target/
 npm/platforms/*/bin/
 *.tgz
+# === obsidian-link: managed ===
+/docs/obsidian/
+# === /obsidian-link: managed ===
+
+# === ai-audit-prompts: local audit evidence ===
+/docs/ai-audit-prompts/

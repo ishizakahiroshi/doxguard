@@ -199,6 +199,11 @@ fn inline_directive_supports_scoped_bare_and_legacy_forms() {
 #[test]
 fn path_exempt_uses_boundaries_not_raw_substring() {
     use doxguard::scan::path_is_exempt;
+    assert_eq!(
+        Config::default().all_exempt_paths().count(),
+        0,
+        "consumer repositories must not inherit quiet-skip paths"
+    );
     assert!(path_is_exempt("tests/fixture.txt", "tests/"));
     assert!(!path_is_exempt("mytests/fixture.txt", "tests/"));
     assert!(path_is_exempt(
@@ -281,6 +286,37 @@ fn ascii_case_insensitive_watchlist_matches_lower_haystack() {
 }
 
 #[test]
+fn missing_env_is_soft_but_resolved_missing_watchlist_fails_closed() {
+    let temp = tempdir().unwrap();
+    let mut config = Config::default();
+    config.watchlists.push(WatchlistSource::Lines {
+        path: "${FIXTURE_ROOT}/missing.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+
+    let missing_env = watchlist::load(&config, temp.path(), &HashMap::new()).unwrap();
+    assert!(missing_env.matcher.is_empty());
+    assert!(
+        missing_env
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("FIXTURE_ROOT not set"))
+    );
+
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let error = watchlist::load(&config, temp.path(), &env).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("resolved successfully but was not found"),
+        "unexpected error: {error:#}"
+    );
+}
+
+#[test]
 fn oversized_config_is_refused_before_parse() {
     let temp = tempdir().unwrap();
     let path = temp.path().join("doxguard.config.json");
@@ -338,6 +374,9 @@ fn oversize_staged_blob_is_coverage_skipped() {
     )
     .unwrap();
     assert_eq!(result.coverage_skips, 1);
+    assert_eq!(result.scanned, 0);
+    assert_eq!(result.exempt_or_skipped, 1);
+    assert_eq!(result.total_files, 1);
     assert!(
         result
             .warnings
@@ -409,6 +448,9 @@ fn oversize_file_emits_coverage_skip_warning() {
     )
     .unwrap();
     assert_eq!(result.coverage_skips, 1);
+    assert_eq!(result.scanned, 0);
+    assert_eq!(result.exempt_or_skipped, 1);
+    assert_eq!(result.total_files, 1);
     assert!(
         result
             .warnings

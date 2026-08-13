@@ -223,11 +223,10 @@ pub fn load(
             }
         };
         if !path.exists() {
-            warnings.push(format!(
-                "WARN: watchlist not found; skipped {}",
+            bail!(
+                "watchlist {} resolved successfully but was not found; check the configured environment variable or path",
                 source.path()
-            ));
-            continue;
+            );
         }
         let meta = fs::metadata(&path)
             .with_context(|| format!("failed to stat watchlist {}", source.path()))?;
@@ -239,8 +238,9 @@ pub fn load(
                 config.max_file_size
             );
         }
-        // Missing env / missing path stay soft-skip (CI structural-only). Once a path
-        // exists, read/parse failures must fail closed so protection cannot shrink silently.
+        // An unset environment variable stays a soft skip for structural-only CI.
+        // Once a source resolves, missing/read/parse failures fail closed so protection
+        // cannot shrink silently.
         let values = read_values(source, &path)
             .with_context(|| format!("failed to read watchlist {}", source.path()))?;
         let paren_variants = matches!(

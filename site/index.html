@@ -1200,10 +1200,7 @@ doxguard scan --all-tracked --dry-run</pre><button class="copy" data-copy="priva
           <div class="terminal-head"><i></i><i></i><i></i></div>
           <div class="terminal-body" id="terminal-output"><span class="dim">$ git commit -m "docs: update guide"</span>
 
-<span class="pass">PASS</span> doxguard scanned staged files
-  files: 4
-  needles: 82
-  findings: 0
+<span class="pass">OK:</span> doxguard passed (scanned 4 files; 82 needles + 4 structural patterns)
 
 [main 4a15b2c] docs: update guide</div>
         </div>
@@ -1322,8 +1319,8 @@ doxguard scan --all-tracked --dry-run</pre><button class="copy" data-copy="priva
     };
 
     const terminalResults = {
-      pass: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="pass">PASS</span> doxguard scanned staged files\n  files: 4\n  needles: 82\n  findings: 0\n\n[main 4a15b2c] docs: update guide',
-      block: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="fail">BLOCK</span> doxguard found 1 match\n  docs/guide.md:42:17\n  kind: private names\n  match: Northwind Harbor\n  suggestion: replace with a generic example\n\ncommit stopped (exit 1)'
+      pass: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="pass">OK:</span> doxguard passed (scanned 4 files; 82 needles + 4 structural patterns)\n\n[main 4a15b2c] docs: update guide',
+      block: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="fail">BLOCKED:</span> doxguard detected 1 match(es).\n\ndocs/guide.md:42\n  matched: "Northwind Harbor"\n  source:  private names\n  suggest: Generalize or remove the watchlist-derived value\n\ncommit stopped (exit 1)'
     };
 
     function wireTabs(selector, targetId, values, attribute) {

@@ -141,11 +141,10 @@ fn run_git(args: &[&str], cwd: &Path) -> Result<String> {
     run_command(git_program()?, &full, cwd, &[])
 }
 
-fn lines(output: String) -> Vec<String> {
+fn nul_paths(output: String) -> Vec<String> {
     output
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
+        .split_terminator('\0')
+        .filter(|path| !path.is_empty())
         .map(str::to_owned)
         .collect()
 }
@@ -187,15 +186,21 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
 
 pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
     match mode {
-        ScanMode::Staged => Ok(lines(run_git(
-            &["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        ScanMode::Staged => Ok(nul_paths(run_git(
+            &[
+                "diff",
+                "--cached",
+                "--name-only",
+                "-z",
+                "--diff-filter=ACMRT",
+            ],
             cwd,
         )?)),
-        ScanMode::Diff => Ok(lines(run_git(
-            &["diff", "--name-only", "--diff-filter=ACMR", "HEAD"],
+        ScanMode::Diff => Ok(nul_paths(run_git(
+            &["diff", "--name-only", "-z", "--diff-filter=ACMRT", "HEAD"],
             cwd,
         )?)),
-        ScanMode::AllTracked => Ok(lines(run_git(&["ls-files"], cwd)?)),
+        ScanMode::AllTracked => Ok(nul_paths(run_git(&["ls-files", "-z"], cwd)?)),
         ScanMode::Packaged => packaged_files(cwd),
     }
 }
@@ -471,7 +476,6 @@ pub fn scan_paths(
             }
         }
     }
-    let scanned = files.len();
     let outcomes: Result<Vec<FileScanOutcome>> = if files.len() <= 4 {
         files
             .iter()
@@ -484,10 +488,13 @@ pub fn scan_paths(
             .collect()
     };
     let mut hits = Vec::new();
+    let mut scanned = 0usize;
     for (path, outcome) in files.iter().zip(outcomes?) {
         if let Some(reason) = outcome.coverage_skip {
             coverage_skips += 1;
             warnings.push(format!("WARN: skipped {path} ({reason})"));
+        } else {
+            scanned += 1;
         }
         hits.extend(outcome.hits);
     }
@@ -507,4 +514,17 @@ pub fn scan_paths(
         hits,
         warnings,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::nul_paths;
+
+    #[test]
+    fn nul_paths_preserves_whitespace_and_newlines() {
+        assert_eq!(
+            nul_paths(" leading.txt\0trailing.txt \0line\nbreak.txt\0".to_owned()),
+            [" leading.txt", "trailing.txt ", "line\nbreak.txt"]
+        );
+    }
 }

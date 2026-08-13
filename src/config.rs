@@ -9,18 +9,6 @@ use serde::Deserialize;
 
 pub const CONFIG_FILENAME: &str = "doxguard.config.json";
 
-const DEFAULT_EXEMPT_PATHS: &[&str] = &[
-    CONFIG_FILENAME,
-    "src/patterns.rs",
-    "tests/",
-    ".githooks/pre-commit",
-    ".husky/pre-commit",
-    ".github/workflows/doxguard",
-    ".github/workflows/validate",
-    ".github/workflows/release",
-    "docs/local/",
-];
-
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
 pub enum WatchlistSource {
@@ -180,10 +168,7 @@ impl Config {
     }
 
     pub fn all_exempt_paths(&self) -> impl Iterator<Item = &str> {
-        DEFAULT_EXEMPT_PATHS
-            .iter()
-            .copied()
-            .chain(self.exempt_paths.iter().map(String::as_str))
+        self.exempt_paths.iter().map(String::as_str)
     }
 
     pub fn validate(&self) -> Result<()> {
