@@ -86,8 +86,12 @@ jobs:
         with:
           node-version: "20"
       - name: Scan tracked files (structural patterns only, strict)
-        run: npx --yes doxguard@0.1.0 scan --all-tracked --block --strict
+        run: npx --yes doxguard@__DOXGUARD_VERSION__ scan --all-tracked --block --strict
 "#;
+
+fn ci_template() -> String {
+    CI_TEMPLATE.replace("__DOXGUARD_VERSION__", env!("CARGO_PKG_VERSION"))
+}
 
 fn skipped_existing(path: &str) -> ScaffoldAction {
     ScaffoldAction {
@@ -111,6 +115,25 @@ fn is_link_like(metadata: &fs::Metadata) -> bool {
     {
         false
     }
+}
+
+fn write_created_content(
+    mut writer: impl Write,
+    target: &Path,
+    display_path: &str,
+    content: &str,
+) -> Result<()> {
+    if let Err(write_error) = writer.write_all(content.as_bytes()) {
+        drop(writer);
+        if let Err(cleanup_error) = fs::remove_file(target) {
+            bail!(
+                "failed to write scaffold file {display_path}: {write_error}; additionally failed to remove the incomplete file: {cleanup_error}"
+            );
+        }
+        return Err(write_error)
+            .with_context(|| format!("failed to write scaffold file {display_path}"));
+    }
+    Ok(())
 }
 
 fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<ScaffoldAction> {
@@ -188,7 +211,7 @@ fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<Sca
             .file_name()
             .expect("validated scaffold path has a final component"),
     );
-    let mut file = match OpenOptions::new()
+    let file = match OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(&target)
@@ -201,8 +224,7 @@ fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<Sca
             return Err(error).with_context(|| format!("failed to create scaffold file {path}"));
         }
     };
-    file.write_all(content.as_bytes())
-        .with_context(|| format!("failed to write scaffold file {path}"))?;
+    write_created_content(file, &target, path, content)?;
     Ok(ScaffoldAction {
         path: path.to_owned(),
         status: ActionStatus::Created,
@@ -259,8 +281,19 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
     let hook_dir = git_dir.join("doxguard").join("hooks");
     fs::create_dir_all(&hook_dir)?;
     let cached_hook = hook_dir.join("pre-commit");
-    fs::copy(std::env::current_exe()?, &cached_hook)
-        .context("failed to cache the native doxguard binary")?;
+    let current_exe = std::env::current_exe()?;
+    let same_file = if cached_hook.exists() {
+        match (current_exe.canonicalize(), cached_hook.canonicalize()) {
+            (Ok(source), Ok(destination)) => source == destination,
+            _ => false,
+        }
+    } else {
+        false
+    };
+    if !same_file {
+        fs::copy(&current_exe, &cached_hook)
+            .context("failed to cache the native doxguard binary")?;
+    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -338,10 +371,63 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
 }
 
 pub fn initialize(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
+    let ci_template = ci_template();
     let mut actions = vec![
         create_without_overwrite(cwd, "doxguard.config.json", CONFIG_TEMPLATE)?,
-        create_without_overwrite(cwd, ".github/workflows/doxguard.yml", CI_TEMPLATE)?,
+        create_without_overwrite(cwd, ".github/workflows/doxguard.yml", &ci_template)?,
     ];
     actions.extend(install_hooks(cwd)?);
     Ok(actions)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    struct FailingWriter;
+
+    impl Write for FailingWriter {
+        fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
+            Err(io::Error::other("synthetic write failure"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn failed_scaffold_write_removes_incomplete_file() {
+        let temp = tempdir().unwrap();
+        let target = temp.path().join("incomplete.txt");
+        fs::write(&target, "").unwrap();
+
+        let error =
+            write_created_content(FailingWriter, &target, "incomplete.txt", "content").unwrap_err();
+
+        assert!(error.to_string().contains("failed to write scaffold file"));
+        assert!(!target.exists());
+    }
+
+    #[test]
+    fn generated_templates_follow_package_version_and_config_defaults() {
+        let workflow = ci_template();
+        assert!(workflow.contains(&format!("doxguard@{} ", env!("CARGO_PKG_VERSION"))));
+        assert!(!workflow.contains("__DOXGUARD_VERSION__"));
+
+        let config: crate::config::Config = serde_json::from_str(CONFIG_TEMPLATE).unwrap();
+        config.validate().unwrap();
+        assert_eq!(
+            config.max_file_size,
+            crate::config::Config::default().max_file_size
+        );
+        assert_eq!(
+            config.fail_on_skip,
+            crate::config::Config::default().fail_on_skip
+        );
+    }
 }

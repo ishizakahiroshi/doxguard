@@ -149,6 +149,16 @@ fn inline_directive_supports_scoped_bare_and_legacy_forms() {
         "Anne-Marie",
         &config
     ));
+    assert!(allowed_by_directive(
+        "Northwind Harbor // doxguard: allow Northwind,",
+        "Northwind Harbor",
+        &config
+    ));
+    assert!(allowed_by_directive(
+        "Northwind Harbor // doxguard: allow Northwind。",
+        "Northwind Harbor",
+        &config
+    ));
     // the HTML comment closer must not leak into the token
     assert!(allowed_by_directive(
         "Contoso-Labs <!-- doxguard: allow Contoso-Labs -->",
@@ -205,13 +215,47 @@ fn path_exempt_uses_boundaries_not_raw_substring() {
         "consumer repositories must not inherit quiet-skip paths"
     );
     assert!(path_is_exempt("tests/fixture.txt", "tests/"));
+    assert!(!path_is_exempt("tests/fixture.txt", "tests"));
+    assert!(path_is_exempt("tests", "tests"));
     assert!(!path_is_exempt("mytests/fixture.txt", "tests/"));
-    assert!(path_is_exempt(
+    assert!(!path_is_exempt(
         ".github/workflows/doxguard.yml",
         ".github/workflows/doxguard"
     ));
+    assert!(path_is_exempt(
+        ".github/workflows/doxguard.yml",
+        ".github/workflows/"
+    ));
+    assert!(!path_is_exempt("src/tests/fixture.txt", "tests/"));
     assert!(!path_is_exempt("src/main.rs", ""));
     assert!(!path_is_exempt("any/path", ""));
+}
+
+#[test]
+fn metadata_errors_are_coverage_skips_but_missing_files_are_quiet() {
+    let config = Config::default();
+    let matcher = watchlist::WatchlistMatcher::new(Vec::new()).unwrap();
+    let patterns = patterns::build(&config).unwrap();
+    let temp = tempdir().unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["missing.txt".to_owned(), "invalid\0path.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+
+    assert_eq!(result.coverage_skips, 1);
+    assert_eq!(result.scanned, 0);
+    assert!(
+        result
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("unscannable metadata"))
+    );
 }
 
 #[test]
@@ -308,6 +352,7 @@ fn missing_env_is_soft_but_resolved_missing_watchlist_fails_closed() {
         temp.path().to_string_lossy().into_owned(),
     )]);
     let error = watchlist::load(&config, temp.path(), &env).unwrap_err();
+    assert!(!error.to_string().contains("missing.txt"));
     assert!(
         error
             .to_string()
@@ -458,4 +503,92 @@ fn oversize_file_emits_coverage_skip_warning() {
             .any(|w| w.contains("skipped big.txt") && w.contains("oversize"))
     );
     assert!(result.hits.is_empty());
+}
+
+#[test]
+fn bom_is_removed_from_lines_values_and_csv_headers() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("lines.txt"), "\u{feff}SyntheticBomLine\n").unwrap();
+    fs::write(
+        temp.path().join("values.csv"),
+        "\u{feff}name,kind\nSyntheticBomCsv,fixture\n",
+    )
+    .unwrap();
+    let config = Config {
+        watchlists: vec![
+            WatchlistSource::Lines {
+                path: "${FIXTURE_ROOT}/lines.txt".to_owned(),
+                label: Some("synthetic lines".to_owned()),
+            },
+            WatchlistSource::Csv {
+                path: "${FIXTURE_ROOT}/values.csv".to_owned(),
+                column: ColumnSpec::Name("name".to_owned()),
+                label: Some("synthetic csv".to_owned()),
+                paren_variants: false,
+            },
+        ],
+        ..Default::default()
+    };
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+
+    assert!(matcher.matches("SyntheticBomLine").next().is_some());
+    assert!(matcher.matches("SyntheticBomCsv").next().is_some());
+}
+
+#[test]
+fn watchlist_has_a_hard_size_ceiling_independent_of_config() {
+    let temp = tempdir().unwrap();
+    let path = temp.path().join("oversized.txt");
+    let file = fs::File::create(&path).unwrap();
+    file.set_len((64 * 1024 * 1024) + 1).unwrap();
+    let mut config = Config {
+        max_file_size: 128 * 1024 * 1024,
+        ..Default::default()
+    };
+    config.watchlists.push(WatchlistSource::Lines {
+        path: "${FIXTURE_ROOT}/oversized.txt".to_owned(),
+        label: Some("synthetic oversized".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+
+    let error = watchlist::load(&config, temp.path(), &env).unwrap_err();
+
+    assert!(error.to_string().contains("effective limit is 67108864"));
+}
+
+#[test]
+fn config_rejects_unknown_watchlist_fields_and_unsafe_exempt_paths() {
+    let typo =
+        r#"{"watchlists":[{"type":"lines","path":"${FIXTURE_ROOT}/names.txt","lable":"typo"}]}"#;
+    assert!(serde_json::from_str::<Config>(typo).is_err());
+
+    for invalid in [
+        "../private",
+        "/private",
+        "C:/private",
+        "./generated",
+        "generated//nested",
+    ] {
+        let config = Config {
+            exempt_paths: vec![invalid.to_owned()],
+            ..Default::default()
+        };
+        assert!(config.validate().is_err(), "must reject {invalid:?}");
+    }
+
+    for valid in ["generated", "generated/", "docs/generated.txt"] {
+        let config = Config {
+            exempt_paths: vec![valid.to_owned()],
+            ..Default::default()
+        };
+        config.validate().unwrap();
+    }
 }

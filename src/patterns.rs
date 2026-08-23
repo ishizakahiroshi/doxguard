@@ -1,7 +1,7 @@
-use anyhow::{Context, Result};
-use regex::{Regex, RegexBuilder};
+use anyhow::Result;
+use regex::Regex;
 
-use crate::config::Config;
+use crate::config::{Config, compile_custom_regex};
 
 #[derive(Debug, Clone)]
 enum AllowRule {
@@ -103,11 +103,7 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
     for custom in &config.structural.custom {
         patterns.push(StructuralPattern {
             name: custom.name.clone(),
-            regex: RegexBuilder::new(&custom.regex)
-                .size_limit(1 << 20)
-                .dfa_size_limit(1 << 20)
-                .build()
-                .with_context(|| format!("invalid custom regex `{}`", custom.name))?,
+            regex: compile_custom_regex(custom)?,
             suggestion: custom
                 .suggestion
                 .clone()

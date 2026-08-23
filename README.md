@@ -92,18 +92,25 @@ doxguard scan --all-tracked --dry-run
 doxguard scan --packaged --block
 doxguard scan --all-tracked --format json
 doxguard scan --all-tracked --block --strict
+doxguard scan --all-tracked --show-matched # explicitly reveal matched values
 ```
 
 Exactly one mode is required:
 
 - `--staged`: added, copied, renamed, or modified files in the git index (reads index blobs, not the worktree)
-- `--diff`: working-tree changes compared with `HEAD`
+- `--diff`: tracked working-tree changes compared with `HEAD`; untracked files are not included
 - `--all-tracked`: all files returned by `git ls-files`
 - `--packaged`: files returned by `npm pack --dry-run --json`
 
 `--strict` (or config `allow.disallowBareAllow` + `failOnSkip`) turns on a harder gate: bare
 `doxguard: allow` is ignored, and unscanned coverage skips (oversize / non-UTF-8 / symlink) fail
-when combined with `--block`. Prefer `--strict` in CI.
+when combined with `--block`. Native pre-commit hooks and generated CI use `--strict`. For the
+content that will enter a commit, use `--staged`; `--diff` intentionally does not add untracked files.
+
+Matched values are `[REDACTED]` in text and JSON by default so a detected private value is not
+copied into terminal or CI logs. `--show-matched` reveals it explicitly; use that option only in a
+trusted local terminal. A clean text report is written to stdout. Match/incomplete details and
+warnings are written to stderr; JSON reports are written to stdout and also carry their warnings.
 
 Exit codes are stable: `0` means pass/report-only, `1` means a `--block` scan found matches (or
 coverage skips under strict/`failOnSkip`), and `2` means usage or configuration error.
@@ -111,6 +118,10 @@ coverage skips under strict/`failOnSkip`), and `2` means usage or configuration 
 ## Configuration
 
 `doxguard.config.json` supports line lists and CSV columns. Numeric CSV columns are 1-based.
+For Git scan modes, an implicit config and repository-relative scan paths are resolved from the Git
+worktree root even when doxguard is launched in a subdirectory. A relative `--config` or
+`DOXGUARD_CONFIG` value remains relative to the directory where the command was invoked, as do
+relative watchlist paths in that explicitly selected config.
 
 ```json
 {
@@ -160,7 +171,12 @@ coverage skips under strict/`failOnSkip`), and `2` means usage or configuration 
 
 Watchlist paths should use `${ENV_VAR}` expansion. Literal paths work but produce a warning so a
 private path is not accidentally committed. `DOXGUARD_CONFIG` can point to an entirely local config
-when even the source layout should stay out of the repository.
+when even the source layout should stay out of the repository. UTF-8 BOMs are accepted in line files
+and the first CSV header. A watchlist is limited to the smaller of `maxFileSize` and 64 MiB.
+
+Each `exemptPaths` entry is a repository-relative exact file or directory subtree. For example,
+`generated/` exempts `generated/report.txt`, while `src/generated/report.txt` and
+`generated.json` remain scanned. Absolute paths and `.` / `..` path components are rejected.
 
 Built-in structural checks detect:
 
@@ -179,6 +195,9 @@ fixture=192.168.50.9 # doxguard: allow 192.168.50.9
 ```
 
 `doxguard: allow WORD` exempts matching values containing `WORD` (WORD must be at least 4 characters).
+Common sentence-ending punctuation after `WORD` is ignored; path, email, and hyphen characters are
+not stripped. A scoped allow is a reviewer-visible trust annotation, not an authorization boundary:
+any contributor who can edit scanned content can also add one.
 Bare `doxguard: allow` (no token) exempts all matches on that line unless `allow.disallowBareAllow`
 or `--strict` is enabled. The former `secrets-scan: allow` spelling remains compatible for migration.
 
@@ -197,6 +216,7 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 
 - Watchlist contents are read locally and never sent anywhere.
 - Repository config contains environment-variable references, not private absolute paths.
+- CLI output masks matched values and does not echo resolved watchlist paths by default.
 - CI normally runs structural patterns only because private watchlists are unavailable there.
 - Scan commands are read-only: they report and return an exit code, but never edit or delete files.
 - Binary, lock, oversized, and explicitly exempt files are skipped.

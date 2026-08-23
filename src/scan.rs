@@ -63,7 +63,7 @@ pub struct ScanResult {
 enum Eligibility {
     Scan,
     QuietSkip,
-    CoverageSkip,
+    CoverageSkip(&'static str),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -139,6 +139,17 @@ fn run_git(args: &[&str], cwd: &Path) -> Result<String> {
     full.push("core.quotepath=false");
     full.extend_from_slice(args);
     run_command(git_program()?, &full, cwd, &[])
+}
+
+/// Resolve the worktree root once so Git enumeration and file reads use the
+/// same repository-relative coordinate system even when invoked below it.
+pub fn repository_root(cwd: &Path) -> Result<PathBuf> {
+    let output = run_git(&["rev-parse", "--show-toplevel"], cwd)?;
+    let root = output.trim_end_matches(['\r', '\n']);
+    if root.is_empty() {
+        bail!("git rev-parse returned an empty repository root");
+    }
+    Ok(PathBuf::from(root))
 }
 
 fn nul_paths(output: String) -> Vec<String> {
@@ -230,6 +241,13 @@ pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool 
             // `<!-- doxguard: allow -->` is the bare form, not a token.
             return !config.allow.disallow_bare_allow;
         }
+        token = token.trim_end_matches([
+            ',', '.', ';', ':', '!', '?', '、', '。', '；', '：', '！', '？',
+        ]);
+        if token.is_empty() {
+            // An explicit punctuation-only token must never become a bare allow.
+            return false;
+        }
         let target = token.to_ascii_lowercase();
         // Short tokens (e.g. "168", ".") over-suppress structural hits.
         if target.chars().count() < 4 {
@@ -250,10 +268,21 @@ fn normalize_path(path: &str) -> String {
 pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
     let path = normalize_path(path);
     let exempt = normalize_path(exempt.trim());
-    if exempt.is_empty() || exempt == "." || exempt == "/" {
+    let is_directory = exempt.ends_with('/');
+    let drive_absolute = exempt
+        .as_bytes()
+        .get(1)
+        .is_some_and(|separator| *separator == b':');
+    if exempt.is_empty()
+        || exempt.starts_with('/')
+        || drive_absolute
+        || exempt
+            .trim_end_matches('/')
+            .split('/')
+            .any(|component| component.is_empty() || component == "." || component == "..")
+    {
         return false;
     }
-    let dir_style = exempt.ends_with('/');
     let exempt = exempt.trim_end_matches('/');
     if exempt.is_empty() {
         return false;
@@ -261,19 +290,10 @@ pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
     if path == exempt {
         return true;
     }
-    if path.starts_with(&format!("{exempt}/")) {
+    if is_directory && path.starts_with(&format!("{exempt}/")) {
         return true;
     }
-    if dir_style {
-        return false;
-    }
-    // Prefix with boundary: next char is end, '/', or '.' (workflow stem → .yml).
-    if let Some(rest) = path.strip_prefix(exempt) {
-        if rest.is_empty() || rest.starts_with('/') || rest.starts_with('.') {
-            return true;
-        }
-    }
-    path.ends_with(&format!("/{exempt}")) || path.contains(&format!("/{exempt}/"))
+    false
 }
 
 fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eligibility {
@@ -305,16 +325,19 @@ fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eli
     let joined = cwd.join(path);
     let metadata = match fs::symlink_metadata(&joined) {
         Ok(metadata) => metadata,
-        Err(_) => return Eligibility::QuietSkip,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Eligibility::QuietSkip;
+        }
+        Err(_) => return Eligibility::CoverageSkip("unscannable metadata"),
     };
     if metadata.file_type().is_symlink() {
-        return Eligibility::CoverageSkip;
+        return Eligibility::CoverageSkip("symlink");
     }
     if !metadata.is_file() {
         return Eligibility::QuietSkip;
     }
     if metadata.len() > config.max_file_size {
-        return Eligibility::CoverageSkip;
+        return Eligibility::CoverageSkip("oversize");
     }
     Eligibility::Scan
 }
@@ -329,7 +352,7 @@ fn read_scan_content(
 ) -> Result<ContentLoad> {
     if mode == ScanMode::Staged {
         // Index blob, not worktree — pre-commit must gate what will be committed.
-        let spec = format!(":{path}");
+        let spec = format!(":0:{path}");
         let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
         // Ask for the blob size first so an oversize blob is never loaded.
         if let Ok(size) = run_git(&["cat-file", "-s", &spec], cwd) {
@@ -456,22 +479,8 @@ pub fn scan_paths(
         match classify_path(&path, cwd, config, mode) {
             Eligibility::Scan => files.push(path),
             Eligibility::QuietSkip => {}
-            Eligibility::CoverageSkip => {
+            Eligibility::CoverageSkip(reason) => {
                 coverage_skips += 1;
-                let reason = {
-                    let joined = cwd.join(&path);
-                    if let Ok(meta) = fs::symlink_metadata(&joined) {
-                        if meta.file_type().is_symlink() {
-                            "symlink"
-                        } else if meta.len() > config.max_file_size {
-                            "oversize"
-                        } else {
-                            "unscannable"
-                        }
-                    } else {
-                        "unscannable"
-                    }
-                };
                 warnings.push(format!("WARN: skipped {path} ({reason})"));
             }
         }

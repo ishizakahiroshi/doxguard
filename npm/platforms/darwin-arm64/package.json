@@ -8,6 +8,5 @@
   "author": "Hiroshi Ishizaka (ishizakahiroshi)",
   "os": ["darwin"],
   "cpu": ["arm64"],
-  "bin": { "doxguard": "bin/doxguard" },
   "files": ["bin/doxguard", "README.md", "LICENSE"]
 }

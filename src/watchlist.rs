@@ -9,6 +9,8 @@ use anyhow::{Context, Result, anyhow, bail};
 
 use crate::config::{ColumnSpec, Config, WatchlistSource};
 
+const WATCHLIST_MAX_BYTES: u64 = 64 * 1024 * 1024;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WatchlistItem {
     pub needle: String,
@@ -75,6 +77,7 @@ fn expand_path(
     template: &str,
     cwd: &Path,
     env: &HashMap<String, String>,
+    source_number: usize,
 ) -> std::result::Result<PathBuf, String> {
     static VARIABLE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
     let variable = VARIABLE.get_or_init(|| {
@@ -95,8 +98,8 @@ fn expand_path(
         missing.sort();
         missing.dedup();
         return Err(format!(
-            "WARN: {} not set; skipped watchlist {template}",
-            missing.join(", ")
+            "WARN: {} not set; skipped watchlist source #{source_number}",
+            missing.join(", "),
         ));
     }
     let path = PathBuf::from(expanded.as_ref());
@@ -152,19 +155,32 @@ fn expand_variants(value: &str, paren_variants: bool) -> Vec<String> {
 
 fn read_values(source: &WatchlistSource, path: &Path) -> Result<Vec<String>> {
     match source {
-        WatchlistSource::Lines { .. } => Ok(fs::read_to_string(path)?
-            .lines()
-            .map(str::trim)
-            .filter(|line| !line.is_empty() && !line.starts_with('#'))
-            .map(str::to_owned)
-            .collect()),
+        WatchlistSource::Lines { .. } => {
+            let text = fs::read_to_string(path)?;
+            Ok(text
+                .strip_prefix('\u{feff}')
+                .unwrap_or(&text)
+                .lines()
+                .map(str::trim)
+                .filter(|line| !line.is_empty() && !line.starts_with('#'))
+                .map(str::to_owned)
+                .collect())
+        }
         WatchlistSource::Csv { column, .. } => {
             let mut reader = csv::Reader::from_path(path)?;
             let headers = reader.headers()?.clone();
             let index = match column {
                 ColumnSpec::Name(name) => headers
                     .iter()
-                    .position(|header| header == name)
+                    .enumerate()
+                    .position(|(index, header)| {
+                        let header = if index == 0 {
+                            header.strip_prefix('\u{feff}').unwrap_or(header)
+                        } else {
+                            header
+                        };
+                        header == name
+                    })
                     .ok_or_else(|| anyhow!("column `{name}` not found"))?,
                 ColumnSpec::Index(index) => {
                     let zero_based = index - 1;
@@ -214,8 +230,9 @@ pub fn load(
     };
     let allowed: HashSet<&str> = allowed_owned.iter().map(String::as_str).collect();
 
-    for source in &config.watchlists {
-        let path = match expand_path(source.path(), cwd, env) {
+    for (source_index, source) in config.watchlists.iter().enumerate() {
+        let source_number = source_index + 1;
+        let path = match expand_path(source.path(), cwd, env, source_number) {
             Ok(path) => path,
             Err(warning) => {
                 warnings.push(warning);
@@ -224,25 +241,23 @@ pub fn load(
         };
         if !path.exists() {
             bail!(
-                "watchlist {} resolved successfully but was not found; check the configured environment variable or path",
-                source.path()
+                "watchlist source #{source_number} resolved successfully but was not found; check the configured environment variable or path"
             );
         }
         let meta = fs::metadata(&path)
-            .with_context(|| format!("failed to stat watchlist {}", source.path()))?;
-        if meta.len() > config.max_file_size {
+            .with_context(|| format!("failed to stat watchlist source #{source_number}"))?;
+        let limit = config.max_file_size.min(WATCHLIST_MAX_BYTES);
+        if meta.len() > limit {
             bail!(
-                "watchlist {} is {} bytes (maxFileSize is {}); refuse to load unbounded lists",
-                source.path(),
+                "watchlist source #{source_number} is {} bytes (effective limit is {limit}); refuse to load unbounded lists",
                 meta.len(),
-                config.max_file_size
             );
         }
         // An unset environment variable stays a soft skip for structural-only CI.
         // Once a source resolves, missing/read/parse failures fail closed so protection
         // cannot shrink silently.
         let values = read_values(source, &path)
-            .with_context(|| format!("failed to read watchlist {}", source.path()))?;
+            .with_context(|| format!("failed to read watchlist source #{source_number}"))?;
         let paren_variants = matches!(
             source,
             WatchlistSource::Csv {
@@ -265,7 +280,7 @@ pub fn load(
                 }
                 items.push(WatchlistItem {
                     needle,
-                    source: source.label(),
+                    source: source.display_label(source_index),
                 });
             }
         }

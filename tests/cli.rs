@@ -80,6 +80,11 @@ fn init_scaffolds_and_reruns_idempotently() {
     assert_actions_are_commit_pinned(
         &fs::read_to_string(temp.path().join(".github/workflows/doxguard.yml")).unwrap(),
     );
+    assert!(
+        fs::read_to_string(temp.path().join(".github/workflows/doxguard.yml"))
+            .unwrap()
+            .contains(&format!("doxguard@{} ", env!("CARGO_PKG_VERSION")))
+    );
     let hooks_path = Command::new("git")
         .args(["config", "--get", "core.hooksPath"])
         .current_dir(temp.path())
@@ -198,6 +203,26 @@ fn install_hooks_preserves_existing_hooks_path() {
 }
 
 #[test]
+fn cached_hook_can_reinstall_without_copying_over_itself() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let installed = run(binary(), temp.path(), &["install-hooks"]);
+    assert!(installed.status.success());
+    let cached = temp.path().join(".git/doxguard/hooks/pre-commit");
+    let before = fs::metadata(&cached).unwrap().len();
+    assert!(before > 0);
+
+    let reinstalled = run(&cached, temp.path(), &["install-hooks"]);
+
+    assert!(
+        reinstalled.status.success(),
+        "cached binary must not copy over itself; stderr: {}",
+        String::from_utf8_lossy(&reinstalled.stderr)
+    );
+    assert_eq!(fs::metadata(&cached).unwrap().len(), before);
+}
+
+#[test]
 fn strict_blocks_on_coverage_skips_end_to_end() {
     let temp = tempdir().unwrap();
     init_repo(temp.path());
@@ -229,6 +254,226 @@ fn strict_blocks_on_coverage_skips_end_to_end() {
     );
     assert!(!String::from_utf8_lossy(&strict.stdout).contains("OK:"));
     assert!(String::from_utf8_lossy(&strict.stderr).contains("INCOMPLETE:"));
+}
+
+#[test]
+fn nested_invocation_uses_repository_root_for_config_and_tracked_files() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::create_dir(temp.path().join("nested")).unwrap();
+    fs::write(temp.path().join("names.txt"), "SyntheticIdentityNeedle\n").unwrap();
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"watchlists":[{"type":"lines","path":"names.txt","label":"synthetic fixture"}]}"#,
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("sibling.txt"),
+        "owner=SyntheticIdentityNeedle\n",
+    )
+    .unwrap();
+    git(temp.path(), &["add", "."]);
+
+    let blocked = run(
+        binary(),
+        &temp.path().join("nested"),
+        &["scan", "--all-tracked", "--block"],
+    );
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "nested invocation must load the root config and scan sibling files; stderr: {}",
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    assert!(String::from_utf8_lossy(&blocked.stderr).contains("sibling.txt"));
+}
+
+#[test]
+fn nested_explicit_config_keeps_relative_watchlists_at_invocation_directory() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let nested = temp.path().join("nested");
+    fs::create_dir(&nested).unwrap();
+    fs::write(nested.join("names.txt"), "SyntheticExplicitNeedle\n").unwrap();
+    fs::write(
+        nested.join("local.json"),
+        r#"{"watchlists":[{"type":"lines","path":"names.txt","label":"synthetic explicit"}]}"#,
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("sibling.txt"),
+        "owner=SyntheticExplicitNeedle\n",
+    )
+    .unwrap();
+    git(temp.path(), &["add", "sibling.txt"]);
+
+    let blocked = run(
+        binary(),
+        &nested,
+        &["scan", "--all-tracked", "--block", "--config", "local.json"],
+    );
+
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "explicit config and its relative watchlist must retain invocation-cwd semantics; stderr: {}",
+        String::from_utf8_lossy(&blocked.stderr)
+    );
+    assert!(String::from_utf8_lossy(&blocked.stderr).contains("sibling.txt"));
+}
+
+#[test]
+fn cli_masks_watchlist_values_and_paths_unless_explicitly_requested() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::create_dir(temp.path().join("private-fixture")).unwrap();
+    fs::write(
+        temp.path().join("private-fixture/watchlist.txt"),
+        "SyntheticIdentityNeedle\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"watchlists":[{"type":"lines","path":"private-fixture/watchlist.txt"}]}"#,
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("target.txt"),
+        "owner=SyntheticIdentityNeedle\n",
+    )
+    .unwrap();
+    git(temp.path(), &["add", "doxguard.config.json", "target.txt"]);
+
+    let text = run(binary(), temp.path(), &["scan", "--all-tracked", "--block"]);
+    let text_stderr = String::from_utf8_lossy(&text.stderr);
+    assert_eq!(text.status.code(), Some(1), "stderr: {text_stderr}");
+    assert!(text_stderr.contains("[REDACTED]"));
+    assert!(text_stderr.contains("watchlist source #1"));
+    assert!(!text_stderr.contains("SyntheticIdentityNeedle"));
+    assert!(!text_stderr.contains("private-fixture/watchlist.txt"));
+
+    let json = run(
+        binary(),
+        temp.path(),
+        &["scan", "--all-tracked", "--block", "--format", "json"],
+    );
+    let value: serde_json::Value = serde_json::from_slice(&json.stdout).unwrap();
+    assert_eq!(value["hits"][0]["matched"], "[REDACTED]");
+    assert!(!String::from_utf8_lossy(&json.stdout).contains("SyntheticIdentityNeedle"));
+    assert!(!String::from_utf8_lossy(&json.stderr).contains("private-fixture/watchlist.txt"));
+
+    let explicit = run(
+        binary(),
+        temp.path(),
+        &["scan", "--all-tracked", "--block", "--show-matched"],
+    );
+    assert!(String::from_utf8_lossy(&explicit.stderr).contains("SyntheticIdentityNeedle"));
+
+    let explicit_json = run(
+        binary(),
+        temp.path(),
+        &[
+            "scan",
+            "--all-tracked",
+            "--block",
+            "--show-matched",
+            "--format",
+            "json",
+        ],
+    );
+    let value: serde_json::Value = serde_json::from_slice(&explicit_json.stdout).unwrap();
+    assert_eq!(value["hits"][0]["matched"], "SyntheticIdentityNeedle");
+}
+
+#[test]
+fn cli_escapes_terminal_and_bidi_controls_in_labels() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::write(
+        temp.path().join("watchlist.txt"),
+        "SyntheticControlNeedle\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"watchlists":[{"type":"lines","path":"watchlist.txt","label":"fixture\u001b[31m\u202e"}]}"#,
+    )
+    .unwrap();
+    fs::write(temp.path().join("target.txt"), "SyntheticControlNeedle\n").unwrap();
+    git(temp.path(), &["add", "doxguard.config.json", "target.txt"]);
+
+    let output = run(binary(), temp.path(), &["scan", "--all-tracked", "--block"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(!output.stderr.contains(&0x1b));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stderr.contains('\u{202e}'));
+    assert!(stderr.contains(r"\u{1b}"), "stderr: {stderr}");
+    assert!(stderr.contains(r"\u{202e}"), "stderr: {stderr}");
+
+    let json = run(
+        binary(),
+        temp.path(),
+        &["scan", "--all-tracked", "--block", "--format", "json"],
+    );
+    assert!(!json.stdout.contains(&0x1b));
+    let value: serde_json::Value = serde_json::from_slice(&json.stdout).unwrap();
+    let source = value["hits"][0]["source"].as_str().unwrap();
+    assert!(!source.contains('\u{202e}'));
+    assert!(source.contains(r"\u{1b}"));
+    assert!(source.contains(r"\u{202e}"));
+}
+
+#[test]
+fn native_hook_enables_strict_coverage_gate() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let initialized = run(binary(), temp.path(), &["init"]);
+    assert!(initialized.status.success());
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        "{\"maxFileSize\":16}\n",
+    )
+    .unwrap();
+    fs::write(temp.path().join("big.txt"), "x".repeat(64)).unwrap();
+    git(temp.path(), &["add", "big.txt"]);
+
+    let commit = Command::new("git")
+        .args(["commit", "-m", "synthetic oversized fixture"])
+        .current_dir(temp.path())
+        .env_remove("DOXGUARD_CONFIG")
+        .output()
+        .unwrap();
+    assert_eq!(
+        commit.status.code(),
+        Some(1),
+        "native hook must fail closed on coverage skips; stderr: {}",
+        String::from_utf8_lossy(&commit.stderr)
+    );
+    assert!(String::from_utf8_lossy(&commit.stderr).contains("INCOMPLETE:"));
+}
+
+#[test]
+fn native_hook_blocks_non_utf8_staged_content() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let initialized = run(binary(), temp.path(), &["init"]);
+    assert!(initialized.status.success());
+    fs::write(temp.path().join("non-utf8.txt"), vec![b'x', 0x80]).unwrap();
+    git(temp.path(), &["add", "non-utf8.txt"]);
+
+    let commit = Command::new("git")
+        .args(["commit", "-m", "synthetic non-UTF8 fixture"])
+        .current_dir(temp.path())
+        .env_remove("DOXGUARD_CONFIG")
+        .output()
+        .unwrap();
+    assert_eq!(
+        commit.status.code(),
+        Some(1),
+        "native hook must fail closed on non-UTF-8 staged content; stderr: {}",
+        String::from_utf8_lossy(&commit.stderr)
+    );
+    assert!(String::from_utf8_lossy(&commit.stderr).contains("INCOMPLETE:"));
 }
 
 #[test]
@@ -277,6 +522,25 @@ fn staged_scan_preserves_leading_whitespace_in_filename() {
         String::from_utf8_lossy(&blocked.stderr)
     );
     assert!(String::from_utf8_lossy(&blocked.stderr).contains("RFC1918"));
+}
+
+#[cfg(unix)]
+#[test]
+fn staged_scan_uses_explicit_stage_zero_for_colon_prefixed_paths() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    let filename = "1:fixture.txt";
+    fs::write(temp.path().join(filename), "server=192.168.50.9\n").unwrap();
+    git(temp.path(), &["add", filename]);
+
+    let blocked = run(binary(), temp.path(), &["scan", "--staged", "--block"]);
+
+    assert_eq!(
+        blocked.status.code(),
+        Some(1),
+        "stage-zero blob must be read for colon-prefixed paths; stderr: {}",
+        String::from_utf8_lossy(&blocked.stderr)
+    );
 }
 
 #[test]
@@ -382,6 +646,55 @@ fn cwd_planted_git_is_not_executed() {
     assert!(
         output.status.success(),
         "scan must resolve git from PATH, not cwd; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn empty_config_environment_variable_is_treated_as_unset() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::write(temp.path().join("safe.txt"), "safe\n").unwrap();
+    git(temp.path(), &["add", "safe.txt"]);
+
+    let output = Command::new(binary())
+        .args(["scan", "--all-tracked", "--block"])
+        .current_dir(temp.path())
+        .env("DOXGUARD_CONFIG", "")
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "empty config env must not resolve to the repository directory; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn unrelated_non_unicode_environment_value_does_not_panic() {
+    use std::{ffi::OsString, os::unix::ffi::OsStringExt};
+
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::write(temp.path().join("safe.txt"), "safe\n").unwrap();
+    git(temp.path(), &["add", "safe.txt"]);
+
+    let output = Command::new(binary())
+        .args(["scan", "--all-tracked", "--block"])
+        .current_dir(temp.path())
+        .env_remove("DOXGUARD_CONFIG")
+        .env(
+            "SYNTHETIC_NON_UNICODE_ENV",
+            OsString::from_vec(vec![0x66, 0x80]),
+        )
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "unrelated non-Unicode env must be ignored; stderr: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 }

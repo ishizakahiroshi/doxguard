@@ -93,7 +93,10 @@ fn npm_platform_packages_match_root_optional_dependencies() {
         } else {
             "bin/doxguard"
         };
-        assert_eq!(package["bin"]["doxguard"], expected_bin, "{slug}");
+        assert!(
+            package.get("bin").is_none(),
+            "{slug} must not publish a competing doxguard bin"
+        );
         assert_eq!(
             package["files"],
             serde_json::json!([expected_bin, "README.md", "LICENSE"]),
@@ -117,7 +120,14 @@ fn npm_launcher_map_matches_optional_dependencies_and_manifests() {
                 .unwrap(),
         )
         .unwrap();
-        let binary = Path::new(package["bin"]["doxguard"].as_str().unwrap())
+        let binary_path = package["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(serde_json::Value::as_str)
+            .find(|path| path.starts_with("bin/"))
+            .unwrap();
+        let binary = Path::new(binary_path)
             .file_name()
             .unwrap()
             .to_str()
@@ -171,4 +181,31 @@ fn manual_full_release_binds_the_input_tag_to_the_dispatch_commit() {
         release.contains(r#"test "$(git rev-list -n 1 "$RELEASE_TAG")" = "$GITHUB_SHA""#),
         "manual full release must refuse a tag that does not resolve to the dispatch commit"
     );
+}
+
+#[test]
+fn release_requires_main_push_validation_and_serializes_each_tag() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let release = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();
+    assert!(release.contains("group: release-${{"));
+    assert!(release.contains("cancel-in-progress: false"));
+    assert!(
+        release.contains("git merge-base --is-ancestor \"$GITHUB_SHA\" refs/remotes/origin/main")
+    );
+    assert!(release.contains("--branch main --event push"));
+    assert!(release.contains("--commit \"$GITHUB_SHA\""));
+}
+
+#[test]
+fn npm_publish_retry_is_transient_only_and_checks_lost_success() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let release = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();
+    assert!(release.contains("npm view \"$name@$version\" version"));
+    for transient in ["429", "EAI_AGAIN", "ECONNRESET", "ETIMEDOUT", "E50[0234]"] {
+        assert!(
+            release.contains(transient),
+            "missing transient token {transient}"
+        );
+    }
+    assert!(!release.contains("E401|E403"));
 }

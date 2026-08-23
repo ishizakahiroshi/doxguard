@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::{Context, Result, bail};
+use regex::{Regex, RegexBuilder};
 use serde::Deserialize;
 
 pub const CONFIG_FILENAME: &str = "doxguard.config.json";
@@ -36,8 +37,17 @@ impl WatchlistSource {
 
     pub fn label(&self) -> String {
         match self {
-            Self::Lines { path, label } => label.clone().unwrap_or_else(|| format!("lines:{path}")),
-            Self::Csv { path, label, .. } => label.clone().unwrap_or_else(|| format!("csv:{path}")),
+            Self::Lines { label, .. } | Self::Csv { label, .. } => {
+                label.clone().unwrap_or_else(|| "watchlist".to_owned())
+            }
+        }
+    }
+
+    pub fn display_label(&self, index: usize) -> String {
+        match self {
+            Self::Lines { label, .. } | Self::Csv { label, .. } => label
+                .clone()
+                .unwrap_or_else(|| format!("watchlist source #{}", index + 1)),
         }
     }
 }
@@ -56,6 +66,16 @@ pub struct CustomPatternConfig {
     pub regex: String,
     #[serde(default)]
     pub suggestion: Option<String>,
+}
+
+const CUSTOM_REGEX_SIZE_LIMIT: usize = 1 << 20;
+
+pub fn compile_custom_regex(pattern: &CustomPatternConfig) -> Result<Regex> {
+    RegexBuilder::new(&pattern.regex)
+        .size_limit(CUSTOM_REGEX_SIZE_LIMIT)
+        .dfa_size_limit(CUSTOM_REGEX_SIZE_LIMIT)
+        .build()
+        .with_context(|| format!("invalid custom regex `{}`", pattern.name))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -180,8 +200,22 @@ impl Config {
         }
         for exempt in &self.exempt_paths {
             let trimmed = exempt.trim();
-            if trimmed.is_empty() || trimmed == "." || trimmed == "/" {
-                bail!("exemptPaths entries must be non-empty path fragments (got {exempt:?})");
+            let normalized = trimmed.replace('\\', "/");
+            let normalized = normalized.trim_end_matches('/');
+            let drive_absolute = normalized
+                .as_bytes()
+                .get(1)
+                .is_some_and(|separator| *separator == b':');
+            if normalized.is_empty()
+                || normalized.starts_with('/')
+                || drive_absolute
+                || normalized
+                    .split('/')
+                    .any(|component| component.is_empty() || component == "." || component == "..")
+            {
+                bail!(
+                    "exemptPaths entries must be repository-relative files or directories without `.` or `..` components (got {exempt:?})"
+                );
             }
         }
         for domain in &self.allow.email_domains {
@@ -206,11 +240,7 @@ impl Config {
             }
         }
         for custom in &self.structural.custom {
-            regex::RegexBuilder::new(&custom.regex)
-                .size_limit(1 << 20)
-                .dfa_size_limit(1 << 20)
-                .build()
-                .with_context(|| format!("invalid custom regex `{}`", custom.name))?;
+            compile_custom_regex(custom)?;
         }
         Ok(())
     }
@@ -234,7 +264,22 @@ pub struct LoadedConfig {
 }
 
 pub fn load(cwd: &Path, requested_path: Option<&Path>) -> Result<LoadedConfig> {
-    let env_path = std::env::var_os("DOXGUARD_CONFIG").map(PathBuf::from);
+    load_from(cwd, cwd, requested_path)
+}
+
+/// Load an explicitly requested config relative to the invocation directory,
+/// while resolving the implicit repository config from `auto_root`.
+pub fn load_from(
+    invocation_cwd: &Path,
+    auto_root: &Path,
+    requested_path: Option<&Path>,
+) -> Result<LoadedConfig> {
+    if requested_path.is_some_and(|path| path.as_os_str().is_empty()) {
+        bail!("--config path must not be empty");
+    }
+    let env_path = std::env::var_os("DOXGUARD_CONFIG")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from);
     let explicit = requested_path.is_some() || env_path.is_some();
     let requested = requested_path
         .map(PathBuf::from)
@@ -243,7 +288,8 @@ pub fn load(cwd: &Path, requested_path: Option<&Path>) -> Result<LoadedConfig> {
     let path = if requested.is_absolute() {
         requested
     } else {
-        cwd.join(requested)
+        let base = if explicit { invocation_cwd } else { auto_root };
+        base.join(requested)
     };
     if !path.exists() {
         if explicit {
@@ -277,11 +323,12 @@ pub fn load(cwd: &Path, requested_path: Option<&Path>) -> Result<LoadedConfig> {
     let warnings = config
         .watchlists
         .iter()
-        .filter(|source| !source.path().contains("${"))
-        .map(|source| {
+        .enumerate()
+        .filter(|(_, source)| !source.path().contains("${"))
+        .map(|(index, _)| {
             format!(
-                "WARN: watchlist path is literal instead of env-based: {}. Prefer `${{WATCHLIST_ROOT}}/...` so private paths never enter the repository.",
-                source.path()
+                "WARN: watchlist source #{} uses a literal path instead of an environment reference. Prefer `${{WATCHLIST_ROOT}}/...` so private paths never enter the repository.",
+                index + 1
             )
         })
         .collect();
@@ -295,5 +342,7 @@ pub fn load(cwd: &Path, requested_path: Option<&Path>) -> Result<LoadedConfig> {
 }
 
 pub fn process_env() -> HashMap<String, String> {
-    std::env::vars().collect()
+    std::env::vars_os()
+        .filter_map(|(name, value)| Some((name.into_string().ok()?, value.into_string().ok()?)))
+        .collect()
 }

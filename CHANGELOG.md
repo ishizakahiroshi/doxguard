@@ -2,6 +2,42 @@
 
 All notable changes to doxguard are documented here.
 
+## [Unreleased]
+
+### Changed
+
+- Text and JSON scan reports redact matched values by default. `--show-matched` explicitly restores
+  the prior full-value output for trusted local diagnosis.
+- Git scan modes resolve file enumeration and the implicit config from the repository root, including
+  when invoked from a subdirectory.
+- `exemptPaths` now accepts only repository-relative exact files or directory subtrees; absolute and
+  traversal-style entries are rejected.
+- Platform npm packages no longer publish a competing `doxguard` bin; only the root launcher owns it.
+
+### Security
+
+- Terminal-facing paths, labels, warnings, errors, and suggestions escape control and bidirectional
+  formatting characters, and watchlist diagnostics use source numbers instead of resolved paths.
+- Native hooks enable strict coverage gating so unreadable, non-UTF-8, or oversized staged blobs
+  cannot pass silently; strict worktree scans also fail on symlink coverage skips.
+- Release preflight requires the tagged commit to be on `main` and requires a successful `push`-event
+  Validate run on `main` for that exact commit.
+
+### Fixed
+
+- UTF-8 BOMs are removed from the first line-list value and first CSV header.
+- Non-Unicode unrelated environment values no longer panic config expansion, and an empty
+  `DOXGUARD_CONFIG` is treated as unset.
+- Watchlist reads have a 64 MiB hard ceiling independent of repository-configured `maxFileSize`.
+- Scoped inline allows accept common trailing sentence punctuation without turning punctuation-only
+  tokens into bare allows.
+- Staged blobs use an explicit stage-zero Git spec, avoiding ambiguity for colon-prefixed paths.
+- Failed scaffold writes remove only the incomplete file created by that attempt, cached hooks avoid
+  self-copy, and generated CI pins the current package version.
+- Same-tag release runs no longer execute concurrently. npm publish retries only allowlisted transient
+  failures and treats an exact version observed after a lost response as success.
+- The visual guide restores copy-button text after both clipboard success and failure.
+
 ## [0.1.0] - 2026-08-03
 
 ### Added
@@ -36,4 +72,5 @@ All notable changes to doxguard are documented here.
 - Oversize staged blobs are size-checked with `git cat-file -s` before being read.
 - Watchlist hits report the original line casing under ASCII case-insensitive matching.
 
+[Unreleased]: https://github.com/ishizakahiroshi/doxguard/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.1.0

@@ -1320,7 +1320,7 @@ doxguard scan --all-tracked --dry-run</pre><button class="copy" data-copy="priva
 
     const terminalResults = {
       pass: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="pass">OK:</span> doxguard passed (scanned 4 files; 82 needles + 4 structural patterns)\n\n[main 4a15b2c] docs: update guide',
-      block: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="fail">BLOCKED:</span> doxguard detected 1 match(es).\n\ndocs/guide.md:42\n  matched: "Northwind Harbor"\n  source:  private names\n  suggest: Generalize or remove the watchlist-derived value\n\ncommit stopped (exit 1)'
+      block: '<span class="dim">$ git commit -m "docs: update guide"</span>\n\n<span class="fail">BLOCKED:</span> doxguard detected 1 match(es).\n\ndocs/guide.md:42\n  matched: "[REDACTED]"\n  source:  private names\n  suggest: Generalize or remove the watchlist-derived value\n\ncommit stopped (exit 1)'
     };
 
     function wireTabs(selector, targetId, values, attribute) {
@@ -1347,18 +1347,18 @@ doxguard scan --all-tracked --dry-run</pre><button class="copy" data-copy="priva
     document.querySelectorAll('[data-copy]').forEach((button) => {
       button.addEventListener('click', async () => {
         const source = document.getElementById(button.dataset.copy).textContent;
+        const original = button.textContent;
         try {
           await navigator.clipboard.writeText(source);
-          const original = button.textContent;
           button.textContent = 'コピー済み';
           button.classList.add('done');
-          setTimeout(() => {
-            button.textContent = original;
-            button.classList.remove('done');
-          }, 1400);
         } catch (_) {
           button.textContent = '選択してコピー';
         }
+        setTimeout(() => {
+          button.textContent = original;
+          button.classList.remove('done');
+        }, 1400);
       });
     });
   </script>

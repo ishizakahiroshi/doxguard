@@ -72,6 +72,9 @@ struct ScanArgs {
     /// Stricter gate: disallow bare `doxguard: allow`, and fail on coverage skips with `--block`.
     #[arg(long, action = ArgAction::SetTrue)]
     strict: bool,
+    /// Include the detected value in output. This may expose private data in logs.
+    #[arg(long, action = ArgAction::SetTrue)]
+    show_matched: bool,
 }
 
 fn mode(args: &ScanArgs) -> ScanMode {
@@ -86,7 +89,69 @@ fn mode(args: &ScanArgs) -> ScanMode {
     }
 }
 
-fn text_report(result: &ScanResult) -> String {
+const REDACTED_MATCH: &str = "[REDACTED]";
+
+fn is_bidi_control(character: char) -> bool {
+    matches!(
+        character,
+        '\u{061c}'
+            | '\u{200e}'
+            | '\u{200f}'
+            | '\u{202a}'..='\u{202e}'
+            | '\u{2066}'..='\u{2069}'
+    )
+}
+
+fn sanitize_terminal(value: &str) -> String {
+    let mut sanitized = String::with_capacity(value.len());
+    for character in value.chars() {
+        if character.is_control() || is_bidi_control(character) {
+            sanitized.extend(character.escape_default());
+        } else {
+            sanitized.push(character);
+        }
+    }
+    sanitized
+}
+
+fn json_report(result: &ScanResult, show_matched: bool) -> Result<String> {
+    let mut value = serde_json::to_value(result)?;
+    if let Some(hits) = value
+        .get_mut("hits")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for hit in hits {
+            let Some(hit) = hit.as_object_mut() else {
+                continue;
+            };
+            for field in ["file", "source", "suggestion"] {
+                if let Some(serde_json::Value::String(value)) = hit.get_mut(field) {
+                    *value = sanitize_terminal(value);
+                }
+            }
+            if let Some(serde_json::Value::String(value)) = hit.get_mut("matched") {
+                *value = if show_matched {
+                    sanitize_terminal(value)
+                } else {
+                    REDACTED_MATCH.to_owned()
+                };
+            }
+        }
+    }
+    if let Some(warnings) = value
+        .get_mut("warnings")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        for warning in warnings {
+            if let serde_json::Value::String(value) = warning {
+                *value = sanitize_terminal(value);
+            }
+        }
+    }
+    Ok(serde_json::to_string_pretty(&value)?)
+}
+
+fn text_report(result: &ScanResult, show_matched: bool) -> String {
     if result.hits.is_empty() {
         if result.coverage_skips > 0 {
             return format!(
@@ -104,9 +169,18 @@ fn text_report(result: &ScanResult) -> String {
         result.hits.len()
     );
     for hit in &result.hits {
+        let matched = if show_matched {
+            sanitize_terminal(&hit.matched)
+        } else {
+            REDACTED_MATCH.to_owned()
+        };
         output.push_str(&format!(
             "{}:{}\n  matched: {:?}\n  source:  {}\n  suggest: {}\n\n",
-            hit.file, hit.line_number, hit.matched, hit.source, hit.suggestion
+            sanitize_terminal(&hit.file),
+            hit.line_number,
+            matched,
+            sanitize_terminal(&hit.source),
+            sanitize_terminal(&hit.suggestion)
         ));
     }
     output
@@ -124,7 +198,11 @@ fn print_actions(actions: &[ScaffoldAction]) {
             .as_deref()
             .map(|detail| format!(" ({detail})"))
             .unwrap_or_default();
-        println!("{status}: {}{detail}", action.path);
+        println!(
+            "{status}: {}{}",
+            sanitize_terminal(&action.path),
+            sanitize_terminal(&detail)
+        );
     }
 }
 
@@ -137,31 +215,40 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
         anyhow::bail!("scan requires exactly one mode");
     }
     let cwd = std::env::current_dir()?;
-    let mut loaded = config::load(&cwd, args.config.as_deref())?;
+    let scan_mode = mode(args);
+    let scan_root = if scan_mode == ScanMode::Packaged {
+        cwd.clone()
+    } else {
+        scan::repository_root(&cwd)?
+    };
+    let explicit_config = args.config.is_some()
+        || std::env::var_os("DOXGUARD_CONFIG").is_some_and(|value| !value.is_empty());
+    let mut loaded = config::load_from(&cwd, &scan_root, args.config.as_deref())?;
     if args.strict {
         loaded.config.apply_strict();
     }
-    let watchlists = watchlist::load(&loaded.config, &cwd, &process_env())?;
+    let watchlist_root = if explicit_config { &cwd } else { &scan_root };
+    let watchlists = watchlist::load(&loaded.config, watchlist_root, &process_env())?;
     let patterns = patterns::build(&loaded.config)?;
     let mut warnings = loaded.warnings;
     warnings.extend(watchlists.warnings);
-    let paths = scan::files_for_mode(mode(args), &cwd)?;
+    let paths = scan::files_for_mode(scan_mode, &scan_root)?;
     let result = scan::scan_paths(
-        mode(args),
+        scan_mode,
         paths,
-        &cwd,
+        &scan_root,
         &loaded.config,
         &watchlists.matcher,
         &patterns,
         warnings,
     )?;
     for warning in &result.warnings {
-        eprintln!("{warning}");
+        eprintln!("{}", sanitize_terminal(warning));
     }
     match args.format {
-        OutputFormat::Json => println!("{}", serde_json::to_string_pretty(&result)?),
+        OutputFormat::Json => println!("{}", json_report(&result, args.show_matched)?),
         OutputFormat::Text => {
-            let report = text_report(&result);
+            let report = text_report(&result, args.show_matched);
             if result.hits.is_empty() && result.coverage_skips == 0 {
                 print!("{report}");
                 io::stdout().flush()?;
@@ -198,7 +285,7 @@ pub fn run() -> ExitCode {
             .and_then(|path| path.file_stem().map(|stem| stem == "pre-commit"))
             .unwrap_or(false);
     let parsed = if invoked_as_hook {
-        Cli::try_parse_from(["doxguard", "scan", "--staged", "--block"])
+        Cli::try_parse_from(["doxguard", "scan", "--staged", "--block", "--strict"])
     } else {
         Cli::try_parse()
     };
@@ -213,7 +300,7 @@ pub fn run() -> ExitCode {
     match try_run(cli) {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
-            eprintln!("ERROR: {error:#}");
+            eprintln!("ERROR: {}", sanitize_terminal(&format!("{error:#}")));
             ExitCode::from(2)
         }
     }
