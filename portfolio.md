@@ -15,7 +15,7 @@ tech: ["Rust", "npm", "pre-commit", "Aho–Corasick", "CLI"]
 store: null
 live: null
 guide: "https://ishizakahiroshi.github.io/doxguard/"
-featured: false
+featured: true
 features:
   - icon: "⚑"
     title: { ja: "監視語は手元だけ", en: "Watchlist stays local" }
