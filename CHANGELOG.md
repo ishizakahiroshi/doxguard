@@ -4,6 +4,8 @@ All notable changes to doxguard are documented here.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-29
+
 ### Changed
 
 - Text and JSON scan reports redact matched values by default. `--show-matched` explicitly restores
@@ -72,5 +74,6 @@ All notable changes to doxguard are documented here.
 - Oversize staged blobs are size-checked with `git cat-file -s` before being read.
 - Watchlist hits report the original line casing under ASCII case-insensitive matching.
 
-[Unreleased]: https://github.com/ishizakahiroshi/doxguard/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ishizakahiroshi/doxguard/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/ishizakahiroshi/doxguard/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.1.0

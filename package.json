@@ -1,6 +1,6 @@
 {
   "name": "doxguard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Keep personal identity data out of public repositories.",
   "type": "module",
   "bin": {
@@ -15,12 +15,12 @@
     "node": ">=20"
   },
   "optionalDependencies": {
-    "@ishizakahiroshi/doxguard-darwin-arm64": "0.1.0",
-    "@ishizakahiroshi/doxguard-darwin-x64": "0.1.0",
-    "@ishizakahiroshi/doxguard-linux-arm64": "0.1.0",
-    "@ishizakahiroshi/doxguard-linux-x64": "0.1.0",
-    "@ishizakahiroshi/doxguard-win32-arm64": "0.1.0",
-    "@ishizakahiroshi/doxguard-win32-x64": "0.1.0"
+    "@ishizakahiroshi/doxguard-darwin-arm64": "0.1.1",
+    "@ishizakahiroshi/doxguard-darwin-x64": "0.1.1",
+    "@ishizakahiroshi/doxguard-linux-arm64": "0.1.1",
+    "@ishizakahiroshi/doxguard-linux-x64": "0.1.1",
+    "@ishizakahiroshi/doxguard-win32-arm64": "0.1.1",
+    "@ishizakahiroshi/doxguard-win32-x64": "0.1.1"
   },
   "keywords": [
     "privacy",

@@ -18,6 +18,7 @@ desktop.ini
 # === AI ツールのローカル状態（トークンを含む可能性あり） ===
 .claude/
 .codex-tmp/
+opencode.json
 
 # === ツール生成キャッシュ（アカウント ID 等の識別子を含み得る・追跡しない） ===
 .wrangler/
