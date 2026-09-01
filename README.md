@@ -174,12 +174,14 @@ private path is not accidentally committed. `DOXGUARD_CONFIG` can point to an en
 when even the source layout should stay out of the repository. UTF-8 BOMs are accepted in line files
 and the first CSV header. A watchlist is limited to the smaller of `maxFileSize` and 64 MiB.
 
-Each `exemptPaths` entry is a repository-relative exact file or directory subtree. For example,
-`generated/` exempts `generated/report.txt`, while `src/generated/report.txt` and
-`generated.json` remain scanned. Absolute paths and `.` / `..` path components are rejected.
-To exempt a directory subtree, end the entry with `/` (for example `generated/`). A bare
-`generated` (no trailing slash) matches only a file or path named exactly `generated`, not the
-`generated/` subtree.
+Each `exemptPaths` entry is a repository-relative exact file or directory subtree. An exempt path
+skips the built-in **structural** patterns (so synthetic fixtures with placeholder IPs or paths do
+not fail the scan), but **watchlist matching still runs** on it, so an exempt file cannot silently
+hide a real private identity. For example, `generated/` exempts `generated/report.txt` from
+structural checks, while `src/generated/report.txt` and `generated.json` stay fully scanned.
+Absolute paths and `.` / `..` path components are rejected. To exempt a directory subtree, end the
+entry with `/` (for example `generated/`). A bare `generated` (no trailing slash) matches only a
+file or path named exactly `generated`, not the `generated/` subtree.
 
 Built-in structural checks detect:
 
@@ -222,7 +224,9 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 - CLI output masks matched values and does not echo resolved watchlist paths by default.
 - CI normally runs structural patterns only because private watchlists are unavailable there.
 - Scan commands are read-only: they report and return an exit code, but never edit or delete files.
-- Binary, lock, oversized, and explicitly exempt files are skipped.
+- Binary and oversized files are skipped. Dependency lockfiles (`package-lock.json`, `Cargo.lock`,
+  and similar) are scanned for structural patterns only (private hosts, IPs, and paths), not
+  watchlist terms. Explicitly exempt paths skip structural patterns but are still watchlist-scanned.
 
 ## Security
 

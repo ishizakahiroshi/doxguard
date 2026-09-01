@@ -795,6 +795,115 @@ fn init_skips_dangling_leaf_symlink_without_creating_its_target() {
     assert!(String::from_utf8_lossy(&output.stdout).contains("SKIPPED"));
 }
 
+#[cfg(windows)]
+#[test]
+fn init_refuses_to_scaffold_through_parent_junction() {
+    // A junction (mount point) is a name-surrogate reparse point and must still be
+    // rejected after is_link_like stopped treating every reparse point as a link
+    // (so cloud placeholders are allowed). This also fails on the pinned MSRV in CI
+    // if a toolchain ever stopped reporting junctions as symlinks.
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    init_repo(temp.path());
+    let link = temp.path().join(".github");
+    let status = Command::new("cmd")
+        .args(["/c", "mklink", "/J"])
+        .arg(&link)
+        .arg(outside.path())
+        .status()
+        .unwrap();
+    assert!(status.success(), "failed to create junction fixture");
+
+    let output = run(binary(), temp.path(), &["init"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!outside.path().join("workflows/doxguard.yml").exists());
+}
+
+#[test]
+fn install_hooks_from_linked_worktree_targets_common_git_dir() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::write(temp.path().join("seed.txt"), "seed\n").unwrap();
+    git(temp.path(), &["add", "seed.txt"]);
+    git(temp.path(), &["commit", "-q", "-m", "seed"]);
+
+    let wt = temp.path().join("wt");
+    git(
+        temp.path(),
+        &[
+            "worktree",
+            "add",
+            "-q",
+            wt.to_str().unwrap(),
+            "-b",
+            "feature",
+        ],
+    );
+
+    // Install FROM the linked worktree: the F-B02 bug wrote a per-worktree hooksPath
+    // into the shared config, which vanished when the worktree was removed.
+    let output = run(binary(), &wt, &["install-hooks"]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let hooks_path = Command::new("git")
+        .args(["config", "--get", "core.hooksPath"])
+        .current_dir(&wt)
+        .output()
+        .unwrap();
+    let hp = String::from_utf8_lossy(&hooks_path.stdout)
+        .trim()
+        .replace('\\', "/");
+    assert!(
+        hp.contains("/.git/doxguard/hooks"),
+        "hooksPath must target the common git dir: {hp}"
+    );
+    assert!(
+        !hp.contains("/worktrees/"),
+        "hooksPath must not be per-worktree: {hp}"
+    );
+    assert!(temp.path().join(".git/doxguard/hooks/pre-commit").exists());
+
+    // A commit from the MAIN worktree is gated by the shared hook.
+    fs::write(temp.path().join("leak.txt"), "192.168.50.9\n").unwrap();
+    git(temp.path(), &["add", "leak.txt"]);
+    let commit = Command::new("git")
+        .args(["commit", "-m", "synthetic leak"])
+        .current_dir(temp.path())
+        .env_remove("DOXGUARD_CONFIG")
+        .output()
+        .unwrap();
+    assert_eq!(
+        commit.status.code(),
+        Some(1),
+        "main-worktree commit must be gated by the shared hook; stderr: {}",
+        String::from_utf8_lossy(&commit.stderr)
+    );
+}
+
+#[test]
+fn scan_without_config_warns_structural_only() {
+    let temp = tempdir().unwrap();
+    init_repo(temp.path());
+    fs::write(temp.path().join("safe.txt"), "safe\n").unwrap();
+    git(temp.path(), &["add", "safe.txt"]);
+
+    let output = run(binary(), temp.path(), &["scan", "--all-tracked"]);
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("structural patterns only"),
+        "missing structural-only warning; stderr: {stderr}"
+    );
+}
+
 #[test]
 fn usage_errors_exit_two() {
     let temp = tempdir().unwrap();

@@ -1,8 +1,9 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
+    io::Write,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     sync::OnceLock,
 };
 
@@ -60,8 +61,32 @@ pub struct ScanResult {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ScanKind {
+    /// Watchlist needles and structural patterns.
+    Full,
+    /// Watchlist needles only; structural patterns skipped. Used for `exemptPaths`,
+    /// which are meant to silence synthetic structural fixtures but must still catch
+    /// a real private identity that lands in an "exempt" file (F-B12).
+    WatchlistOnly,
+    /// Structural patterns only; watchlist matching skipped. Used for dependency
+    /// lockfiles, which can carry private registry hosts / `file:` paths / private
+    /// IPs but are noisy for watchlist matching (F-A01).
+    StructuralOnly,
+}
+
+impl ScanKind {
+    fn wants_watchlist(self) -> bool {
+        matches!(self, ScanKind::Full | ScanKind::WatchlistOnly)
+    }
+
+    fn wants_structural(self) -> bool {
+        matches!(self, ScanKind::Full | ScanKind::StructuralOnly)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Eligibility {
-    Scan,
+    Scan(ScanKind),
     QuietSkip,
     CoverageSkip(&'static str),
 }
@@ -312,13 +337,8 @@ pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
 
 fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eligibility {
     let normalized = normalize_path(path);
-    if config
-        .all_exempt_paths()
-        .any(|exempt| path_is_exempt(&normalized, exempt))
-    {
-        return Eligibility::QuietSkip;
-    }
     let lower = normalized.to_ascii_lowercase();
+    // Binaries are never scanned for either pattern class.
     if BINARY_EXTENSIONS
         .iter()
         .any(|extension| lower.ends_with(extension))
@@ -329,12 +349,22 @@ fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eli
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or_default();
-    if SKIP_FILENAMES.contains(&filename) {
-        return Eligibility::QuietSkip;
-    }
+    // Which pattern classes apply. exemptPaths keep watchlist matching (a real
+    // identity must not hide in an "exempt" file); lockfiles keep structural
+    // matching (private hosts / paths / IPs) but drop noisy watchlist matching.
+    let kind = if config
+        .all_exempt_paths()
+        .any(|exempt| path_is_exempt(&normalized, exempt))
+    {
+        ScanKind::WatchlistOnly
+    } else if SKIP_FILENAMES.contains(&filename) {
+        ScanKind::StructuralOnly
+    } else {
+        ScanKind::Full
+    };
     // Staged mode reads index blobs; worktree size/symlink checks would false-skip.
     if mode == ScanMode::Staged {
-        return Eligibility::Scan;
+        return Eligibility::Scan(kind);
     }
     let joined = cwd.join(path);
     let metadata = match fs::symlink_metadata(&joined) {
@@ -353,26 +383,92 @@ fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eli
     if metadata.len() > config.max_file_size {
         return Eligibility::CoverageSkip("oversize");
     }
-    Eligibility::Scan
+    Eligibility::Scan(kind)
 }
 
 const STAGED_BLOB_MAX_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Size-probe every staged blob with a single `git cat-file --batch-check` instead
+/// of one process per file, halving the child processes a pre-commit hook spawns
+/// (F-A05). Returns `None` when the batch probe is unavailable (`-Z` needs git
+/// 2.42) so the caller falls back to the per-file probe. Only the *size probe* is
+/// batched: blob content is still read per file, leaving the security-critical
+/// read path unchanged.
+fn staged_blob_sizes(paths: &[String], cwd: &Path) -> Option<HashMap<String, u64>> {
+    let git = git_program().ok()?;
+    let mut child = Command::new(git)
+        .args([
+            "-c",
+            "core.quotepath=false",
+            "cat-file",
+            "--batch-check",
+            "-Z",
+        ])
+        .current_dir(cwd)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let mut stdin = child.stdin.take()?;
+    let specs: Vec<String> = paths.iter().map(|path| format!(":0:{path}")).collect();
+    // Write from a separate thread: git streams records back while we are still
+    // writing, so writing everything first would deadlock on a full pipe buffer
+    // exactly in the large-staged-set case this optimizes.
+    let writer = std::thread::spawn(move || {
+        for spec in specs {
+            if stdin.write_all(spec.as_bytes()).is_err() || stdin.write_all(b"\0").is_err() {
+                return;
+            }
+        }
+    });
+    let output = child.wait_with_output().ok()?;
+    let _ = writer.join();
+    if !output.status.success() {
+        return None;
+    }
+    // Records come back in input order, so zip them with the requested paths.
+    let records = output
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|record| !record.is_empty());
+    let mut sizes = HashMap::new();
+    for (path, record) in paths.iter().zip(records) {
+        let Ok(record) = std::str::from_utf8(record) else {
+            continue;
+        };
+        // "<oid> <type> <size>" for a resolved blob; "<spec> missing" otherwise.
+        let fields: Vec<&str> = record.split_whitespace().collect();
+        if fields.len() == 3 {
+            if let Ok(size) = fields[2].parse::<u64>() {
+                sizes.insert(path.clone(), size);
+            }
+        }
+    }
+    Some(sizes)
+}
 
 fn read_scan_content(
     mode: ScanMode,
     path: &str,
     cwd: &Path,
     max_file_size: u64,
+    staged_sizes: Option<&HashMap<String, u64>>,
 ) -> Result<ContentLoad> {
     if mode == ScanMode::Staged {
         // Index blob, not worktree — pre-commit must gate what will be committed.
         let spec = format!(":0:{path}");
         let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
-        // Ask for the blob size first so an oversize blob is never loaded.
-        if let Ok(size) = run_git(&["cat-file", "-s", &spec], cwd) {
-            if size.trim().parse::<u64>().is_ok_and(|size| size > limit) {
-                return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
-            }
+        // Ask for the blob size first so an oversize blob is never loaded. Prefer
+        // the batched probe; fall back to a per-file one when it was unavailable.
+        let probed = match staged_sizes.and_then(|sizes| sizes.get(path).copied()) {
+            Some(size) => Some(size),
+            None => run_git(&["cat-file", "-s", &spec], cwd)
+                .ok()
+                .and_then(|size| size.trim().parse::<u64>().ok()),
+        };
+        if probed.is_some_and(|size| size > limit) {
+            return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
         }
         match run_git(&["show", &spec], cwd) {
             Ok(content) => {
@@ -429,15 +525,25 @@ struct FileScanOutcome {
     coverage_skip: Option<&'static str>,
 }
 
-fn scan_file(
+/// Everything a single file scan needs beyond its own path and scan kind.
+struct ScanContext<'a> {
     mode: ScanMode,
-    path: &str,
-    cwd: &Path,
-    config: &Config,
-    matcher: &WatchlistMatcher,
-    patterns: &[StructuralPattern],
-) -> Result<FileScanOutcome> {
-    match read_scan_content(mode, path, cwd, config.max_file_size)? {
+    cwd: &'a Path,
+    config: &'a Config,
+    matcher: &'a WatchlistMatcher,
+    patterns: &'a [StructuralPattern],
+    staged_sizes: Option<&'a HashMap<String, u64>>,
+}
+
+fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<FileScanOutcome> {
+    let config = context.config;
+    match read_scan_content(
+        context.mode,
+        path,
+        context.cwd,
+        config.max_file_size,
+        context.staged_sizes,
+    )? {
         ContentLoad::CoverageSkip(reason) => Ok(FileScanOutcome {
             hits: Vec::new(),
             coverage_skip: Some(reason),
@@ -446,8 +552,19 @@ fn scan_file(
             let mut hits = Vec::new();
             for (index, line) in content.lines().enumerate() {
                 let line_number = index + 1;
-                hits.extend(watchlist_hits(line, path, line_number, matcher, config));
-                for pattern in patterns {
+                if kind.wants_watchlist() {
+                    hits.extend(watchlist_hits(
+                        line,
+                        path,
+                        line_number,
+                        context.matcher,
+                        config,
+                    ));
+                }
+                if !kind.wants_structural() {
+                    continue;
+                }
+                for pattern in context.patterns {
                     let mut seen = HashSet::new();
                     for found in pattern.regex.find_iter(line) {
                         let matched = found.as_str();
@@ -488,10 +605,10 @@ pub fn scan_paths(
     let total_files = paths.len();
     let mut warnings = warnings;
     let mut coverage_skips = 0usize;
-    let mut files = Vec::new();
+    let mut files: Vec<(String, ScanKind)> = Vec::new();
     for path in paths {
         match classify_path(&path, cwd, config, mode) {
-            Eligibility::Scan => files.push(path),
+            Eligibility::Scan(kind) => files.push((path, kind)),
             Eligibility::QuietSkip => {}
             Eligibility::CoverageSkip(reason) => {
                 coverage_skips += 1;
@@ -499,20 +616,35 @@ pub fn scan_paths(
             }
         }
     }
+    // One batched size probe for the whole staged set instead of one per file.
+    let staged_sizes = if mode == ScanMode::Staged && !files.is_empty() {
+        let staged: Vec<String> = files.iter().map(|(path, _)| path.clone()).collect();
+        staged_blob_sizes(&staged, cwd)
+    } else {
+        None
+    };
+    let context = ScanContext {
+        mode,
+        cwd,
+        config,
+        matcher,
+        patterns,
+        staged_sizes: staged_sizes.as_ref(),
+    };
     let outcomes: Result<Vec<FileScanOutcome>> = if files.len() <= 4 {
         files
             .iter()
-            .map(|path| scan_file(mode, path, cwd, config, matcher, patterns))
+            .map(|(path, kind)| scan_file(&context, path, *kind))
             .collect()
     } else {
         files
             .par_iter()
-            .map(|path| scan_file(mode, path, cwd, config, matcher, patterns))
+            .map(|(path, kind)| scan_file(&context, path, *kind))
             .collect()
     };
     let mut hits = Vec::new();
     let mut scanned = 0usize;
-    for (path, outcome) in files.iter().zip(outcomes?) {
+    for ((path, _kind), outcome) in files.iter().zip(outcomes?) {
         if let Some(reason) = outcome.coverage_skip {
             coverage_skips += 1;
             warnings.push(format!("WARN: skipped {path} ({reason})"));

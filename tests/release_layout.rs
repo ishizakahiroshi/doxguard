@@ -204,6 +204,30 @@ fn release_requires_same_commit_validation_and_serializes_each_tag() {
 }
 
 #[test]
+fn release_pipeline_hardening_is_present() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let release = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();
+    // F-C07: fmt/clippy run in the preflight (dispatch path too).
+    assert!(release.contains("cargo fmt --all -- --check"));
+    assert!(release.contains("cargo clippy --all-targets --locked -- -D warnings"));
+    // F-C08: build provenance attestation for the native binaries.
+    assert!(release.contains("actions/attest-build-provenance@"));
+    assert!(release.contains("subject-path: staging/"));
+    // F-C10: pre-release tags are marked as pre-release on GitHub.
+    assert!(release.contains("--prerelease"));
+    // F-B12: the npm packaged gate runs in strict mode.
+    assert!(release.contains("scan --packaged --block --strict"));
+    // F-C09 / T09b: trusted publishing (OIDC) — no long-lived npm token anywhere,
+    // and Node 22 for the npm >= 11.5.1 requirement.
+    assert!(
+        !release.contains("NPM_TOKEN"),
+        "trusted publishing must not reference a long-lived NPM_TOKEN"
+    );
+    assert!(!release.contains("NODE_AUTH_TOKEN"));
+    assert!(release.contains("node-version: \"22\""));
+}
+
+#[test]
 fn npm_publish_retry_is_transient_only_and_checks_lost_success() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let release = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();

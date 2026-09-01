@@ -295,11 +295,19 @@ pub fn load_from(
         if explicit {
             bail!("config not found: {}", path.display());
         }
+        // No config was found at the repository root. Falling back to defaults is
+        // intentional for structural-only CI, but it is also what happens when
+        // `doxguard init` created a config in a subdirectory: that config is never
+        // read from the worktree root, and the scan silently runs with 0 watchlist
+        // needles. Surface it (without echoing the absolute path) so the drop is not
+        // invisible. The message is a warning only; it does not change the exit code.
         return Ok(LoadedConfig {
             config: Config::default(),
             path,
             found: false,
-            warnings: Vec::new(),
+            warnings: vec![
+                "WARN: no doxguard config found at the repository root; scanning with built-in structural patterns only (0 watchlist needles). If you ran `doxguard init` in a subdirectory, move doxguard.config.json to the repository root.".to_owned(),
+            ],
         });
     }
     // Hard ceiling checked before the config is read, so `maxFileSize` cannot

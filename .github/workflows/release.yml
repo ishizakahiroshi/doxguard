@@ -40,10 +40,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master
         with:
           toolchain: 1.85.0
+          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: "20"
+          node-version: "22"
       - name: Verify version single-source agreement
         run: |
           set -euo pipefail
@@ -73,6 +74,13 @@ jobs:
           conclusion=$(gh run list --workflow Validate --branch main \
             --commit "$GITHUB_SHA" --limit 1 --json conclusion --jq '.[0].conclusion // ""')
           test "$conclusion" = success
+      # develop is merged into main without a PR and push-triggered CI is not
+      # delivered here, so fmt/clippy run in the release preflight as the last gate
+      # (this runs on the dispatch path too, independent of push delivery). See F-C07.
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
       - name: Test
         run: cargo test --all-targets --locked
       - name: Structural content gate
@@ -83,6 +91,10 @@ jobs:
     needs: preflight
     if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -133,6 +145,11 @@ jobs:
           if [[ "${{ matrix.binary }}" != *.exe ]]; then
             chmod +x "staging/${{ matrix.slug }}/${{ matrix.binary }}"
           fi
+      # Build provenance so GitHub Release consumers can `gh attestation verify`
+      # the native binary, not just the unsigned checksums file (F-C08).
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: staging/${{ matrix.slug }}/${{ matrix.binary }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: native-${{ matrix.slug }}
@@ -175,7 +192,11 @@ jobs:
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" release/* --clobber
           else
-            gh release create "$tag" release/* --generate-notes --title "$tag"
+            # A pre-release tag (v1.2.3-rc.1) must not become the GitHub "Latest"
+            # release; npm already routes it to the `next` dist-tag (F-C10).
+            prerelease=
+            case "$tag" in *-*) prerelease=--prerelease ;; esac
+            gh release create "$tag" release/* --generate-notes --title "$tag" $prerelease
           fi
           gh release view "$tag" --json body -q .body \
             | awk '/^## SHA256 checksums/{exit} {print}' > release-notes.md
@@ -191,32 +212,26 @@ jobs:
     needs: [build, github-release]
     if: ${{ always() && (needs.github-release.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.npm_only)) }}
     runs-on: ubuntu-latest
+    # Publishes via npm trusted publishing (OIDC): no long-lived publish token.
+    # Requires a trusted publisher configured on npmjs.com for each of the 7
+    # packages (the 6 platform packages + the root). See F-C09 / docs bugfix T09b.
     permissions:
       contents: read
       id-token: write
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
-      - name: Check npm publish credential
-        id: npm-token
-        run: |
-          if [[ -n "$NPM_TOKEN" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "NPM_TOKEN is not configured; npm channel skipped"
-          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         with:
           ref: ${{ env.RELEASE_TAG }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
+      - name: Ensure npm supports trusted publishing
+        # Trusted publishing needs npm >= 11.5.1; Node 22 ships npm 10.x.
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
       - name: Download and verify canonical release
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -234,7 +249,6 @@ jobs:
             unzip -q "canonical/doxguard-$slug.zip" -d "artifacts/$slug"
           done
       - name: Validate version and stage platform packages
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
@@ -251,14 +265,10 @@ jobs:
             chmod +x "npm/platforms/$slug/bin/doxguard"
           done
       - name: Scan npm package contents with native doxguard
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         run: |
           chmod +x artifacts/linux-x64/doxguard
-          artifacts/linux-x64/doxguard scan --packaged --block
-      - name: Publish platform packages, then root
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+          artifacts/linux-x64/doxguard scan --packaged --block --strict
+      - name: Publish platform packages, then root (trusted publishing / OIDC)
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"

@@ -631,6 +631,99 @@ fn glued_allow_suffixes_do_not_become_bare_allow() {
     );
 }
 
+#[test]
+fn exempt_paths_skip_structural_but_still_match_watchlist() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("names.txt"), "SyntheticExemptNeedle\n").unwrap();
+    fs::write(
+        temp.path().join("fixture.txt"),
+        "ip=192.168.50.9\nowner=SyntheticExemptNeedle\n",
+    )
+    .unwrap();
+    let mut config = Config {
+        exempt_paths: vec!["fixture.txt".to_owned()],
+        ..Default::default()
+    };
+    config.watchlists.push(WatchlistSource::Lines {
+        path: "${FIXTURE_ROOT}/names.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["fixture.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    // The synthetic private IP (structural) is intentionally silenced for an
+    // exempt file, but a real watchlist identity is still reported (F-B12).
+    assert_eq!(result.scanned, 1);
+    assert!(result.hits.iter().all(|hit| hit.kind == HitKind::Watchlist));
+    assert!(
+        result
+            .hits
+            .iter()
+            .any(|hit| hit.matched.contains("SyntheticExemptNeedle"))
+    );
+    assert!(
+        !result
+            .hits
+            .iter()
+            .any(|hit| hit.matched.contains("192.168"))
+    );
+}
+
+#[test]
+fn lockfiles_run_structural_patterns_but_skip_watchlist() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("names.txt"), "SyntheticLockNeedle\n").unwrap();
+    fs::write(
+        temp.path().join("package-lock.json"),
+        "{\"host\":\"192.168.50.9\",\"note\":\"SyntheticLockNeedle\"}\n",
+    )
+    .unwrap();
+    let mut config = Config::default();
+    config.watchlists.push(WatchlistSource::Lines {
+        path: "${FIXTURE_ROOT}/names.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["package-lock.json".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    // A private IP in a lockfile is now caught (F-A01), but the noisy watchlist
+    // match inside the lockfile is skipped.
+    assert_eq!(result.scanned, 1);
+    assert!(
+        result
+            .hits
+            .iter()
+            .any(|hit| hit.kind == HitKind::Structural && hit.matched.contains("192.168"))
+    );
+    assert!(result.hits.iter().all(|hit| hit.kind != HitKind::Watchlist));
+}
+
 #[cfg(unix)]
 #[test]
 fn config_and_watchlist_refuse_non_regular_files() {
