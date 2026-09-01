@@ -65,7 +65,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          conclusion=$(gh run list --workflow Validate --branch main --event push \
+          # push-triggered Validate runs are not created in this repo (F-C06 / docs
+          # bugfix T06): a real `git push` to main produces zero runs while dispatch
+          # works. Accept a same-commit Validate run from any event (a workflow_dispatch
+          # Validate on the main ref) until push delivery is restored. `--branch main`
+          # and `--commit "$GITHUB_SHA"` still bind the check to this exact release commit.
+          conclusion=$(gh run list --workflow Validate --branch main \
             --commit "$GITHUB_SHA" --limit 1 --json conclusion --jq '.[0].conclusion // ""')
           test "$conclusion" = success
       - name: Test

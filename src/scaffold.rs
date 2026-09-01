@@ -236,7 +236,16 @@ fn has_husky(cwd: &Path) -> bool {
     if cwd.join(".husky").exists() {
         return true;
     }
-    let Ok(text) = fs::read_to_string(cwd.join("package.json")) else {
+    let package_json = cwd.join("package.json");
+    // Only read a regular file; a non-regular path (e.g. a character device)
+    // could make read_to_string loop forever.
+    if !fs::metadata(&package_json)
+        .map(|meta| meta.is_file())
+        .unwrap_or(false)
+    {
+        return false;
+    }
+    let Ok(text) = fs::read_to_string(&package_json) else {
         return false;
     };
     let Ok(package): Result<Value, _> = serde_json::from_str(&text) else {

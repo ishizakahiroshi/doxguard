@@ -592,3 +592,64 @@ fn config_rejects_unknown_watchlist_fields_and_unsafe_exempt_paths() {
         config.validate().unwrap();
     }
 }
+
+#[test]
+fn glued_allow_suffixes_do_not_become_bare_allow() {
+    let config = Config::default();
+    // `allow` glued to more characters is not an allow directive and must never
+    // suppress a hit (regression guard for F-A03).
+    for line in [
+        "private@sample.test // doxguard: allow-list",
+        "private@sample.test // doxguard: allow=x",
+        "private@sample.test // doxguard: allow.internal",
+        "private@sample.test // doxguard: allow(x)",
+        "private@sample.test // doxguard: ALLOW-LIST",
+        "private@sample.test // doxguard: allow-listed",
+        "private@sample.test // doxguard: allowlist note",
+    ] {
+        assert!(
+            !allowed_by_directive(line, "private@sample.test", &config),
+            "glued suffix must not act as bare allow: {line}"
+        );
+    }
+    // Carve-out: `allow-->` (comment closer with no separating space) stays the
+    // bare form so existing inline comments keep working.
+    assert!(allowed_by_directive(
+        "192.168.50.9 <!-- doxguard: allow-->",
+        "192.168.50.9",
+        &config
+    ));
+    let mut strict = Config::default();
+    strict.apply_strict();
+    assert!(
+        !allowed_by_directive(
+            "192.168.50.9 <!-- doxguard: allow-->",
+            "192.168.50.9",
+            &strict
+        ),
+        "strict mode must reject the bare comment-closer form too"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn config_and_watchlist_refuse_non_regular_files() {
+    use std::path::Path;
+
+    let error = doxguard::config::load(Path::new("/"), Some(Path::new("/dev/zero"))).unwrap_err();
+    assert!(
+        error.to_string().contains("not a regular file"),
+        "unexpected error: {error:#}"
+    );
+
+    let mut config = Config::default();
+    config.watchlists.push(WatchlistSource::Lines {
+        path: "/dev/zero".to_owned(),
+        label: Some("synthetic device".to_owned()),
+    });
+    let error = watchlist::load(&config, Path::new("/"), &HashMap::new()).unwrap_err();
+    assert!(
+        error.to_string().contains("not a regular file"),
+        "unexpected error: {error:#}"
+    );
+}

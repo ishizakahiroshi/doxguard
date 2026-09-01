@@ -314,6 +314,14 @@ pub fn load_from(
             meta.len()
         );
     }
+    // A character device (e.g. /dev/zero) reports len 0 and would make
+    // read_to_string loop forever; only read regular files.
+    if !meta.is_file() {
+        bail!(
+            "config {} is not a regular file; refuse to read a non-regular path",
+            path.display()
+        );
+    }
     let text = fs::read_to_string(&path)
         .with_context(|| format!("failed to read config {}", path.display()))?;
     let config: Config = serde_json::from_str(&text)

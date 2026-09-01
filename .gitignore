@@ -19,6 +19,8 @@ desktop.ini
 .claude/
 .codex-tmp/
 opencode.json
+# many-ai-cli のオーケストレーション worktree・ボード（追跡しない）
+.many-ai-cli/
 
 # === ツール生成キャッシュ（アカウント ID 等の識別子を含み得る・追跡しない） ===
 .wrangler/

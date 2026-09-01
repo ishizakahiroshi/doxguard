@@ -253,6 +253,13 @@ pub fn load(
                 meta.len(),
             );
         }
+        // A character device (e.g. /dev/zero) reports len 0 and would make the
+        // read loop forever; only read regular files.
+        if !meta.file_type().is_file() {
+            bail!(
+                "watchlist source #{source_number} is not a regular file; refuse to read a non-regular path"
+            );
+        }
         // An unset environment variable stays a soft skip for structural-only CI.
         // Once a source resolves, missing/read/parse failures fail closed so protection
         // cannot shrink silently.

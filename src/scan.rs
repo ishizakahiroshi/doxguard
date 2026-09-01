@@ -219,16 +219,30 @@ pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
 fn directive_regex() -> &'static Regex {
     static DIRECTIVE: OnceLock<Regex> = OnceLock::new();
     DIRECTIVE.get_or_init(|| {
-        // Tokens may contain `-` (Anne-Marie); the `-->` comment closer is cut
-        // off below because the regex crate has no lookahead to stop on it.
-        Regex::new(r"(?i)(?:doxguard|secrets-scan):\s*allow\b(?:\s+([^\s>]+))?")
+        // Group 1 captures any non-space characters glued directly onto `allow`
+        // (e.g. `-list`, `=x`, `list` in `allowlist`) so a word like `allowlist`
+        // is not mistaken for a bare allow. Group 2 captures a space-separated
+        // scoped token (which may contain `-`, as in Anne-Marie); the `-->`
+        // comment closer is cut off below because the regex crate has no lookahead.
+        Regex::new(r"(?i)(?:doxguard|secrets-scan):\s*allow(\S*)(?:\s+([^\s>]+))?")
             .expect("static directive regex")
     })
 }
 
 pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool {
     directive_regex().captures_iter(line).any(|capture| {
-        let Some(target) = capture.get(1) else {
+        // Characters glued directly to `allow` with no separating space.
+        let glued = capture.get(1).map(|m| m.as_str()).unwrap_or_default();
+        if !glued.is_empty() {
+            // `allow-->` (comment closer, no space) is still the bare form; every
+            // other glued suffix (`allow-list`, `allow=x`, `allowlist`, ...) is not
+            // an allow directive at all and must never suppress a hit.
+            if glued == "-->" {
+                return !config.allow.disallow_bare_allow;
+            }
+            return false;
+        }
+        let Some(target) = capture.get(2) else {
             // Bare `doxguard: allow` — optional hard-off for CI / --strict.
             return !config.allow.disallow_bare_allow;
         };

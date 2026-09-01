@@ -184,7 +184,7 @@ fn manual_full_release_binds_the_input_tag_to_the_dispatch_commit() {
 }
 
 #[test]
-fn release_requires_main_push_validation_and_serializes_each_tag() {
+fn release_requires_same_commit_validation_and_serializes_each_tag() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let release = fs::read_to_string(root.join(".github/workflows/release.yml")).unwrap();
     assert!(release.contains("group: release-${{"));
@@ -192,8 +192,15 @@ fn release_requires_main_push_validation_and_serializes_each_tag() {
     assert!(
         release.contains("git merge-base --is-ancestor \"$GITHUB_SHA\" refs/remotes/origin/main")
     );
-    assert!(release.contains("--branch main --event push"));
+    // Preflight binds the required Validate run to this exact release commit on main.
+    // `--event push` was removed as the F-C06 / T06 workaround (push-triggered runs are
+    // not delivered in this repo; a same-commit dispatch Validate is accepted instead).
+    assert!(release.contains("--branch main"));
     assert!(release.contains("--commit \"$GITHUB_SHA\""));
+    assert!(
+        !release.contains("--event push"),
+        "F-C06 workaround: preflight must not require a push-event Validate run"
+    );
 }
 
 #[test]

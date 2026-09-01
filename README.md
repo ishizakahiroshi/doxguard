@@ -177,6 +177,9 @@ and the first CSV header. A watchlist is limited to the smaller of `maxFileSize`
 Each `exemptPaths` entry is a repository-relative exact file or directory subtree. For example,
 `generated/` exempts `generated/report.txt`, while `src/generated/report.txt` and
 `generated.json` remain scanned. Absolute paths and `.` / `..` path components are rejected.
+To exempt a directory subtree, end the entry with `/` (for example `generated/`). A bare
+`generated` (no trailing slash) matches only a file or path named exactly `generated`, not the
+`generated/` subtree.
 
 Built-in structural checks detect:
 
@@ -220,6 +223,12 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 - CI normally runs structural patterns only because private watchlists are unavailable there.
 - Scan commands are read-only: they report and return an exit code, but never edit or delete files.
 - Binary, lock, oversized, and explicitly exempt files are skipped.
+
+## Security
+
+Report a suspected vulnerability privately through GitHub Security Advisories: open the
+repository's Security tab and choose "Report a vulnerability". Please do not open a public issue
+for security reports.
 
 ## 日本語
 
