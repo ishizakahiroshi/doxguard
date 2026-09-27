@@ -76,3 +76,6 @@ coverage/
 target/
 npm/platforms/*/bin/
 *.tgz
+
+# Local video production files
+/brag-output/
