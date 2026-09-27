@@ -1,4 +1,11 @@
 ---
+cover:
+  path: portfolio/overview-2026-09-28.jpg
+  alt: {ja: "doxguard の紹介動画", en: "doxguard overview video"}
+video:
+  provider: youtube
+  id: "vXnJZsTrhRY"
+  durationSeconds: 20
 schemaVersion: 1
 color: "#326b8c"
 initials: "dx"

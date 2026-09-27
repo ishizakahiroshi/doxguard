@@ -85,3 +85,6 @@ npm/platforms/*/bin/
 
 # === ai-audit-prompts: local audit evidence ===
 /docs/ai-audit-prompts/
+
+# Local video production files
+/brag-output/
