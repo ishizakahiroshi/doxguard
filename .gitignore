@@ -85,3 +85,13 @@ npm/platforms/*/bin/
 
 # === ai-audit-prompts: local audit evidence ===
 /docs/ai-audit-prompts/
+
+# Local promo video sources and renders
+/brag-output/
+
+# === project-init 推奨の追記（2026-09-28・templates/gitignore から不足分のみ） ===
+Cargo.lock.bak
+.commandcode/
+.cursor/
+opencode.json*
+.docsweep/
