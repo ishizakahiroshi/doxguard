@@ -83,6 +83,62 @@ which is the expected CI behavior.
 For a diagram-rich walkthrough of installation, watchlist setup, and the daily commit flow, see the
 [visual user guide](https://ishizakahiroshi.github.io/doxguard/).
 
+## Adding watch terms
+
+```console
+doxguard watch add "Fabrikam Labs"
+printf '%s\n' "Fabrikam Labs" "Tailspin Yard" | doxguard watch add --stdin
+doxguard watch add --source 2 --dry-run "Fabrikam Labs"
+```
+
+`watch add` appends terms to a `lines` watchlist source, the first one by default or the one chosen
+with `--source N` (1-based, the same number as in `source #N` warnings). It only appends: it never
+removes or rewrites lines, and it refuses to write when the file resolves inside the repository
+worktree, is a symbolic link, or is not a regular file. The parent directory must already exist.
+Output is limited to counts (`ADDED`, `EXISTS`, `REJECTED` with reason kinds, `TOTAL`); term values
+and file paths are never printed. Terms passed as arguments stay in shell history, so prefer
+`--stdin` for sensitive values. If some terms are rejected (empty, starts with `#`, too short,
+control characters, or allow-listed), the valid ones are still appended and the exit code is `2`.
+Loosening settings (`allow.*`, `exemptPaths`, `doxguard: allow`) has no command; edit those by hand.
+
+## Using doxguard with AI agents
+
+- **The real defense is the hook and CI.** `doxguard scan --staged --block` in the pre-commit hook
+  and the CI workflow stop a leak at commit and at push time, whether or not an agent read any
+  instruction file.
+- **Guidance for agents lives in the CLI itself.** `--help` and the error messages say what a
+  command is for and what to do next, so an agent that runs the command sees it.
+- **Instruction files are only a recommendation.** Use `AGENTS.md` as the shared entry point. Claude
+  Code reads `CLAUDE.md` and did not read `AGENTS.md` in our test, so put the single line
+  `@AGENTS.md` in `CLAUDE.md` to import it (relative import confirmed on Claude Code 2.1.287,
+  2026-10-02). doxguard never generates or modifies the instruction files in your repository.
+- **Locations are hidden by default.** Error and warning messages refer to "the config" or
+  "watchlist source #N" instead of file-system locations, so they do not end up in agent
+  transcripts or public CI logs. Add `--show-paths` (any subcommand) or set
+  `DOXGUARD_SHOW_PATHS=1` (or `true`) to show them. Finding locations (`file:line`, JSON `file`)
+  are always shown, and matched values stay `[REDACTED]` unless `--show-matched` is given.
+
+Which project instruction files each CLI loaded, measured on 2026-10-02 (Windows 11). Each result
+is a single run, and the read-only tools could not be fully disabled for every CLI, so "read"
+may include the agent opening the file itself. Treat this as a snapshot, not a guarantee; versions
+change.
+
+| CLI (version) | `AGENTS.md` only | `CLAUDE.md` only | Both | `CLAUDE.md` containing `@NOTE.md` |
+|---|---|---|---|---|
+| Claude Code 2.1.287 | not read | read | `CLAUDE.md` only | imported (relative path) |
+| grok 1.0.46 | not read by default; read with the folder-trust gate disabled via environment variable | same as left | `AGENTS.md` only, gate disabled | not imported, even with the gate disabled |
+| opencode 1.18.34 | read | read | `AGENTS.md` only | not imported |
+| codex-cli 0.160.0 | read | not read | `AGENTS.md` only | not verified (`CLAUDE.md` is not read) |
+| agy (Antigravity) 1.2.14 | read | not read | `AGENTS.md` only | not verified (`CLAUDE.md` is not read) |
+| gemini 0.42.0 | not verified (authentication error) | not verified | not verified | not verified |
+| GitHub Copilot CLI 1.0.91 | read | read | `AGENTS.md` only | imported (relative path) |
+| cursor-agent 2026.10.01 | read | read | `AGENTS.md` only | not imported |
+
+Notes: agy also read a `GEMINI.md`-only directory. grok's result with the gate disabled may include
+the agent reading the file with a tool; its "not read" result stands as measured. The `@AGENTS.md`
+pattern could not be told apart from reading `AGENTS.md` directly for every CLI except Claude Code,
+which is why the last column uses a file name no CLI reads on its own.
+
 ## Scan commands
 
 ```console
@@ -224,6 +280,8 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 - CLI output masks matched values and does not echo resolved watchlist paths by default.
 - CI normally runs structural patterns only because private watchlists are unavailable there.
 - Scan commands are read-only: they report and return an exit code, but never edit or delete files.
+  `watch add` is the only command that appends to a watchlist, and it only appends to a file
+  outside the repository.
 - Binary and oversized files are skipped. Dependency lockfiles (`package-lock.json`, `Cargo.lock`,
   and similar) are scanned for structural patterns only (private hosts, IPs, and paths), not
   watchlist terms. Explicitly exempt paths skip structural patterns but are still watchlist-scanned.
@@ -243,6 +301,18 @@ doxguard は、本名・家族名・勤務先・顧客名・社内ホスト名�
 pre-commitは `.git` 内に保存したネイティブバイナリを直接起動するため、日常のコミットで
 Node・npm・Cargoの起動待ちは発生しません。watchlistは手元から出ず、CIでは構造パターンだけが
 動作します。APIキーを検知するgitleaks等とは競合せず、補完関係です。
+
+監視語は `doxguard watch add <語>`（機微な語は `--stdin`）でリポ外の `lines` 形式ファイルへ
+追記できます。追記のみで、削除・書き換えはしません。リポ内・シンボリックリンクへの書き込みは
+拒否し、語の値とパスは出力しません。許可系（`allow.*` / `exemptPaths` / `doxguard: allow`）を
+足すコマンドは無く、手で編集します。
+
+AI エージェントと使う場合、守りの本体は hook と CI で、指示ファイルを読まれなくても commit と CI で
+止まります。AI への案内は `--help` とエラー文に書いてあります。指示ファイルは `AGENTS.md` を共通の
+入口にし、Claude Code 向けには `CLAUDE.md` に `@AGENTS.md` と書いて取り込む構成を推奨します
+（各 CLI の読み込みは上の英語の表のとおり、2026-10-02 の 1 回ごとの実測で、未確認は not verified）。
+エラー・警告の場所は既定で隠れ、`--show-paths` か `DOXGUARD_SHOW_PATHS=1` で表示できます。
+doxguard は指示ファイルを生成も書き換えもしません。
 
 ## Development
 

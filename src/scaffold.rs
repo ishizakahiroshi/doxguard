@@ -8,7 +8,7 @@ use std::{
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
 
-use crate::scan::git_program;
+use crate::{config::place, scan::git_program};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActionStatus {
@@ -142,7 +142,9 @@ fn common_git_dir(git: &Path, cwd: &Path) -> Result<PathBuf> {
             .context("failed to locate git directory")?
     };
     if !output.status.success() {
-        bail!("could not locate git directory");
+        bail!(
+            "could not locate git directory. Run this inside a git repository (`git init` first if needed)"
+        );
     }
     let raw = std::str::from_utf8(&output.stdout)
         .context("git directory was not UTF-8")?
@@ -199,7 +201,7 @@ fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<Sca
 
     let root = cwd
         .canonicalize()
-        .with_context(|| format!("failed to resolve repository root {}", cwd.display()))?;
+        .with_context(|| format!("failed to resolve {}", place("the repository root", cwd)))?;
     let target = root.join(relative);
     match fs::symlink_metadata(&target) {
         Ok(_) => return Ok(skipped_existing(path)),
@@ -218,8 +220,8 @@ fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<Sca
                 Ok(metadata) => {
                     if is_link_like(&metadata) || !metadata.is_dir() {
                         bail!(
-                            "refusing to scaffold through a link or non-directory: {}",
-                            parent.display()
+                            "refusing to scaffold through a link or non-directory: {}. Replace it with a real directory, then run again",
+                            place("a scaffold directory", &parent)
                         );
                     }
                 }
@@ -229,33 +231,47 @@ fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<Sca
                         Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
                         Err(error) => {
                             return Err(error).with_context(|| {
-                                format!("failed to create scaffold directory {}", parent.display())
+                                format!(
+                                    "failed to create {}",
+                                    place("a scaffold directory", &parent)
+                                )
                             });
                         }
                     }
                     let metadata = fs::symlink_metadata(&parent).with_context(|| {
-                        format!("failed to verify scaffold directory {}", parent.display())
+                        format!(
+                            "failed to verify {}",
+                            place("a scaffold directory", &parent)
+                        )
                     })?;
                     if is_link_like(&metadata) || !metadata.is_dir() {
                         bail!(
-                            "refusing to scaffold through a link or non-directory: {}",
-                            parent.display()
+                            "refusing to scaffold through a link or non-directory: {}. Replace it with a real directory, then run again",
+                            place("a scaffold directory", &parent)
                         );
                     }
                 }
                 Err(error) => {
                     return Err(error).with_context(|| {
-                        format!("failed to inspect scaffold directory {}", parent.display())
+                        format!(
+                            "failed to inspect {}",
+                            place("a scaffold directory", &parent)
+                        )
                     });
                 }
             }
         }
     }
-    let canonical_parent = parent
-        .canonicalize()
-        .with_context(|| format!("failed to resolve scaffold directory {}", parent.display()))?;
+    let canonical_parent = parent.canonicalize().with_context(|| {
+        format!(
+            "failed to resolve {}",
+            place("a scaffold directory", &parent)
+        )
+    })?;
     if !canonical_parent.starts_with(&root) {
-        bail!("refusing to create scaffold file outside repository root: {path}");
+        bail!(
+            "refusing to create scaffold file outside repository root: {path}. Remove any link in that location, then run again"
+        );
     }
     let target = canonical_parent.join(
         relative
@@ -384,7 +400,12 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
                 path: "git config core.hooksPath".to_owned(),
                 status: ActionStatus::Skipped,
                 detail: Some(format!(
-                    "already set to {existing}; left unchanged (call the git-dir cached hook or `doxguard scan --staged --block --strict` from that hooksPath)"
+                    "already set to {}; left unchanged (call the git-dir cached hook or `doxguard scan --staged --block --strict` from that hooksPath)",
+                    if crate::config::show_paths() {
+                        existing.clone()
+                    } else {
+                        "another location (pass --show-paths to show it)".to_owned()
+                    }
                 )),
             });
             return Ok(actions);
@@ -401,7 +422,7 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         bail!(
-            "could not configure git hooks; is this a git repository? {}",
+            "could not configure git hooks; is this a git repository? Run `git init` or change into one, then run again. {}",
             stderr.trim()
         );
     }

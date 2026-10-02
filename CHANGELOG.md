@@ -4,6 +4,22 @@ All notable changes to doxguard are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- `doxguard watch add [TERM ...] [--stdin] [--source N] [--dry-run]` appends terms to a `lines`
+  watchlist outside the repository. It is append-only, refuses in-repo targets and symbolic
+  links, and prints counts only (never term values or paths). Loosening settings stay manual.
+- Global `--show-paths` flag and `DOXGUARD_SHOW_PATHS=1` (or `true`) environment variable. Error
+  and warning messages no longer include file-system locations by default and point to the flag;
+  finding locations (`file:line`, JSON `file`) are unchanged.
+- README section "Using doxguard with AI agents", with a measured table of which AI CLIs load
+  `AGENTS.md` / `CLAUDE.md`.
+
+### Changed
+
+- Error messages and `--help` text now state the cause and the next step (for example, which
+  environment variable to set, or to point the watchlist outside the repository).
+
 ## [0.2.0] - 2026-09-01
 
 0.1.1 was prepared but never tagged or published; its entries are folded in here.

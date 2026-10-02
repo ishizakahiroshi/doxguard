@@ -16,6 +16,8 @@ fn run(program: &Path, cwd: &Path, args: &[&str]) -> Output {
         .current_dir(cwd)
         // Hermetic: an author environment may export its own watchlist config.
         .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
+        .env_remove("DOXGUARD_WATCHLIST_DIR")
         .output()
         .unwrap()
 }
@@ -151,6 +153,7 @@ fn native_hook_runs_on_commit() {
         .current_dir(temp.path())
         // The hook child inherits this environment too.
         .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
         .output()
         .unwrap();
     assert!(
@@ -441,6 +444,7 @@ fn native_hook_enables_strict_coverage_gate() {
         .args(["commit", "-m", "synthetic oversized fixture"])
         .current_dir(temp.path())
         .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
         .output()
         .unwrap();
     assert_eq!(
@@ -465,6 +469,7 @@ fn native_hook_blocks_non_utf8_staged_content() {
         .args(["commit", "-m", "synthetic non-UTF8 fixture"])
         .current_dir(temp.path())
         .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
         .output()
         .unwrap();
     assert_eq!(
@@ -661,6 +666,7 @@ fn empty_config_environment_variable_is_treated_as_unset() {
         .args(["scan", "--all-tracked", "--block"])
         .current_dir(temp.path())
         .env("DOXGUARD_CONFIG", "")
+        .env_remove("DOXGUARD_SHOW_PATHS")
         .output()
         .unwrap();
 
@@ -685,6 +691,7 @@ fn unrelated_non_unicode_environment_value_does_not_panic() {
         .args(["scan", "--all-tracked", "--block"])
         .current_dir(temp.path())
         .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
         .env(
             "SYNTHETIC_NON_UNICODE_ENV",
             OsString::from_vec(vec![0x66, 0x80]),
@@ -874,6 +881,7 @@ fn install_hooks_from_linked_worktree_targets_common_git_dir() {
         .args(["commit", "-m", "synthetic leak"])
         .current_dir(temp.path())
         .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
         .output()
         .unwrap();
     assert_eq!(
@@ -909,4 +917,462 @@ fn usage_errors_exit_two() {
     let temp = tempdir().unwrap();
     let output = run(binary(), temp.path(), &["scan", "--staged", "--diff"]);
     assert_eq!(output.status.code(), Some(2));
+}
+
+// ---- watch add ------------------------------------------------------------
+
+const LIST_ENV: &str = "DG_WATCH_TEST_LIST";
+
+struct WatchFixture {
+    repo: tempfile::TempDir,
+    outside: tempfile::TempDir,
+}
+
+impl WatchFixture {
+    fn new(config_body: &str) -> Self {
+        let repo = tempdir().unwrap();
+        let outside = tempdir().unwrap();
+        init_repo(repo.path());
+        fs::write(repo.path().join("doxguard.config.json"), config_body).unwrap();
+        Self { repo, outside }
+    }
+
+    fn with_lines() -> Self {
+        Self::new(&format!(
+            r#"{{"watchlists":[{{"type":"lines","path":"${{{LIST_ENV}}}"}}]}}"#
+        ))
+    }
+
+    fn list(&self) -> std::path::PathBuf {
+        self.outside.path().join("terms.txt")
+    }
+
+    fn watch(&self, args: &[&str], stdin: Option<&str>) -> Output {
+        self.watch_at(Some(&self.list()), args, stdin)
+    }
+
+    fn watch_at(&self, list: Option<&Path>, args: &[&str], stdin: Option<&str>) -> Output {
+        use std::io::Write;
+        use std::process::Stdio;
+        let mut command = Command::new(binary());
+        command
+            .arg("watch")
+            .args(args)
+            .current_dir(self.repo.path())
+            .env_remove("DOXGUARD_CONFIG")
+            .env_remove("DOXGUARD_SHOW_PATHS")
+            .env_remove("DOXGUARD_WATCHLIST_DIR")
+            .env_remove(LIST_ENV)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        if let Some(list) = list {
+            command.env(LIST_ENV, list);
+        }
+        let mut child = command.spawn().unwrap();
+        let mut input = child.stdin.take().unwrap();
+        if let Some(text) = stdin {
+            input.write_all(text.as_bytes()).unwrap();
+        }
+        drop(input);
+        child.wait_with_output().unwrap()
+    }
+}
+
+fn combined(output: &Output) -> String {
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    )
+}
+
+fn assert_no_leak(output: &Output, fixture: &WatchFixture, values: &[&str]) {
+    let text = combined(output);
+    for value in values {
+        assert!(!text.contains(value), "output leaked a term value");
+    }
+    for path in [fixture.outside.path(), fixture.repo.path()] {
+        let raw = path.to_string_lossy();
+        assert!(!text.contains(raw.as_ref()), "output leaked a path");
+    }
+    assert!(!text.contains("terms.txt"), "output leaked the file name");
+}
+
+#[test]
+fn watch_add_appends_and_scan_detects() {
+    let fixture = WatchFixture::with_lines();
+    fs::write(fixture.list(), "").unwrap();
+    let output = fixture.watch(&["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(0), "{}", combined(&output));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("ADDED: 1"));
+    assert_no_leak(&output, &fixture, &["zebrafish-qux"]);
+    assert_eq!(
+        fs::read_to_string(fixture.list()).unwrap(),
+        "zebrafish-qux\n"
+    );
+
+    fs::write(
+        fixture.repo.path().join("note.txt"),
+        "see zebrafish-qux here\n",
+    )
+    .unwrap();
+    git(fixture.repo.path(), &["add", "note.txt"]);
+    let scan = Command::new(binary())
+        .args(["scan", "--staged", "--block"])
+        .current_dir(fixture.repo.path())
+        .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
+        .env_remove("DOXGUARD_WATCHLIST_DIR")
+        .env(LIST_ENV, fixture.list())
+        .output()
+        .unwrap();
+    assert_eq!(scan.status.code(), Some(1), "{}", combined(&scan));
+}
+
+#[test]
+fn watch_add_creates_missing_file_in_existing_parent() {
+    let fixture = WatchFixture::with_lines();
+    let output = fixture.watch(&["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(0), "{}", combined(&output));
+    assert_eq!(
+        fs::read_to_string(fixture.list()).unwrap(),
+        "zebrafish-qux\n"
+    );
+}
+
+#[test]
+fn watch_add_is_idempotent_and_honors_case_setting() {
+    let fixture = WatchFixture::with_lines();
+    fixture.watch(&["add", "Zebrafish-Qux"], None);
+    let again = fixture.watch(&["add", "Zebrafish-Qux"], None);
+    assert_eq!(again.status.code(), Some(0));
+    assert!(String::from_utf8_lossy(&again.stdout).contains("EXISTS: 1"));
+    // Case-sensitive by default: a different case is a new term.
+    let other = fixture.watch(&["add", "zebrafish-qux"], None);
+    assert!(String::from_utf8_lossy(&other.stdout).contains("ADDED: 1"));
+    assert_eq!(
+        fs::read_to_string(fixture.list()).unwrap(),
+        "Zebrafish-Qux\nzebrafish-qux\n"
+    );
+
+    let insensitive = WatchFixture::new(&format!(
+        r#"{{"watchlists":[{{"type":"lines","path":"${{{LIST_ENV}}}"}}],"noise":{{"asciiCaseInsensitive":true}}}}"#
+    ));
+    insensitive.watch(&["add", "Zebrafish-Qux"], None);
+    let dup = insensitive.watch(&["add", "ZEBRAFISH-QUX"], None);
+    assert!(String::from_utf8_lossy(&dup.stdout).contains("EXISTS: 1"));
+    assert_eq!(
+        fs::read_to_string(insensitive.list()).unwrap(),
+        "Zebrafish-Qux\n"
+    );
+}
+
+#[test]
+fn watch_add_preserves_existing_lines_across_formats() {
+    let cases: [(&str, &str); 4] = [
+        (
+            "alpha-one\nbeta-two",
+            "alpha-one\nbeta-two\nzebrafish-qux\n",
+        ),
+        (
+            "alpha-one\r\nbeta-two\r\n",
+            "alpha-one\r\nbeta-two\r\nzebrafish-qux\r\n",
+        ),
+        (
+            "alpha-one\r\nbeta-two",
+            "alpha-one\r\nbeta-two\r\nzebrafish-qux\r\n",
+        ),
+        (
+            "\u{feff}alpha-one\nbeta-two\n",
+            "\u{feff}alpha-one\nbeta-two\nzebrafish-qux\n",
+        ),
+    ];
+    for (before, after) in cases {
+        let fixture = WatchFixture::with_lines();
+        fs::write(fixture.list(), before).unwrap();
+        let output = fixture.watch(&["add", "zebrafish-qux"], None);
+        assert_eq!(output.status.code(), Some(0), "{}", combined(&output));
+        assert_eq!(fs::read_to_string(fixture.list()).unwrap(), after);
+    }
+}
+
+#[test]
+fn watch_add_refuses_unsafe_targets_without_writing() {
+    // Inside the worktree.
+    let fixture = WatchFixture::with_lines();
+    let inside = fixture.repo.path().join("terms.txt");
+    let output = fixture.watch_at(Some(&inside), &["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!inside.exists());
+    assert_no_leak(&output, &fixture, &["zebrafish-qux"]);
+
+    // Environment variable unset.
+    let output = fixture.watch_at(None, &["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!fixture.list().exists());
+
+    // Parent directory missing.
+    let missing = fixture.outside.path().join("nope").join("terms.txt");
+    let output = fixture.watch_at(Some(&missing), &["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(!fixture.outside.path().join("nope").exists());
+
+    // Source is not a `lines` source.
+    let csv = WatchFixture::new(&format!(
+        r#"{{"watchlists":[{{"type":"csv","path":"${{{LIST_ENV}}}","column":1}}]}}"#
+    ));
+    fs::write(csv.list(), "name\nalpha-one\n").unwrap();
+    let output = csv.watch(&["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    let output = csv.watch(&["add", "--source", "1", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(fs::read_to_string(csv.list()).unwrap(), "name\nalpha-one\n");
+}
+
+#[test]
+fn watch_add_refuses_symlink_target() {
+    let fixture = WatchFixture::with_lines();
+    let real = fixture.outside.path().join("real.txt");
+    fs::write(&real, "alpha-one\n").unwrap();
+    #[cfg(unix)]
+    let linked = std::os::unix::fs::symlink(&real, fixture.list());
+    #[cfg(windows)]
+    let linked = std::os::windows::fs::symlink_file(&real, fixture.list());
+    if linked.is_err() {
+        eprintln!("symlink creation not permitted here; skipping");
+        return;
+    }
+    let output = fixture.watch(&["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(fs::read_to_string(&real).unwrap(), "alpha-one\n");
+}
+
+#[test]
+fn watch_add_rejects_bad_terms() {
+    let fixture = WatchFixture::new(&format!(
+        r#"{{"watchlists":[{{"type":"lines","path":"${{{LIST_ENV}}}"}}],"allow":{{"names":["permitted-term"]}}}}"#
+    ));
+    fs::write(fixture.list(), "alpha-one\n").unwrap();
+    for bad in ["x", "#hidden-term", "line\nbreak", "permitted-term", "  "] {
+        let output = fixture.watch(&["add", bad], None);
+        assert_eq!(output.status.code(), Some(2), "term should be rejected");
+        assert!(String::from_utf8_lossy(&output.stdout).contains("REJECTED: 1"));
+        assert_no_leak(&output, &fixture, &["hidden-term", "permitted-term"]);
+    }
+    assert_eq!(fs::read_to_string(fixture.list()).unwrap(), "alpha-one\n");
+}
+
+#[test]
+fn watch_add_stdin_and_dry_run() {
+    let fixture = WatchFixture::with_lines();
+    fs::write(fixture.list(), "alpha-one\n").unwrap();
+    let dry = fixture.watch(
+        &["add", "--stdin", "--dry-run"],
+        Some("zebrafish-qux\nquokka-two\n"),
+    );
+    assert_eq!(dry.status.code(), Some(0), "{}", combined(&dry));
+    assert!(String::from_utf8_lossy(&dry.stdout).contains("ADDED: 2"));
+    assert_eq!(fs::read_to_string(fixture.list()).unwrap(), "alpha-one\n");
+
+    let real = fixture.watch(&["add", "--stdin"], Some("zebrafish-qux\nquokka-two\n"));
+    assert_eq!(real.status.code(), Some(0), "{}", combined(&real));
+    assert_no_leak(&real, &fixture, &["zebrafish-qux", "quokka-two"]);
+    assert_eq!(
+        fs::read_to_string(fixture.list()).unwrap(),
+        "alpha-one\nzebrafish-qux\nquokka-two\n"
+    );
+
+    // A rejected term still fails a dry run.
+    let dry_bad = fixture.watch(&["add", "--dry-run", "x"], None);
+    assert_eq!(dry_bad.status.code(), Some(2));
+}
+
+fn stderr_of(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).into_owned()
+}
+
+#[test]
+fn watch_add_unset_env_error_names_variable_and_next_step() {
+    let fixture = WatchFixture::with_lines();
+    let output = fixture.watch_at(None, &["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr_of(&output);
+    assert!(stderr.contains(LIST_ENV), "stderr: {stderr}");
+    assert!(stderr.contains("not set"), "stderr: {stderr}");
+    assert!(stderr.contains("Set them"), "missing next step: {stderr}");
+    assert_no_leak(&output, &fixture, &["zebrafish-qux"]);
+}
+
+#[test]
+fn watch_add_inside_repo_error_says_to_point_outside() {
+    let fixture = WatchFixture::with_lines();
+    let inside = fixture.repo.path().join("terms.txt");
+    let output = fixture.watch_at(Some(&inside), &["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr_of(&output);
+    assert!(
+        stderr.contains("Point the source at a file outside the repository"),
+        "stderr: {stderr}"
+    );
+    assert_no_leak(&output, &fixture, &["zebrafish-qux"]);
+}
+
+#[test]
+fn watch_add_without_lines_source_error_says_to_add_one() {
+    let fixture = WatchFixture::new(r#"{"watchlists":[]}"#);
+    let output = fixture.watch_at(None, &["add", "zebrafish-qux"], None);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr_of(&output);
+    assert!(
+        stderr.contains("no `lines` watchlist source"),
+        "stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("Add a `lines` entry to `watchlists`"),
+        "missing next step: {stderr}"
+    );
+    assert_no_leak(&output, &fixture, &["zebrafish-qux"]);
+}
+
+#[test]
+fn watch_add_help_explains_purpose_and_failure_modes() {
+    let temp = tempdir().unwrap();
+    let output = run(binary(), temp.path(), &["watch", "add", "--help"]);
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("appends only"), "stdout: {stdout}");
+    assert!(stdout.contains("REJECTED"), "stdout: {stdout}");
+    assert!(stdout.contains("exit code 2"), "stdout: {stdout}");
+}
+
+#[test]
+fn scan_help_states_read_only_and_exit_codes() {
+    let temp = tempdir().unwrap();
+    let output = run(binary(), temp.path(), &["scan", "--help"]);
+    assert_eq!(output.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Read-only"), "stdout: {stdout}");
+    assert!(stdout.contains("Exit codes"), "stdout: {stdout}");
+}
+
+// ---- --show-paths ---------------------------------------------------------
+
+fn run_show_paths(cwd: &Path, args: &[&str], env_value: Option<&str>) -> Output {
+    let mut command = Command::new(binary());
+    command
+        .args(args)
+        .current_dir(cwd)
+        .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_WATCHLIST_DIR")
+        .env_remove("DOXGUARD_SHOW_PATHS");
+    if let Some(value) = env_value {
+        command.env("DOXGUARD_SHOW_PATHS", value);
+    }
+    command.output().unwrap()
+}
+
+fn broken_config_repo() -> tempfile::TempDir {
+    let repo = tempdir().unwrap();
+    init_repo(repo.path());
+    fs::write(repo.path().join("doxguard.config.json"), "{ not json").unwrap();
+    fs::write(repo.path().join("fixture.txt"), "server=192.168.50.9\n").unwrap();
+    git(repo.path(), &["add", "."]);
+    repo
+}
+
+#[test]
+fn config_parse_error_hides_location_by_default() {
+    let repo = broken_config_repo();
+    let output = run_show_paths(repo.path(), &["scan", "--all-tracked", "--block"], None);
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr_of(&output);
+    assert!(
+        stderr.contains("failed to parse the config"),
+        "stderr: {stderr}"
+    );
+    assert!(stderr.contains("--show-paths"), "missing hint: {stderr}");
+    assert!(!stderr.contains("doxguard.config.json"), "leaked: {stderr}");
+    assert!(
+        !stderr.contains(repo.path().to_string_lossy().as_ref()),
+        "leaked: {stderr}"
+    );
+}
+
+#[test]
+fn config_parse_error_shows_location_with_flag() {
+    let repo = broken_config_repo();
+    let output = run_show_paths(
+        repo.path(),
+        &["scan", "--all-tracked", "--block", "--show-paths"],
+        None,
+    );
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = stderr_of(&output);
+    assert!(stderr.contains("doxguard.config.json"), "stderr: {stderr}");
+    assert!(!stderr.contains("location hidden"), "stderr: {stderr}");
+}
+
+#[test]
+fn config_parse_error_shows_location_with_env() {
+    for value in ["1", "true"] {
+        let repo = broken_config_repo();
+        let output = run_show_paths(
+            repo.path(),
+            &["scan", "--all-tracked", "--block"],
+            Some(value),
+        );
+        assert_eq!(output.status.code(), Some(2));
+        let stderr = stderr_of(&output);
+        assert!(stderr.contains("doxguard.config.json"), "stderr: {stderr}");
+    }
+    let repo = broken_config_repo();
+    let output = run_show_paths(
+        repo.path(),
+        &["scan", "--all-tracked", "--block"],
+        Some("0"),
+    );
+    assert!(!stderr_of(&output).contains("doxguard.config.json"));
+}
+
+#[test]
+fn findings_keep_file_and_line_without_show_paths() {
+    let repo = tempdir().unwrap();
+    init_repo(repo.path());
+    fs::write(repo.path().join("fixture.txt"), "server=192.168.50.9\n").unwrap();
+    git(repo.path(), &["add", "fixture.txt"]);
+    let text = run_show_paths(repo.path(), &["scan", "--all-tracked", "--block"], None);
+    assert_eq!(text.status.code(), Some(1));
+    assert!(stderr_of(&text).contains("fixture.txt:1"));
+    let json = run_show_paths(
+        repo.path(),
+        &["scan", "--all-tracked", "--block", "--format", "json"],
+        None,
+    );
+    assert!(String::from_utf8_lossy(&json.stdout).contains("\"file\": \"fixture.txt\""));
+}
+
+#[test]
+fn watch_add_location_only_in_errors_with_show_paths() {
+    let fixture = WatchFixture::with_lines();
+    let inside = fixture.repo.path().join("terms.txt");
+
+    let hidden = fixture.watch_at(Some(&inside), &["add", "zebrafish-qux"], None);
+    assert_eq!(hidden.status.code(), Some(2));
+    assert!(!combined(&hidden).contains("terms.txt"));
+
+    let shown = fixture.watch_at(
+        Some(&inside),
+        &["--show-paths", "add", "zebrafish-qux"],
+        None,
+    );
+    assert_eq!(shown.status.code(), Some(2));
+    let text = combined(&shown);
+    assert!(text.contains("terms.txt"), "output: {text}");
+    assert!(!text.contains("zebrafish-qux"), "term leaked: {text}");
+
+    // Success output never carries a location, flag or not.
+    let ok = fixture.watch(&["--show-paths", "add", "zebrafish-qux"], None);
+    assert_eq!(ok.status.code(), Some(0), "output: {}", combined(&ok));
+    assert_no_leak(&ok, &fixture, &["zebrafish-qux"]);
 }

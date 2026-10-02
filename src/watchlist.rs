@@ -73,12 +73,57 @@ pub struct LoadedWatchlists {
     pub warnings: Vec<String>,
 }
 
-fn expand_path(
+/// Normalize a needle exactly as `load` does before de-duplication and matching.
+pub(crate) fn normalize_needle(value: &str, ascii_case_insensitive: bool) -> String {
+    if ascii_case_insensitive {
+        value.to_ascii_lowercase()
+    } else {
+        value.to_owned()
+    }
+}
+
+/// Parse the text of a `lines` watchlist: BOM stripped, blank and `#` lines dropped.
+pub(crate) fn parse_lines(text: &str) -> Vec<String> {
+    text.strip_prefix('\u{feff}')
+        .unwrap_or(text)
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// `allow.names` in the same normalized form `load` compares against.
+pub(crate) fn allowed_names(config: &Config) -> HashSet<String> {
+    config
+        .allow
+        .names
+        .iter()
+        .map(|name| normalize_needle(name, config.noise.ascii_case_insensitive))
+        .collect()
+}
+
+pub(crate) fn expand_path(
     template: &str,
     cwd: &Path,
     env: &HashMap<String, String>,
     source_number: usize,
 ) -> std::result::Result<PathBuf, String> {
+    expand_path_names(template, cwd, env).map_err(|missing| {
+        format!(
+            "WARN: {} not set; skipped watchlist source #{source_number}",
+            missing.join(", "),
+        )
+    })
+}
+
+/// Expand `${NAME}` references; on failure returns the sorted names of the unset
+/// (or empty) variables. Variable names are not secret; their values never leave here.
+pub(crate) fn expand_path_names(
+    template: &str,
+    cwd: &Path,
+    env: &HashMap<String, String>,
+) -> std::result::Result<PathBuf, Vec<String>> {
     static VARIABLE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
     let variable = VARIABLE.get_or_init(|| {
         regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}").expect("static regex")
@@ -97,10 +142,7 @@ fn expand_path(
     if !missing.is_empty() {
         missing.sort();
         missing.dedup();
-        return Err(format!(
-            "WARN: {} not set; skipped watchlist source #{source_number}",
-            missing.join(", "),
-        ));
+        return Err(missing);
     }
     let path = PathBuf::from(expanded.as_ref());
     Ok(if path.is_absolute() {
@@ -117,7 +159,7 @@ fn is_short_kana(value: &str) -> bool {
             .all(|character| matches!(character, '\u{3041}'..='\u{3096}' | 'ー'))
 }
 
-fn should_skip(value: &str, source: &WatchlistSource, config: &Config) -> bool {
+pub(crate) fn should_skip(value: &str, source: &WatchlistSource, config: &Config) -> bool {
     if value.chars().count() < config.noise.min_needle_length {
         return true;
     }
@@ -157,14 +199,7 @@ fn read_values(source: &WatchlistSource, path: &Path) -> Result<Vec<String>> {
     match source {
         WatchlistSource::Lines { .. } => {
             let text = fs::read_to_string(path)?;
-            Ok(text
-                .strip_prefix('\u{feff}')
-                .unwrap_or(&text)
-                .lines()
-                .map(str::trim)
-                .filter(|line| !line.is_empty() && !line.starts_with('#'))
-                .map(str::to_owned)
-                .collect())
+            Ok(parse_lines(&text))
         }
         WatchlistSource::Csv { column, .. } => {
             let mut reader = csv::Reader::from_path(path)?;
@@ -218,16 +253,7 @@ pub fn load(
     let mut warnings = Vec::new();
     let mut items = Vec::new();
     let mut seen = HashSet::new();
-    let allowed_owned: HashSet<String> = if config.noise.ascii_case_insensitive {
-        config
-            .allow
-            .names
-            .iter()
-            .map(|name| name.to_ascii_lowercase())
-            .collect()
-    } else {
-        config.allow.names.iter().cloned().collect()
-    };
+    let allowed_owned: HashSet<String> = allowed_names(config);
     let allowed: HashSet<&str> = allowed_owned.iter().map(String::as_str).collect();
 
     for (source_index, source) in config.watchlists.iter().enumerate() {
@@ -244,12 +270,15 @@ pub fn load(
                 "watchlist source #{source_number} resolved successfully but was not found; check the configured environment variable or path"
             );
         }
-        let meta = fs::metadata(&path)
-            .with_context(|| format!("failed to stat watchlist source #{source_number}"))?;
+        let meta = fs::metadata(&path).with_context(|| {
+            format!(
+                "failed to stat watchlist source #{source_number}; check the file's permissions"
+            )
+        })?;
         let limit = config.max_file_size.min(WATCHLIST_MAX_BYTES);
         if meta.len() > limit {
             bail!(
-                "watchlist source #{source_number} is {} bytes (effective limit is {limit}); refuse to load unbounded lists",
+                "watchlist source #{source_number} is {} bytes (effective limit is {limit}); refuse to load unbounded lists. Trim the file or raise `maxFileSize` in the config",
                 meta.len(),
             );
         }
@@ -257,14 +286,18 @@ pub fn load(
         // read loop forever; only read regular files.
         if !meta.file_type().is_file() {
             bail!(
-                "watchlist source #{source_number} is not a regular file; refuse to read a non-regular path"
+                "watchlist source #{source_number} is not a regular file; refuse to read a non-regular path. Point the source at a regular file"
             );
         }
         // An unset environment variable stays a soft skip for structural-only CI.
         // Once a source resolves, missing/read/parse failures fail closed so protection
         // cannot shrink silently.
         let values = read_values(source, &path)
-            .with_context(|| format!("failed to read watchlist source #{source_number}"))?;
+            .with_context(|| {
+                format!(
+                    "failed to read watchlist source #{source_number}; check that the file is readable, valid UTF-8 text (or CSV with the configured column)"
+                )
+            })?;
         let paren_variants = matches!(
             source,
             WatchlistSource::Csv {
@@ -274,11 +307,7 @@ pub fn load(
         );
         for value in values {
             for needle in expand_variants(value.trim(), paren_variants) {
-                let needle = if config.noise.ascii_case_insensitive {
-                    needle.to_ascii_lowercase()
-                } else {
-                    needle
-                };
+                let needle = normalize_needle(&needle, config.noise.ascii_case_insensitive);
                 if should_skip(&needle, source, config)
                     || allowed.contains(needle.as_str())
                     || !seen.insert(needle.clone())

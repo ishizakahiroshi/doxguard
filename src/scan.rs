@@ -122,7 +122,7 @@ fn cached_program(
     cache
         .get_or_init(|| which::which_global(name).ok())
         .as_deref()
-        .ok_or_else(|| anyhow!("could not find `{name}` on PATH"))
+        .ok_or_else(|| anyhow!("could not find `{name}` on PATH. Install it or add it to PATH"))
 }
 
 pub(crate) fn git_program() -> Result<&'static Path> {
@@ -141,15 +141,32 @@ fn run_command(program: &Path, args: &[&str], cwd: &Path, strip_env: &[&str]) ->
     for variable in strip_env {
         command.env_remove(variable);
     }
-    let output = command
-        .output()
-        .with_context(|| format!("failed to start {}", program.display()))?;
+    // The tool is named by its file name; the full location (which can reveal a home
+    // directory) is shown only with `--show-paths`.
+    let tool = if crate::config::show_paths() {
+        program.display().to_string()
+    } else {
+        program.file_stem().map_or_else(
+            || "command".to_owned(),
+            |stem| stem.to_string_lossy().into_owned(),
+        )
+    };
+    let output = command.output().with_context(|| {
+        format!(
+            "failed to start {tool}{}",
+            if crate::config::show_paths() {
+                ""
+            } else {
+                " (location hidden; pass --show-paths to show it)"
+            }
+        )
+    })?;
     if !output.status.success() {
         let message = String::from_utf8_lossy(&output.stderr).trim().to_owned();
         bail!(
             "{}",
             if message.is_empty() {
-                format!("{} {} failed", program.display(), args.join(" "))
+                format!("{tool} {} failed", args.join(" "))
             } else {
                 message
             }
@@ -215,7 +232,9 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
         }
     }
     if paths.is_empty() {
-        bail!("npm pack did not return a file list");
+        bail!(
+            "npm pack did not return a file list. Run --packaged from the package directory (the one with package.json)"
+        );
     }
     Ok(paths)
 }

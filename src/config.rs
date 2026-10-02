@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use anyhow::{Context, Result, bail};
@@ -9,6 +10,39 @@ use regex::{Regex, RegexBuilder};
 use serde::Deserialize;
 
 pub const CONFIG_FILENAME: &str = "doxguard.config.json";
+
+static SHOW_PATHS: AtomicBool = AtomicBool::new(false);
+
+/// Turn on file-system locations in error and warning messages (`--show-paths` or
+/// `DOXGUARD_SHOW_PATHS`). Off by default so locations do not reach AI transcripts or
+/// public CI logs. Findings (`file:line`, JSON `file`) are not affected.
+pub fn set_show_paths(enabled: bool) {
+    SHOW_PATHS.store(enabled, Ordering::Relaxed);
+}
+
+pub fn show_paths() -> bool {
+    SHOW_PATHS.load(Ordering::Relaxed)
+}
+
+/// `DOXGUARD_SHOW_PATHS` is on for `1` or `true` (case-insensitive).
+pub fn show_paths_from_env() -> bool {
+    std::env::var("DOXGUARD_SHOW_PATHS")
+        .map(|value| {
+            let value = value.trim();
+            value == "1" || value.eq_ignore_ascii_case("true")
+        })
+        .unwrap_or(false)
+}
+
+/// Name a place for a message: `<name> <path>` when locations are enabled, otherwise
+/// `<name>` followed by a pointer to `--show-paths`.
+pub fn place(name: &str, path: &Path) -> String {
+    if show_paths() {
+        format!("{name} {}", path.display())
+    } else {
+        format!("{name} (location hidden; pass --show-paths to show it)")
+    }
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
@@ -227,7 +261,9 @@ impl Config {
         }
         for source in &self.watchlists {
             if source.path().is_empty() {
-                bail!("watchlist path must not be empty");
+                bail!(
+                    "watchlist path must not be empty. Set `path` for every watchlist source (for example `${{WATCHLIST_ROOT}}/terms.txt`)"
+                );
             }
             if let WatchlistSource::Csv {
                 column: ColumnSpec::Index(index),
@@ -275,7 +311,7 @@ pub fn load_from(
     requested_path: Option<&Path>,
 ) -> Result<LoadedConfig> {
     if requested_path.is_some_and(|path| path.as_os_str().is_empty()) {
-        bail!("--config path must not be empty");
+        bail!("--config path must not be empty. Pass a config file path, or omit --config");
     }
     let env_path = std::env::var_os("DOXGUARD_CONFIG")
         .filter(|value| !value.is_empty())
@@ -293,7 +329,10 @@ pub fn load_from(
     };
     if !path.exists() {
         if explicit {
-            bail!("config not found: {}", path.display());
+            bail!(
+                "{} not found. Check the --config value or DOXGUARD_CONFIG, or create one with `doxguard init`",
+                place("the config", &path)
+            );
         }
         // No config was found at the repository root. Falling back to defaults is
         // intentional for structural-only CI, but it is also what happens when
@@ -313,12 +352,12 @@ pub fn load_from(
     // Hard ceiling checked before the config is read, so `maxFileSize` cannot
     // be the thing that protects loading the file that defines it.
     const CONFIG_MAX_BYTES: u64 = 1 << 20;
-    let meta =
-        fs::metadata(&path).with_context(|| format!("failed to stat config {}", path.display()))?;
+    let meta = fs::metadata(&path)
+        .with_context(|| format!("failed to stat {}", place("the config", &path)))?;
     if meta.len() > CONFIG_MAX_BYTES {
         bail!(
-            "config {} is {} bytes (limit is {CONFIG_MAX_BYTES}); refuse to load unbounded config",
-            path.display(),
+            "{} is {} bytes (limit is {CONFIG_MAX_BYTES}); refuse to load unbounded config. Trim the config; large term lists belong in a watchlist file",
+            place("the config", &path),
             meta.len()
         );
     }
@@ -326,14 +365,18 @@ pub fn load_from(
     // read_to_string loop forever; only read regular files.
     if !meta.is_file() {
         bail!(
-            "config {} is not a regular file; refuse to read a non-regular path",
-            path.display()
+            "{} is not a regular file; refuse to read a non-regular path. Point --config / DOXGUARD_CONFIG at a JSON file",
+            place("the config", &path)
         );
     }
     let text = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read config {}", path.display()))?;
-    let config: Config = serde_json::from_str(&text)
-        .with_context(|| format!("failed to parse config {}", path.display()))?;
+        .with_context(|| format!("failed to read {}", place("the config", &path)))?;
+    let config: Config = serde_json::from_str(&text).with_context(|| {
+        format!(
+            "failed to parse {}; fix the JSON at the position reported below",
+            place("the config", &path)
+        )
+    })?;
     config.validate()?;
 
     let warnings = config

@@ -14,7 +14,7 @@
 - 実在の監視語（作者の private watchlist 由来の名前・ホスト名・パス）をコード・テスト・fixture に
   絶対に書かない。fixture は合成データのみ
 - 「watchlist はユーザーのマシンから出ない」設計を崩さない（監視語ハードコード・実パス直書き禁止）
-- スキャナは read-only。ファイル書き換え・削除機能を足さない
+- `scan` 系は read-only。書き込みを行うのは `init` / `install-hooks` / `watch add`（追記のみ）だけ。詳細は `CLAUDE.md`
 - ビルド・コミット禁止、secrets-scan 責務、plan/bugfix/pending md の作成ルール等の AI 作業共通ルールは、各利用者のグローバル AI 設定に従う（作者環境の例: `~/.claude/CLAUDE.md` および `~/.claude/guides/`）
 - secrets-scan のこのリポジトリの配線（scanner パス・手動実行コマンド等）は `CLAUDE.md` の「secrets-scan（このリポジトリの配線）」節を参照
 

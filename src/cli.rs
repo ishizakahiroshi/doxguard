@@ -12,7 +12,7 @@ use crate::{
     patterns,
     scaffold::{self, ActionStatus, ScaffoldAction},
     scan::{self, ScanMode, ScanResult},
-    watchlist,
+    watch, watchlist,
 };
 
 #[derive(Debug, Parser)]
@@ -23,6 +23,11 @@ use crate::{
     disable_help_subcommand = true
 )]
 struct Cli {
+    /// Include file-system locations (config, watchlist, scaffold paths) in error and
+    /// warning messages. Hidden by default so they stay out of AI transcripts and CI
+    /// logs. Same as DOXGUARD_SHOW_PATHS=1. Findings always show `file:line`.
+    #[arg(long, global = true, action = ArgAction::SetTrue)]
+    show_paths: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -30,11 +35,67 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Scan repository content.
+    ///
+    /// Use this to check files before they are committed or published. Read-only: it
+    /// never changes files. Pass exactly one mode (--staged, --diff, --all-tracked or
+    /// --packaged). Add --block to exit 1 when matches are found. Exit codes: 0 =
+    /// clean (or matches reported without --block), 1 = blocked, 2 = usage or
+    /// configuration error (the ERROR line says what to change).
     Scan(ScanArgs),
     /// Create a config, pre-commit hook, and structural-only CI workflow.
+    ///
+    /// Use this once per repository. Existing files are left unchanged (reported as
+    /// SKIPPED), and no AI instruction file (CLAUDE.md, AGENTS.md) is created or edited.
     Init,
     /// Install a core.hooksPath pre-commit hook (Husky is detected, not overwritten).
+    ///
+    /// Use this after cloning, or when commits are not being checked. It is safe to
+    /// run again; an existing hooksPath is left unchanged (reported as SKIPPED).
     InstallHooks,
+    /// Manage the private watchlist (append only).
+    ///
+    /// Use `watch add` to add terms. Editing or removing terms, and allow-lists, are
+    /// done by hand in the watchlist file or the config.
+    Watch {
+        #[command(subcommand)]
+        command: WatchCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum WatchCommand {
+    /// Append terms to a `lines` watchlist outside the repository. Values are never printed; paths only in errors with --show-paths.
+    ///
+    /// Use this when a new private term (a name, host, customer, ...) must be caught
+    /// by `doxguard scan`. It appends only: existing lines are never removed or
+    /// rewritten, and allow-lists are edited by hand. Output shows counts only
+    /// (ADDED, EXISTS, REJECTED, TOTAL), never the term values or the file path.
+    ///
+    /// If it fails: exit code 2 with REJECTED: N means N terms were refused (the reason
+    /// kinds are listed, e.g. too-short, comment-prefix) while the valid terms were
+    /// still appended; exit code 2 with an ERROR line means nothing was written and the
+    /// message says what to change (for example, set an unset environment variable or
+    /// point the source outside the repository).
+    Add(WatchAddArgs),
+}
+
+#[derive(Debug, Args)]
+struct WatchAddArgs {
+    /// Terms to watch. They stay in shell history; prefer --stdin for sensitive values.
+    #[arg(value_name = "TERM", required_unless_present = "stdin")]
+    terms: Vec<String>,
+    /// Also read terms from standard input, one per line.
+    #[arg(long, action = ArgAction::SetTrue)]
+    stdin: bool,
+    /// Watchlist source to append to (1-based, as in `source #N` warnings). Default: first `lines` source.
+    #[arg(long, value_name = "N")]
+    source: Option<usize>,
+    /// Config path. DOXGUARD_CONFIG is used when this option is omitted.
+    #[arg(long)]
+    config: Option<PathBuf>,
+    /// Judge the terms but do not write anything.
+    #[arg(long)]
+    dry_run: bool,
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -212,7 +273,9 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
         .filter(|selected| *selected)
         .count();
     if mode_count != 1 {
-        anyhow::bail!("scan requires exactly one mode");
+        anyhow::bail!(
+            "scan requires exactly one mode. Pass exactly one of --staged, --diff, --all-tracked, --packaged"
+        );
     }
     let cwd = std::env::current_dir()?;
     let scan_mode = mode(args);
@@ -264,8 +327,78 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
     Ok(u8::from(blocked))
 }
 
+fn run_watch_add(args: &WatchAddArgs) -> Result<u8> {
+    use std::io::Read;
+
+    const STDIN_LIMIT: u64 = 1024 * 1024;
+    let mut terms = args.terms.clone();
+    if args.stdin {
+        let mut bytes = Vec::new();
+        io::stdin().take(STDIN_LIMIT + 1).read_to_end(&mut bytes)?;
+        if bytes.len() as u64 > STDIN_LIMIT {
+            anyhow::bail!(
+                "standard input is larger than {STDIN_LIMIT} bytes. Send fewer terms per run"
+            );
+        }
+        let text = String::from_utf8(bytes).map_err(|_| {
+            anyhow::anyhow!("standard input is not valid UTF-8. Send the terms as UTF-8 text")
+        })?;
+        terms.extend(text.lines().map(str::to_owned));
+    }
+    let cwd = std::env::current_dir()?;
+    let repo_root = scan::repository_root(&cwd).unwrap_or_else(|_| cwd.clone());
+    let explicit_config = args.config.is_some()
+        || std::env::var_os("DOXGUARD_CONFIG").is_some_and(|value| !value.is_empty());
+    // Config errors can echo the config location (when --show-paths is on); this command
+    // keeps its generic message unless the caller asked for locations.
+    let loaded = config::load_from(&cwd, &repo_root, args.config.as_deref()).map_err(|error| {
+        if config::show_paths() {
+            error
+        } else {
+            anyhow::anyhow!("failed to load the doxguard config (run `doxguard scan` for details)")
+        }
+    })?;
+    if !loaded.found {
+        anyhow::bail!(
+            "no doxguard config found; nothing to append to. Run from the repository root that holds doxguard.config.json, or pass --config / set DOXGUARD_CONFIG"
+        );
+    }
+    let base = if explicit_config { &cwd } else { &repo_root };
+    let report = watch::add(
+        &loaded.config,
+        base,
+        &repo_root,
+        &process_env(),
+        &terms,
+        args.source,
+        args.dry_run,
+    )?;
+    println!("ADDED: {}", report.added);
+    println!("EXISTS: {}", report.exists);
+    if report.rejected.is_empty() {
+        println!("REJECTED: 0");
+    } else {
+        println!(
+            "REJECTED: {} ({})",
+            report.rejected.len(),
+            sanitize_terminal(&report.rejected_kinds().join(", "))
+        );
+    }
+    println!(
+        "TOTAL: {} active term(s) in the target source",
+        report.total
+    );
+    if args.dry_run {
+        println!("DRY-RUN: nothing was written");
+    }
+    Ok(if report.succeeded() { 0 } else { 2 })
+}
+
 fn try_run(cli: Cli) -> Result<u8> {
     match cli.command {
+        Command::Watch {
+            command: WatchCommand::Add(args),
+        } => run_watch_add(&args),
         Command::Scan(args) => run_scan(&args),
         Command::Init => {
             print_actions(&scaffold::initialize(&std::env::current_dir()?)?);
@@ -297,6 +430,7 @@ pub fn run() -> ExitCode {
             return ExitCode::from(if code == 0 { 0 } else { 2 });
         }
     };
+    config::set_show_paths(cli.show_paths || config::show_paths_from_env());
     match try_run(cli) {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
