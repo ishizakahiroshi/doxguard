@@ -9,6 +9,11 @@ personal filesystem paths, and non-public email addresses.
 Credential scanners such as gitleaks and trufflehog look for API keys and tokens. doxguard looks
 for **you**. Use both.
 
+The integration features described below (joined CSV columns, directory sources, file-list scans,
+history scans, short-term boundaries, staged filtering, statistics, and the stricter missing-source policy) are
+unreleased. The published npm package has not yet
+been updated with them; use a validated local development executable when evaluating them.
+
 ## Why it is fast
 
 - Native Rust executable with no runtime dependency in the scanning path
@@ -62,6 +67,7 @@ doxguard init
 This creates, without overwriting existing files:
 
 - `doxguard.config.json`
+- `doxguard.ci.json`, which explicitly selects structural-only checks without private watchlists
 - `.githooks/pre-commit` as a portable fallback
 - a direct native `pre-commit` under the local git directory, selected by `core.hooksPath`
 - `.github/workflows/doxguard.yml` for structural-only CI scanning
@@ -77,8 +83,10 @@ $env:DOXGUARD_WATCHLIST_DIR = "D:/private/watchlists"
 export DOXGUARD_WATCHLIST_DIR="$HOME/private/watchlists"
 ```
 
-An unset variable skips that source with a warning. Built-in structural checks continue to run,
-which is the expected CI behavior.
+A missing or empty variable for a configured watchlist source stops scanning with exit code `2`.
+Only sources explicitly marked `"optional": true` may be skipped when their variables are unset.
+An optional source whose path resolves but cannot be read still fails. Generated CI passes
+`--config doxguard.ci.json`; it does not rely on missing variables to drop private sources.
 
 For a diagram-rich walkthrough of installation, watchlist setup, and the daily commit flow, see the
 [visual user guide](https://ishizakahiroshi.github.io/doxguard/).
@@ -145,7 +153,9 @@ which is why the last column uses a file name no CLI reads on its own.
 doxguard scan --staged --block
 doxguard scan --diff --block
 doxguard scan --all-tracked --dry-run
+doxguard scan --history --block --strict
 doxguard scan --packaged --block
+doxguard scan --files-from-list submission-files.txt --block --strict
 doxguard scan --all-tracked --format json
 doxguard scan --all-tracked --block --strict
 doxguard scan --all-tracked --show-matched # explicitly reveal matched values
@@ -156,11 +166,16 @@ Exactly one mode is required:
 - `--staged`: added, copied, renamed, or modified files in the git index (reads index blobs, not the worktree)
 - `--diff`: tracked working-tree changes compared with `HEAD`; untracked files are not included
 - `--all-tracked`: all files returned by `git ls-files`
+- `--history`: blobs reachable from all refs, including deleted files and other branches/tags.
+  Findings include `blob_oid`; dangling objects and reflogs are outside this mode.
 - `--packaged`: files returned by `npm pack --dry-run --json`
+- `--files-from-list PATH`: UTF-8 newline-separated paths, including gitignored submission files.
+  The list and its entries are resolved from the invocation directory. Entries must remain inside
+  the repository and use relative paths; missing files and external references are errors.
 
-`--strict` (or config `allow.disallowBareAllow` + `failOnSkip`) turns on a harder gate: bare
-`doxguard: allow` is ignored, and unscanned coverage skips (oversize / non-UTF-8 / symlink) fail
-when combined with `--block`. Native pre-commit hooks and generated CI use `--strict`. For the
+Coverage skips (oversize / non-UTF-8 / symlink) fail with `--block` by default (`failOnSkip: true`).
+`--strict` also ignores bare `doxguard: allow` and forces `failOnSkip` even when a config turns it
+off explicitly. Native pre-commit hooks and generated CI use `--strict`. For the
 content that will enter a commit, use `--staged`; `--diff` intentionally does not add untracked files.
 
 Matched values are `[REDACTED]` in text and JSON by default so a detected private value is not
@@ -171,9 +186,23 @@ warnings are written to stderr; JSON reports are written to stdout and also carr
 Exit codes are stable: `0` means pass/report-only, `1` means a `--block` scan found matches (or
 coverage skips under strict/`failOnSkip`), and `2` means usage or configuration error.
 
+History scans read raw Git objects and never fetch missing content. They require a complete
+local repository: shallow, partial/promisor, and grafted repositories are refused. Git replace
+objects are disabled. Historical path exemptions and lockfile rules still apply; symbolic links
+and gitlinks count as incomplete coverage. An unnamed directly referenced blob uses
+`__history_unnamed_blob__` as its report path. Counts refer to distinct blob/path/mode entries,
+so the same blob under two paths may be inspected twice.
+
+History has finite budgets: 250,000 reachable objects and blob/path entries, 10,000 commits or
+root trees and refs, 100,000 findings, 32 MiB per Git output and accumulated target names,
+256 MiB each for accumulated tree listings and blob reads, and 120 seconds overall (30 seconds
+per command). Each blob is limited to the smaller of `maxFileSize` and 16 MiB. Exceeding a
+processing budget is an error; oversize or undecodable content remains a coverage skip.
+
 ## Configuration
 
-`doxguard.config.json` supports line lists and CSV columns. Numeric CSV columns are 1-based.
+`doxguard.config.json` supports line lists, CSV columns, and directory filename sources.
+Numeric CSV columns are 1-based.
 For Git scan modes, an implicit config and repository-relative scan paths are resolved from the Git
 worktree root even when doxguard is launched in a subdirectory. A relative `--config` or
 `DOXGUARD_CONFIG` value remains relative to the directory where the command was invoked, as do
@@ -216,12 +245,14 @@ relative watchlist paths in that explicitly selected config.
   },
   "noise": {
     "minNeedleLength": 2,
+    "shortNeedleMaxLength": 0,
+    "stagedAddedLinesOnly": false,
     "skipShortKanaGivenNames": true,
     "asciiCaseInsensitive": false
   },
   "exemptPaths": ["generated/"],
   "maxFileSize": 1048576,
-  "failOnSkip": false
+  "failOnSkip": true
 }
 ```
 
@@ -229,6 +260,48 @@ Watchlist paths should use `${ENV_VAR}` expansion. Literal paths work but produc
 private path is not accidentally committed. `DOXGUARD_CONFIG` can point to an entirely local config
 when even the source layout should stay out of the repository. UTF-8 BOMs are accepted in line files
 and the first CSV header. A watchlist is limited to the smaller of `maxFileSize` and 64 MiB.
+
+To join a name from columns on the same CSV row, replace `"column"` with
+`"columns": ["surname", "given_name"]`. Each cell is trimmed and non-empty cells are joined
+without a separator; a row with an empty selected cell contributes no joined term. Specify
+exactly one of `column` or a non-empty `columns` array. Keep separate sources if individual
+columns should also be watched. `parenVariants: true` adds the text before the first half-width
+or full-width opening parenthesis as a term; it works for any CSV source.
+
+A filename source can be configured as follows. It reads filenames rather than file contents,
+and does not follow symbolic links or Windows junctions:
+
+```json
+{
+  "type": "directory",
+  "path": "${PRIVATE_FILES}",
+  "minNameLength": 10,
+  "maxDepth": 2,
+  "maxEntries": 5000
+}
+```
+
+The root is depth 1. Reaching an entry limit before traversal is complete, encountering a link,
+or failing to enumerate a configured source stops the scan. Source values and resolved private
+paths remain hidden by default. `watch add` continues to append to `lines` sources only.
+
+`noise.shortNeedleMaxLength` is independent of `minNeedleLength`: its default `0` keeps
+substring matching. A positive N requires terms of N Unicode characters or fewer to have
+non-ASCII-alphanumeric boundaries. The matcher checks boundaries before deduplicating a term,
+so a later valid occurrence on the same line is still detected.
+
+`noise.stagedAddedLinesOnly` defaults to `false`. When enabled, `--staged` scans index
+contents and retains findings only on lines added relative to HEAD. An initial commit scans
+all staged lines. Git comparison errors stop the scan; coverage skips remain blocking.
+Other scan modes always inspect full files. Run `--all-tracked` during migration to find
+existing leaks that unchanged staged lines would suppress. A term elsewhere in HEAD never
+exempts a new occurrence.
+
+JSON reports include `watchlist_statistics` with `candidates`, `loaded`, `too_short`,
+`short_kana`, `allow_listed`, and `duplicate`. Candidates are counted after parenthesis
+variant expansion; each candidate contributes to exactly one reason or `loaded`.
+`baseline_applied` and `baseline_suppressed_hits` describe staged filtering. These counts
+never reveal term values or private source paths.
 
 Each `exemptPaths` entry is a repository-relative exact file or directory subtree. An exempt path
 skips the built-in **structural** patterns (so synthetic fixtures with placeholder IPs or paths do
@@ -278,7 +351,7 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 - Watchlist contents are read locally and never sent anywhere.
 - Repository config contains environment-variable references, not private absolute paths.
 - CLI output masks matched values and does not echo resolved watchlist paths by default.
-- CI normally runs structural patterns only because private watchlists are unavailable there.
+- CI selects a separate config with an empty watchlist explicitly; private watchlists remain local.
 - Scan commands are read-only: they report and return an exit code, but never edit or delete files.
   `watch add` is the only command that appends to a watchlist, and it only appends to a file
   outside the repository.
@@ -306,6 +379,11 @@ Node・npm・Cargoの起動待ちは発生しません。watchlistは手元か�
 追記できます。追記のみで、削除・書き換えはしません。リポ内・シンボリックリンクへの書き込みは
 拒否し、語の値とパスは出力しません。許可系（`allow.*` / `exemptPaths` / `doxguard: allow`）を
 足すコマンドは無く、手で編集します。
+
+統合機能は未リリースです。CSVの `columns` で同じ行の姓と名を連結し、`directory` で手元の
+ファイル名を監視語として読み取れます。`--files-from-list` はgitignoreされた提出物も検査します。
+必須ソースの環境変数が未設定なら終了コード2で停止し、省くソースだけ `optional: true` を明示します。
+CIは監視語を持たない `doxguard.ci.json` を明示して走らせます。
 
 AI エージェントと使う場合、守りの本体は hook と CI で、指示ファイルを読まれなくても commit と CI で
 止まります。AI への案内は `--help` とエラー文に書いてあります。指示ファイルは `AGENTS.md` を共通の

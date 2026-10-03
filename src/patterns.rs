@@ -66,7 +66,7 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
             "Windows personal absolute path",
             // Case-insensitive Users/dev; allow JSON-style doubled backslashes.
             r"(?i)[A-Za-z]:(?:\\+|/)(?:Users|dev)(?:\\+|/)",
-            "Remove the personal absolute path or replace it with a placeholder",
+            "Remove the personal absolute path or replace it with a placeholder / 個人の絶対パスを削除するか、プレースホルダーへ置き換えてください",
             None,
         ));
     }
@@ -74,7 +74,7 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
         patterns.push(pattern(
             "POSIX home path",
             r"/(?:Users|home)/[a-zA-Z0-9_.-]+/",
-            "Replace the home path with ~/ or a placeholder",
+            "Replace the home path with ~/ or a placeholder / ホームパスを ~/ またはプレースホルダーへ置き換えてください",
             None,
         ));
     }
@@ -88,7 +88,7 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
         patterns.push(pattern(
             "Private IPv4 (RFC1918)",
             &private_ip,
-            "Generalize or remove the internal IP address",
+            "Generalize or remove the internal IP address; for documentation examples, use RFC5737 addresses (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) / 内部 IP アドレスを一般化するか削除してください。文書の例には RFC5737 の文書用アドレスを使ってください",
             None,
         ));
     }
@@ -96,7 +96,7 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
         patterns.push(pattern(
             "Email address (not on public allowlist)",
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}\b",
-            "Remove the non-public email or add an explicitly public address/domain to allow",
+            "Remove the non-public email or add an explicitly public address/domain to allow / 非公開メールを削除するか、公開済みと確認したアドレスまたはドメインを許可設定へ追加してください",
             Some(AllowRule::Email),
         ));
     }

@@ -12,7 +12,15 @@ use rayon::prelude::*;
 use regex::Regex;
 use serde::Serialize;
 
-use crate::{config::Config, patterns::StructuralPattern, watchlist::WatchlistMatcher};
+#[path = "history.rs"]
+mod history;
+pub use history::scan_history;
+
+use crate::{
+    config::Config,
+    patterns::StructuralPattern,
+    watchlist::{WatchlistMatcher, WatchlistStatistics},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -21,6 +29,8 @@ pub enum ScanMode {
     Diff,
     AllTracked,
     Packaged,
+    FilesFromList,
+    History,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -32,6 +42,8 @@ pub enum HitKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ScanHit {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blob_oid: Option<String>,
     pub file: String,
     #[serde(rename = "line_number")]
     pub line_number: usize,
@@ -43,6 +55,9 @@ pub struct ScanHit {
 
 #[derive(Debug, Serialize)]
 pub struct ScanResult {
+    pub watchlist_statistics: WatchlistStatistics,
+    pub baseline_applied: bool,
+    pub baseline_suppressed_hits: usize,
     pub mode: ScanMode,
     pub scanned: usize,
     #[serde(rename = "total_files")]
@@ -257,7 +272,109 @@ pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
         )?)),
         ScanMode::AllTracked => Ok(nul_paths(run_git(&["ls-files", "-z"], cwd)?)),
         ScanMode::Packaged => packaged_files(cwd),
+        ScanMode::FilesFromList => bail!("--files-from-list requires an explicit list path"),
+        ScanMode::History => bail!("history uses reachable Git objects, not worktree paths"),
     }
+}
+
+/// Read a bounded, local list. Every entry stays inside the repository and uses
+/// the invocation cwd as its base; reported paths always use the repository root.
+pub fn files_from_list(list: &Path, cwd: &Path, repo_root: &Path) -> Result<Vec<String>> {
+    const MAX_LIST_BYTES: u64 = 64 * 1024 * 1024;
+    const MAX_LIST_PATHS: usize = 100_000;
+    let list_path = cwd.join(list);
+    let metadata = fs::symlink_metadata(&list_path)
+        .map_err(|_| anyhow!("cannot read file list; check the list path and permissions"))?;
+    if is_link(&metadata) || !metadata.is_file() || metadata.len() > MAX_LIST_BYTES {
+        bail!("file list must be a regular UTF-8 file no larger than 64 MiB");
+    }
+    // Bounded read also protects against growth after the metadata check.
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    fs::File::open(&list_path)
+        .map_err(|_| anyhow!("cannot open file list"))?
+        .take(MAX_LIST_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| anyhow!("cannot read file list"))?;
+    if bytes.len() as u64 > MAX_LIST_BYTES {
+        bail!("file list exceeds 64 MiB");
+    }
+    let text = String::from_utf8(bytes).map_err(|_| anyhow!("file list must be valid UTF-8"))?;
+    let root = repo_root
+        .canonicalize()
+        .context("cannot resolve repository root")?;
+    let mut seen = HashSet::new();
+    let mut paths = Vec::new();
+    for line in text.strip_prefix('\u{feff}').unwrap_or(&text).lines() {
+        let entry = line.trim();
+        if entry.is_empty() {
+            continue;
+        }
+        let entry = entry.replace('\\', "/");
+        if entry.starts_with('/') || entry.contains(':') || entry.contains('\0') {
+            bail!("file list entries must be repository-relative paths");
+        }
+        let candidate = cwd.join(&entry);
+        let real = candidate
+            .canonicalize()
+            .map_err(|_| anyhow!("file list contains a missing or unresolvable target"))?;
+        if !real.starts_with(&root) {
+            bail!("file list target is outside the repository");
+        }
+        if !fs::metadata(&real)
+            .map_err(|_| anyhow!("file list target is unreadable"))?
+            .is_file()
+        {
+            bail!("file list targets must be regular files");
+        }
+        // Preserve link coverage reporting, but reject any link that escapes root.
+        let relative = candidate
+            .strip_prefix(repo_root)
+            .map_err(|_| anyhow!("file list target must resolve from a repository directory"))?;
+        let mut component_path = repo_root.to_owned();
+        let mut found_link = false;
+        for component in relative.components() {
+            component_path.push(component);
+            if fs::symlink_metadata(&component_path).is_ok_and(|metadata| is_link(&metadata)) {
+                found_link = true;
+            }
+        }
+        if found_link
+            && relative
+                .components()
+                .any(|part| part == std::path::Component::ParentDir)
+        {
+            bail!("file list paths cannot combine link traversal with parent components");
+        }
+        let mut normalized = PathBuf::new();
+        for component in relative.components() {
+            match component {
+                std::path::Component::Normal(name) => normalized.push(name),
+                std::path::Component::CurDir => {}
+                std::path::Component::ParentDir => {
+                    if !normalized.pop() {
+                        bail!("file list path escapes the repository");
+                    }
+                }
+                _ => bail!("invalid file list path"),
+            }
+        }
+        let path = normalized
+            .to_str()
+            .ok_or_else(|| anyhow!("file list target must have a UTF-8 name"))?
+            .replace('\\', "/");
+        if seen.insert(path.clone()) {
+            if paths.len() >= MAX_LIST_PATHS {
+                bail!("file list exceeds 100000 distinct paths");
+            }
+            paths.push(path);
+        }
+    }
+    Ok(paths)
+}
+
+fn is_link(metadata: &fs::Metadata) -> bool {
+    metadata.file_type().is_symlink()
 }
 
 fn directive_regex() -> &'static Regex {
@@ -355,6 +472,19 @@ pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
 }
 
 fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eligibility {
+    if mode == ScanMode::FilesFromList {
+        let mut target = cwd.to_owned();
+        for component in Path::new(path).components() {
+            target.push(component);
+            match fs::symlink_metadata(&target) {
+                Ok(metadata) if is_link(&metadata) => {
+                    return Eligibility::CoverageSkip("symlink or reparse point");
+                }
+                Ok(_) => {}
+                Err(_) => return Eligibility::CoverageSkip("missing or unreadable listed target"),
+            }
+        }
+    }
     let normalized = normalize_path(path);
     let lower = normalized.to_ascii_lowercase();
     // Binaries are never scanned for either pattern class.
@@ -393,7 +523,7 @@ fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eli
         }
         Err(_) => return Eligibility::CoverageSkip("unscannable metadata"),
     };
-    if metadata.file_type().is_symlink() {
+    if is_link(&metadata) {
         return Eligibility::CoverageSkip("symlink");
     }
     if !metadata.is_file() {
@@ -524,9 +654,10 @@ fn watchlist_hits(
         line.to_owned()
     };
     matcher
-        .matches_spanned(&haystack)
+        .matches_spanned_with_boundary(&haystack, config.noise.short_needle_max_length)
         .filter(|(item, _)| !allowed_by_directive(line, &item.needle, config))
         .map(|(item, span)| ScanHit {
+            blob_oid: None,
             file: path.to_owned(),
             line_number,
             // Slice the original line so the report keeps its casing even when
@@ -594,6 +725,7 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
                             continue;
                         }
                         hits.push(ScanHit {
+                            blob_oid: None,
                             file: path.to_owned(),
                             line_number,
                             matched: matched.to_owned(),
@@ -677,7 +809,28 @@ pub fn scan_paths(
             "WARN: {coverage_skips} coverage skip(s); content was not fully scanned"
         ));
     }
+    let baseline_applied = mode == ScanMode::Staged && config.noise.staged_added_lines_only;
+    let mut baseline_suppressed_hits = 0;
+    if baseline_applied {
+        let mut added = HashMap::new();
+        // Validate every scanned file, even when no hit happened to be found.
+        for (path, _) in &files {
+            added.insert(path.clone(), staged_added_lines(path, cwd)?);
+        }
+        hits.retain(|hit| {
+            let keep = added
+                .get(&hit.file)
+                .is_some_and(|lines| lines.contains(&hit.line_number));
+            if !keep {
+                baseline_suppressed_hits += 1;
+            }
+            keep
+        });
+    }
     Ok(ScanResult {
+        watchlist_statistics: matcher.statistics().clone(),
+        baseline_applied,
+        baseline_suppressed_hits,
         mode,
         scanned,
         total_files,
@@ -688,6 +841,80 @@ pub fn scan_paths(
         hits,
         warnings,
     })
+}
+
+fn staged_added_lines(path: &str, cwd: &Path) -> Result<HashSet<usize>> {
+    // With no HEAD, Git treats the cached diff as a diff against the empty tree.
+    let mut command = Command::new(git_program()?);
+    // GIT_DIFF_OPTS can override -U0 and turn unchanged context into added ranges.
+    command.env_remove("GIT_DIFF_OPTS");
+    command
+        .current_dir(cwd)
+        .args([
+            "-c",
+            "core.quotepath=false",
+            "diff",
+            "--cached",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            "--no-color",
+            "--output-indicator-new=+",
+            "--output-indicator-old=-",
+            "--output-indicator-context= ",
+            "--text",
+            "--unified=0",
+            "--inter-hunk-context=0",
+            "--",
+            path,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    let mut child = command
+        .spawn()
+        .map_err(|_| anyhow!("cannot determine staged baseline; Git diff failed"))?;
+    use std::io::Read;
+    const DIFF_LIMIT: u64 = 64 * 1024 * 1024;
+    let mut bytes = Vec::new();
+    let read = child
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow!("missing baseline diff output"))?
+        .take(DIFF_LIMIT + 1)
+        .read_to_end(&mut bytes);
+    if read.is_err() || bytes.len() as u64 > DIFF_LIMIT {
+        let _ = child.kill();
+        let _ = child.wait();
+        bail!("cannot determine staged baseline; diff unreadable or exceeds 64 MiB");
+    }
+    if !child
+        .wait()
+        .map_err(|_| anyhow!("cannot wait for baseline diff"))?
+        .success()
+    {
+        bail!("cannot determine staged baseline; Git diff failed");
+    }
+    let diff =
+        String::from_utf8(bytes).map_err(|_| anyhow!("staged baseline diff must be UTF-8"))?;
+    let hunk = Regex::new(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@").expect("static hunk regex");
+    let mut added = HashSet::new();
+    for line in diff.lines().filter(|line| line.starts_with("@@")) {
+        let captures = hunk
+            .captures(line)
+            .ok_or_else(|| anyhow!("cannot parse staged baseline hunk"))?;
+        let start: usize = captures[1]
+            .parse()
+            .map_err(|_| anyhow!("invalid staged baseline position"))?;
+        let count: usize = captures
+            .get(2)
+            .map_or(Ok(1), |value| value.as_str().parse())
+            .map_err(|_| anyhow!("invalid staged baseline count"))?;
+        let end = start
+            .checked_add(count)
+            .ok_or_else(|| anyhow!("staged baseline range overflow"))?;
+        added.extend(start..end);
+    }
+    Ok(added)
 }
 
 #[cfg(test)]

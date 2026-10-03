@@ -29,7 +29,8 @@ const CONFIG_TEMPLATE: &str = r#"{
     {
       "type": "lines",
       "path": "${DOXGUARD_WATCHLIST_DIR}/names.txt",
-      "label": "private names"
+      "label": "private names",
+      "optional": false
     }
   ],
   "structural": {
@@ -47,11 +48,25 @@ const CONFIG_TEMPLATE: &str = r#"{
   },
   "noise": {
     "minNeedleLength": 2,
+    "shortNeedleMaxLength": 0,
+    "stagedAddedLinesOnly": false,
     "skipShortKanaGivenNames": true,
     "asciiCaseInsensitive": false
   },
   "exemptPaths": [],
-  "failOnSkip": false
+  "failOnSkip": true
+}
+"#;
+
+// CI selects this config explicitly, instead of relying on an unavailable private
+// environment variable to silently drop a required source from the local config.
+const CI_CONFIG_TEMPLATE: &str = r#"{
+  "watchlists": [],
+  "allow": {
+    "emailDomains": ["example.com", "users.noreply.github.com"],
+    "disallowBareAllow": true
+  },
+  "failOnSkip": true
 }
 "#;
 
@@ -87,7 +102,7 @@ jobs:
         with:
           node-version: "20"
       - name: Scan tracked files (structural patterns only, strict)
-        run: npx --yes doxguard@__DOXGUARD_VERSION__ scan --all-tracked --block --strict
+        run: npx --yes doxguard@__DOXGUARD_VERSION__ scan --all-tracked --block --strict --config doxguard.ci.json
 "#;
 
 fn ci_template() -> String {
@@ -325,16 +340,7 @@ fn has_husky(cwd: &Path) -> bool {
 }
 
 pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
-    if has_husky(cwd) {
-        return Ok(vec![ScaffoldAction {
-            path: ".husky/pre-commit".to_owned(),
-            status: ActionStatus::Skipped,
-            detail: Some(
-                "husky detected; add `doxguard scan --staged --block --strict` to the existing hook"
-                    .to_owned(),
-            ),
-        }]);
-    }
+    let husky = has_husky(cwd);
     let git = git_program()?;
     let git_dir = common_git_dir(git, cwd)?;
     let hook_dir = git_dir.join("doxguard").join("hooks");
@@ -357,6 +363,23 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
     {
         use std::os::unix::fs::PermissionsExt;
         fs::set_permissions(&cached_hook, fs::Permissions::from_mode(0o755))?;
+    }
+    if husky {
+        return Ok(vec![
+            ScaffoldAction {
+                path: "git-dir/doxguard/hooks/pre-commit".to_owned(),
+                status: ActionStatus::Configured,
+                detail: Some("native cache refreshed; existing Husky hook unchanged".to_owned()),
+            },
+            ScaffoldAction {
+                path: ".husky/pre-commit".to_owned(),
+                status: ActionStatus::Skipped,
+                detail: Some(
+                    "husky detected; preserve its other checks and call the cached native hook using `git rev-parse --git-common-dir`; propagate failures with `|| exit $?`"
+                        .to_owned(),
+                ),
+            },
+        ]);
     }
     let hook = create_without_overwrite(cwd, ".githooks/pre-commit", portable_hook_script())?;
     #[cfg(unix)]
@@ -439,6 +462,7 @@ pub fn initialize(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
     let ci_template = ci_template();
     let mut actions = vec![
         create_without_overwrite(cwd, "doxguard.config.json", CONFIG_TEMPLATE)?,
+        create_without_overwrite(cwd, "doxguard.ci.json", CI_CONFIG_TEMPLATE)?,
         create_without_overwrite(cwd, ".github/workflows/doxguard.yml", &ci_template)?,
     ];
     actions.extend(install_hooks(cwd)?);
@@ -483,6 +507,13 @@ mod tests {
         let workflow = ci_template();
         assert!(workflow.contains(&format!("doxguard@{} ", env!("CARGO_PKG_VERSION"))));
         assert!(!workflow.contains("__DOXGUARD_VERSION__"));
+        assert!(workflow.contains("--config doxguard.ci.json"));
+
+        let ci: crate::config::Config = serde_json::from_str(CI_CONFIG_TEMPLATE).unwrap();
+        ci.validate().unwrap();
+        assert!(ci.watchlists.is_empty());
+        assert!(ci.fail_on_skip);
+        assert!(ci.allow.disallow_bare_allow);
 
         let config: crate::config::Config = serde_json::from_str(CONFIG_TEMPLATE).unwrap();
         config.validate().unwrap();

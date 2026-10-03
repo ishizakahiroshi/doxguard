@@ -50,28 +50,60 @@ pub enum WatchlistSource {
     Lines {
         path: String,
         #[serde(default)]
+        optional: bool,
+        #[serde(default)]
         label: Option<String>,
     },
     Csv {
         path: String,
-        column: ColumnSpec,
+        #[serde(default)]
+        optional: bool,
+        #[serde(default)]
+        column: Option<ColumnSpec>,
+        #[serde(default)]
+        columns: Option<Vec<ColumnSpec>>,
         #[serde(default)]
         label: Option<String>,
         #[serde(default, rename = "parenVariants")]
         paren_variants: bool,
     },
+    Directory {
+        path: String,
+        #[serde(default)]
+        optional: bool,
+        #[serde(default)]
+        label: Option<String>,
+        #[serde(default = "default_directory_min_length", rename = "minNameLength")]
+        min_name_length: usize,
+        #[serde(default = "default_directory_depth", rename = "maxDepth")]
+        max_depth: usize,
+        #[serde(default = "default_directory_entries", rename = "maxEntries")]
+        max_entries: usize,
+    },
+}
+
+fn default_directory_min_length() -> usize {
+    10
+}
+fn default_directory_depth() -> usize {
+    2
+}
+fn default_directory_entries() -> usize {
+    5000
 }
 
 impl WatchlistSource {
     pub fn path(&self) -> &str {
         match self {
-            Self::Lines { path, .. } | Self::Csv { path, .. } => path,
+            Self::Lines { path, .. } | Self::Csv { path, .. } | Self::Directory { path, .. } => {
+                path
+            }
         }
     }
 
     pub fn label(&self) -> String {
         match self {
-            Self::Lines { label, .. } | Self::Csv { label, .. } => {
+            Self::Lines { label, .. } | Self::Csv { label, .. } | Self::Directory { label, .. } => {
                 label.clone().unwrap_or_else(|| "watchlist".to_owned())
             }
         }
@@ -79,9 +111,19 @@ impl WatchlistSource {
 
     pub fn display_label(&self, index: usize) -> String {
         match self {
-            Self::Lines { label, .. } | Self::Csv { label, .. } => label
-                .clone()
-                .unwrap_or_else(|| format!("watchlist source #{}", index + 1)),
+            Self::Lines { label, .. } | Self::Csv { label, .. } | Self::Directory { label, .. } => {
+                label
+                    .clone()
+                    .unwrap_or_else(|| format!("watchlist source #{}", index + 1))
+            }
+        }
+    }
+
+    pub fn optional(&self) -> bool {
+        match self {
+            Self::Lines { optional, .. }
+            | Self::Csv { optional, .. }
+            | Self::Directory { optional, .. } => *optional,
         }
     }
 }
@@ -152,6 +194,10 @@ pub struct AllowConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct NoiseConfig {
+    #[serde(rename = "shortNeedleMaxLength")]
+    pub short_needle_max_length: usize,
+    #[serde(rename = "stagedAddedLinesOnly")]
+    pub staged_added_lines_only: bool,
     #[serde(rename = "minNeedleLength")]
     pub min_needle_length: usize,
     #[serde(rename = "skipShortKanaGivenNames")]
@@ -164,6 +210,8 @@ pub struct NoiseConfig {
 impl Default for NoiseConfig {
     fn default() -> Self {
         Self {
+            short_needle_max_length: 0,
+            staged_added_lines_only: false,
             min_needle_length: 2,
             skip_short_kana_given_names: true,
             ascii_case_insensitive: false,
@@ -209,7 +257,7 @@ impl Default for Config {
             noise: NoiseConfig::default(),
             exempt_paths: Vec::new(),
             max_file_size: default_max_file_size(),
-            fail_on_skip: false,
+            fail_on_skip: true,
         }
     }
 }
@@ -266,12 +314,42 @@ impl Config {
                 );
             }
             if let WatchlistSource::Csv {
-                column: ColumnSpec::Index(index),
+                column, columns, ..
+            } = source
+            {
+                if column.is_some() == columns.is_some()
+                    || columns.as_ref().is_some_and(Vec::is_empty)
+                {
+                    bail!("CSV sources require exactly one of `column` or non-empty `columns`");
+                }
+                for selected in column.iter().chain(columns.iter().flatten()) {
+                    match selected {
+                        ColumnSpec::Index(0) => {
+                            bail!("numeric CSV columns are 1-based and must be at least 1")
+                        }
+                        ColumnSpec::Name(name) if name.trim().is_empty() => {
+                            bail!("CSV column names must not be empty")
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            if let WatchlistSource::Directory {
+                min_name_length,
+                max_depth,
+                max_entries,
                 ..
             } = source
             {
-                if *index == 0 {
-                    bail!("numeric CSV columns are 1-based and must be at least 1");
+                if *min_name_length == 0
+                    || *max_depth == 0
+                    || *max_depth > 64
+                    || *max_entries == 0
+                    || *max_entries > 1_000_000
+                {
+                    bail!(
+                        "directory sources require minNameLength >= 1, maxDepth 1..64, and maxEntries 1..1000000"
+                    );
                 }
             }
         }

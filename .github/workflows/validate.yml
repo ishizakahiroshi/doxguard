@@ -71,7 +71,7 @@ jobs:
       - name: Build release binary
         run: cargo build --release --locked
       - name: Scan repository (structural patterns only, strict)
-        run: ./target/release/doxguard scan --all-tracked --block --strict
+        run: ./target/release/doxguard scan --all-tracked --block --strict --config doxguard.ci.json
       - name: Check npm launcher syntax
         run: node --check bin/doxguard.js
       - name: Verify npm package file list

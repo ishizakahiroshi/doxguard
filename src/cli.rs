@@ -115,9 +115,15 @@ struct ScanArgs {
     /// Scan every git-tracked file.
     #[arg(long, action = ArgAction::SetTrue)]
     all_tracked: bool,
+    /// Scan blobs reachable from all Git refs, including deleted files (full clone required).
+    #[arg(long, action = ArgAction::SetTrue)]
+    history: bool,
     /// Scan the file list produced by npm pack.
     #[arg(long, action = ArgAction::SetTrue)]
     packaged: bool,
+    /// Scan repository-relative paths listed in a UTF-8 file, including gitignored submissions.
+    #[arg(long, value_name = "PATH")]
+    files_from_list: Option<PathBuf>,
     /// Exit 1 when matches are found.
     #[arg(long)]
     block: bool,
@@ -145,6 +151,10 @@ fn mode(args: &ScanArgs) -> ScanMode {
         ScanMode::Diff
     } else if args.all_tracked {
         ScanMode::AllTracked
+    } else if args.history {
+        ScanMode::History
+    } else if args.files_from_list.is_some() {
+        ScanMode::FilesFromList
     } else {
         ScanMode::Packaged
     }
@@ -213,23 +223,38 @@ fn json_report(result: &ScanResult, show_matched: bool) -> Result<String> {
 }
 
 fn text_report(result: &ScanResult, show_matched: bool) -> String {
+    let statistics = &result.watchlist_statistics;
+    let summary = format!(
+        "Watchlist candidates: {}; loaded: {}; excluded: too_short={}, short_kana={}, allow_listed={}, duplicate={}\nBaseline applied: {}; suppressed hits: {}\n",
+        statistics.candidates,
+        statistics.loaded,
+        statistics.too_short,
+        statistics.short_kana,
+        statistics.allow_listed,
+        statistics.duplicate,
+        result.baseline_applied,
+        result.baseline_suppressed_hits
+    );
     if result.hits.is_empty() {
         if result.coverage_skips > 0 {
             return format!(
-                "INCOMPLETE: doxguard skipped {} file(s) that could not be scanned (scanned {} of {} files).\n",
+                "INCOMPLETE: doxguard skipped {} file(s) that could not be scanned (scanned {} of {} files).\n{summary}",
                 result.coverage_skips, result.scanned, result.total_files
             );
         }
         return format!(
-            "OK: doxguard passed (scanned {} files; {} needles + {} structural patterns)\n",
+            "OK: doxguard passed (scanned {} files; {} needles + {} structural patterns)\n{summary}",
             result.scanned, result.watchlist_needles, result.structural_patterns
         );
     }
     let mut output = format!(
-        "BLOCKED: doxguard detected {} match(es).\n\n",
+        "BLOCKED: doxguard detected {} match(es).\n{summary}\n",
         result.hits.len()
     );
     for hit in &result.hits {
+        if let Some(oid) = &hit.blob_oid {
+            output.push_str(&format!("history blob: {oid}\n"));
+        }
         let matched = if show_matched {
             sanitize_terminal(&hit.matched)
         } else {
@@ -268,13 +293,20 @@ fn print_actions(actions: &[ScaffoldAction]) {
 }
 
 fn run_scan(args: &ScanArgs) -> Result<u8> {
-    let mode_count = [args.staged, args.diff, args.all_tracked, args.packaged]
-        .into_iter()
-        .filter(|selected| *selected)
-        .count();
+    let mode_count = [
+        args.staged,
+        args.diff,
+        args.all_tracked,
+        args.history,
+        args.packaged,
+        args.files_from_list.is_some(),
+    ]
+    .into_iter()
+    .filter(|selected| *selected)
+    .count();
     if mode_count != 1 {
         anyhow::bail!(
-            "scan requires exactly one mode. Pass exactly one of --staged, --diff, --all-tracked, --packaged"
+            "scan requires exactly one mode. Pass exactly one of --staged, --diff, --all-tracked, --history, --packaged, --files-from-list"
         );
     }
     let cwd = std::env::current_dir()?;
@@ -295,16 +327,30 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
     let patterns = patterns::build(&loaded.config)?;
     let mut warnings = loaded.warnings;
     warnings.extend(watchlists.warnings);
-    let paths = scan::files_for_mode(scan_mode, &scan_root)?;
-    let result = scan::scan_paths(
-        scan_mode,
-        paths,
-        &scan_root,
-        &loaded.config,
-        &watchlists.matcher,
-        &patterns,
-        warnings,
-    )?;
+    let result = if scan_mode == ScanMode::History {
+        scan::scan_history(
+            &scan_root,
+            &loaded.config,
+            &watchlists.matcher,
+            &patterns,
+            warnings,
+        )?
+    } else {
+        let paths = if let Some(list) = &args.files_from_list {
+            scan::files_from_list(list, &cwd, &scan_root)?
+        } else {
+            scan::files_for_mode(scan_mode, &scan_root)?
+        };
+        scan::scan_paths(
+            scan_mode,
+            paths,
+            &scan_root,
+            &loaded.config,
+            &watchlists.matcher,
+            &patterns,
+            warnings,
+        )?
+    };
     for warning in &result.warnings {
         eprintln!("{}", sanitize_terminal(warning));
     }

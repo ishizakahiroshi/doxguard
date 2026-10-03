@@ -26,18 +26,23 @@ fn loads_lines_and_csv_watchlists_with_allow_and_noise_rules() {
     config.allow.names.push("Allowed Product".to_owned());
     config.watchlists = vec![
         WatchlistSource::Lines {
+            optional: false,
             path: "${FIXTURE_ROOT}/names.txt".to_owned(),
             label: Some("fixture lines".to_owned()),
         },
         WatchlistSource::Csv {
+            optional: false,
             path: "${FIXTURE_ROOT}/people.csv".to_owned(),
-            column: ColumnSpec::Name("name".to_owned()),
+            column: Some(ColumnSpec::Name("name".to_owned())),
+            columns: None,
             label: Some("fixture names".to_owned()),
             paren_variants: true,
         },
         WatchlistSource::Csv {
+            optional: false,
             path: "${FIXTURE_ROOT}/people.csv".to_owned(),
-            column: ColumnSpec::Name("given_name".to_owned()),
+            column: Some(ColumnSpec::Name("given_name".to_owned())),
+            columns: None,
             label: Some("fixture given_name".to_owned()),
             paren_variants: false,
         },
@@ -80,6 +85,7 @@ fn detects_all_structural_kinds_and_honors_three_allow_mechanisms() {
     config.allow.emails.push("public@sample.test".to_owned());
     config.allow.email_domains.push("public.test".to_owned());
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -318,6 +324,7 @@ fn ascii_case_insensitive_watchlist_matches_lower_haystack() {
         ..Default::default()
     };
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -330,14 +337,19 @@ fn ascii_case_insensitive_watchlist_matches_lower_haystack() {
 }
 
 #[test]
-fn missing_env_is_soft_but_resolved_missing_watchlist_fails_closed() {
+fn only_optional_missing_env_is_soft_and_resolved_missing_watchlist_fails_closed() {
     let temp = tempdir().unwrap();
     let mut config = Config::default();
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/missing.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
 
+    assert!(watchlist::load(&config, temp.path(), &HashMap::new()).is_err());
+    if let WatchlistSource::Lines { optional, .. } = &mut config.watchlists[0] {
+        *optional = true;
+    }
     let missing_env = watchlist::load(&config, temp.path(), &HashMap::new()).unwrap();
     assert!(missing_env.matcher.is_empty());
     assert!(
@@ -444,6 +456,7 @@ fn case_insensitive_hits_report_original_line_casing() {
         ..Default::default()
     };
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -517,12 +530,15 @@ fn bom_is_removed_from_lines_values_and_csv_headers() {
     let config = Config {
         watchlists: vec![
             WatchlistSource::Lines {
+                optional: false,
                 path: "${FIXTURE_ROOT}/lines.txt".to_owned(),
                 label: Some("synthetic lines".to_owned()),
             },
             WatchlistSource::Csv {
+                optional: false,
                 path: "${FIXTURE_ROOT}/values.csv".to_owned(),
-                column: ColumnSpec::Name("name".to_owned()),
+                column: Some(ColumnSpec::Name("name".to_owned())),
+                columns: None,
                 label: Some("synthetic csv".to_owned()),
                 paren_variants: false,
             },
@@ -551,6 +567,7 @@ fn watchlist_has_a_hard_size_ceiling_independent_of_config() {
         ..Default::default()
     };
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/oversized.txt".to_owned(),
         label: Some("synthetic oversized".to_owned()),
     });
@@ -645,6 +662,7 @@ fn exempt_paths_skip_structural_but_still_match_watchlist() {
         ..Default::default()
     };
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -693,6 +711,7 @@ fn lockfiles_run_structural_patterns_but_skip_watchlist() {
     .unwrap();
     let mut config = Config::default();
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -737,6 +756,7 @@ fn config_and_watchlist_refuse_non_regular_files() {
 
     let mut config = Config::default();
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "/dev/zero".to_owned(),
         label: Some("synthetic device".to_owned()),
     });

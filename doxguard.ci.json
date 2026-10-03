@@ -1,0 +1,9 @@
+{
+  "watchlists": [],
+  "exemptPaths": ["src/patterns.rs", "tests/"],
+  "allow": {
+    "emailDomains": ["example.com", "users.noreply.github.com"],
+    "disallowBareAllow": true
+  },
+  "failOnSkip": true
+}

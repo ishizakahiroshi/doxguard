@@ -4,7 +4,18 @@ All notable changes to doxguard are documented here.
 
 ## [Unreleased]
 
+- Add bounded, read-only `scan --history` for blobs reachable from all refs, including
+  deleted files. Findings identify the blob; incomplete local object databases are refused.
+
+- Add independent short-term boundaries, watchlist exclusion statistics, and an opt-in
+  staged added-lines baseline. Full-file modes retain full coverage; Git comparison failures stop scans.
+
 ### Added
+
+- Unreleased integration support: joined CSV columns, bounded directory filename sources,
+  and `scan --files-from-list` for repository-local submission files.
+- `init` generates `doxguard.ci.json` for explicitly selected structural-only CI scanning.
+- Built-in structural suggestions include Japanese guidance and RFC5737 replacement addresses.
 
 - `doxguard watch add [TERM ...] [--stdin] [--source N] [--dry-run]` appends terms to a `lines`
   watchlist outside the repository. It is append-only, refuses in-repo targets and symbolic
@@ -16,6 +27,10 @@ All notable changes to doxguard are documented here.
   `AGENTS.md` / `CLAUDE.md`.
 
 ### Changed
+
+- Watchlist sources are required by default: unset environment references stop scanning.
+  Only explicitly optional sources may skip unset variables; resolved source errors still fail.
+- Coverage skips fail blocking scans by default; `failOnSkip: false` remains an explicit override.
 
 - Error messages and `--help` text now state the cause and the next step (for example, which
   environment variable to set, or to point the watchlist outside the repository).

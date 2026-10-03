@@ -143,6 +143,11 @@ fn native_hook_runs_on_commit() {
     let initialized = run(binary(), temp.path(), &["init"]);
     assert!(initialized.status.success());
     fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"watchlists":[]}"#,
+    )
+    .unwrap();
+    fs::write(
         temp.path().join("fixture.txt"),
         "server=192.168.50.9 # doxguard: allow 192.168.50.9\n",
     )
@@ -231,7 +236,7 @@ fn strict_blocks_on_coverage_skips_end_to_end() {
     init_repo(temp.path());
     fs::write(
         temp.path().join("doxguard.config.json"),
-        "{\"maxFileSize\": 16}\n",
+        "{\"maxFileSize\": 16, \"failOnSkip\": false}\n",
     )
     .unwrap();
     fs::write(temp.path().join("big.txt"), "x".repeat(64)).unwrap();
@@ -462,6 +467,11 @@ fn native_hook_blocks_non_utf8_staged_content() {
     init_repo(temp.path());
     let initialized = run(binary(), temp.path(), &["init"]);
     assert!(initialized.status.success());
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"watchlists":[]}"#,
+    )
+    .unwrap();
     fs::write(temp.path().join("non-utf8.txt"), vec![b'x', 0x80]).unwrap();
     git(temp.path(), &["add", "non-utf8.txt"]);
 
@@ -554,6 +564,11 @@ fn generated_hook_is_scanned_instead_of_implicitly_exempted() {
     init_repo(temp.path());
     let initialized = run(binary(), temp.path(), &["init"]);
     assert!(initialized.status.success());
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"watchlists":[]}"#,
+    )
+    .unwrap();
 
     let hook_path = temp.path().join(".githooks/pre-commit");
     let mut hook = fs::read_to_string(&hook_path).unwrap();
