@@ -266,6 +266,21 @@ fn files_list_scans_gitignored_submissions_and_preserves_cwd_and_names() {
 }
 
 #[test]
+fn files_list_accepts_equivalent_repository_root_spellings() {
+    let temp = tempdir().unwrap();
+    fs::create_dir(temp.path().join("sub")).unwrap();
+    fs::write(temp.path().join("sub/fixture.txt"), "synthetic content\n").unwrap();
+    fs::write(temp.path().join("sub/list.txt"), "fixture.txt\n").unwrap();
+    // Windows canonical paths use a verbatim prefix; Git and cwd may instead use
+    // ordinary or short-name spellings of the same directory.
+    let root = temp.path().canonicalize().unwrap();
+    assert_eq!(
+        scan::files_from_list(Path::new("list.txt"), &temp.path().join("sub"), &root).unwrap(),
+        ["sub/fixture.txt"]
+    );
+}
+
+#[test]
 fn list_errors_and_coverage_skips_fail_closed() {
     let temp = tempdir().unwrap();
     git(temp.path(), &["init", "-q"]);

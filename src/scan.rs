@@ -303,6 +303,16 @@ pub fn files_from_list(list: &Path, cwd: &Path, repo_root: &Path) -> Result<Vec<
     let root = repo_root
         .canonicalize()
         .context("cannot resolve repository root")?;
+    // Git and Windows cwd can spell the same directory differently (short names,
+    // casing, or a verbatim prefix). Match its filesystem identity, then retain
+    // the lexical suffix so in-repository links and parent traversal remain visible.
+    // Use the outermost matching ancestor: a nested link back to root must not
+    // disappear from the suffix used for coverage checks.
+    let invocation_root = cwd
+        .ancestors()
+        .filter(|ancestor| ancestor.canonicalize().is_ok_and(|path| path == root))
+        .last()
+        .ok_or_else(|| anyhow!("file list target must resolve from a repository directory"))?;
     let mut seen = HashSet::new();
     let mut paths = Vec::new();
     for line in text.strip_prefix('\u{feff}').unwrap_or(&text).lines() {
@@ -329,7 +339,7 @@ pub fn files_from_list(list: &Path, cwd: &Path, repo_root: &Path) -> Result<Vec<
         }
         // Preserve link coverage reporting, but reject any link that escapes root.
         let relative = candidate
-            .strip_prefix(repo_root)
+            .strip_prefix(invocation_root)
             .map_err(|_| anyhow!("file list target must resolve from a repository directory"))?;
         let mut component_path = repo_root.to_owned();
         let mut found_link = false;
