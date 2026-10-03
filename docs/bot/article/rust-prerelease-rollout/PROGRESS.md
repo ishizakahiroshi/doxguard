@@ -5,7 +5,7 @@ repo: `ishizakahiroshi/doxguard`。
 指示branch: `dots/article-rust-prerelease-rollout-8`。制作PR base: `develop`。
 投稿repo: `ishizakahiroshi/qiita-content`、branch: `main`。
 更新日: 2026-10-03。
-状態: 本文・4PNG制作済み、完成画像の自己・独立目視済み。GitHub最終提出とcommit照合中。Qiita未投稿。
+状態: 本文・4PNG・制作証跡を提出済み。成果物SHA 128ea0bce064e34023919e7256b6e968a3d866bdの独立レビューPASS。証跡後続commitの差分確認後に単一記事dispatchを補完。Qiita未投稿。
 指示SHA: `1cd7da54f5faade668071843f1e3f36657905802`。
 制作branch: `dots/article-rust-prerelease-rollout-8-production`。
 
@@ -18,8 +18,8 @@ repo: `ishizakahiroshi/doxguard`。
 | infographic | dots | complete | PNG・元データ・目視結果 |
 | 本文挿絵 | dots | complete | PNG・生成条件 |
 | 本文図 | dots | complete | PNG・HTML/SVG |
-| 自己レビュー・独立レビュー | dots／別担当 | in_progress | 最終PNG等倍目視済み。独立したローカルバイトレビューは重大指摘なし。確定commit blob照合待ち |
-| 記事PR提出 | dots | submitted | https://github.com/ishizakahiroshi/doxguard/pull/1 。画像・証跡の最終commitを追加中 |
+| 自己レビュー・独立レビュー | dots／別担当 | passed_artifacts | 128ea0bce064e34023919e7256b6e968a3d866bdの29成果物blob一致。本文・4PNGの等倍目視PASS、重大指摘なし。証跡後続差分は別確認 |
+| 記事PR提出 | dots | submitted | https://github.com/ishizakahiroshi/doxguard/pull/1 。成果物SHA128ea0bce064e34023919e7256b6e968a3d866bdを提出済み |
 | Qiita公開 | dots | pending | 実行ID・記事ID・URL・重複確認 |
 | 実URL確認 | dots／ローカル | pending | 本文・画像・公開状態 |
 
@@ -33,3 +33,5 @@ repo: `ishizakahiroshi/doxguard`。
 
 
 2026-10-03 12:35 UTC: 3件のAI画像生成と4PNGの制作・目視検査が完了。GitHubへのbinary blob作成は1回の承認待ちを経て成功。最終4PNGと生成元をSHA照合済み。既提出本文SHAはb7c07030f565f8b6f1b0f22e1cf637822d59a58c。最終提出commitと独立照合を進める。Qiitaはpending-publication。
+
+2026-10-03 12:43 UTC: GitHub成果物SHA128ea0bce064e34023919e7256b6e968a3d866bdの独立レビューPASS。29成果物のblob/容量/bytesが一致し、developからの34追加ファイルはすべて記事範囲内。本文・画像は固定し、レビュー結果と公開前画像read-backの証跡だけを後続commitへ記録。最終差分確認後にローカル担当のdispatchへ進む。

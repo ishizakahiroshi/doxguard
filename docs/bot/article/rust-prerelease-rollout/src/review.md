@@ -50,3 +50,13 @@
 5. GitHubの確定commit treeとローカルでレビューした各ファイルのGit blob SHAを比較。
 
 投稿前の新規記事重複確認、実行アカウント、記事ID保持、公開URLでの本文・画像確認はpublication-receiptの別工程とする。
+
+## 確定commitに対する独立レビュー結果
+
+- レビュー対象SHA: `128ea0bce064e34023919e7256b6e968a3d866bd`
+- tree SHA: `b27ae2e6289f108afc68c80b644ac44f6fd284f7`
+- 結果: **PASS（記事・図版・制作証跡）**。重大指摘なし。
+- 29件の予定成果物について、ローカルでレビューしたbytes、容量、Git blob SHAとGitHub treeの値が一致した。本文と最終4PNGは目視時の固定bytesから変わっていない。
+- develop base `4b4687e522bba60c1662e9a5f9e2d176caf96ca3` との比較では34追加ファイルで、すべて記事フォルダ内。製品コードなど範囲外の変更はない。
+- この後続commitはレビュー結果、進捗、GitHub画像URLのread-back証跡だけを記録する。本文・PNG・組版・数値データは変更しない。後続commit自身についても独立した差分確認を依頼し、旧PASSを自動流用しない。
+- Qiitaのdispatch、公開本文、実記事内の4画像確認は未実施。この記事・図版PASSと公開完了を混同しない。
