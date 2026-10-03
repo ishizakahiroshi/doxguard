@@ -1,0 +1,122 @@
+{
+  "article_key": "rust-prerelease-rollout",
+  "account": "ishizakahiroshi",
+  "state": "verified-publication-and-desktop-visual",
+  "item_id": "cdbe8d6a65c4d17e564a",
+  "source_repo": "ishizakahiroshi/doxguard",
+  "source_sha": "128ea0bce064e34023919e7256b6e968a3d866bd",
+  "reviewed_sha": "128ea0bce064e34023919e7256b6e968a3d866bd",
+  "run_id": "37124608032",
+  "confirmed_body_sha256": "b7530289008fc6ef7d6f241a92566436948658a263e9499def19202830a5c0eb",
+  "pending_body_sha256": "b7530289008fc6ef7d6f241a92566436948658a263e9499def19202830a5c0eb",
+  "image_urls": [
+    "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/01_2026-10-03_rust-prerelease-rollout_hero.png",
+    "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/02_2026-10-03_rust-prerelease-rollout_infographic.png",
+    "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/03_2026-10-03_rust-prerelease-rollout_illustration.png",
+    "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/04_2026-10-03_rust-prerelease-rollout_fig.png"
+  ],
+  "url": "https://qiita.com/ishizakahiroshi/items/cdbe8d6a65c4d17e564a",
+  "verified_at": "2026-10-03T12:58:57.459Z",
+  "visual_acceptance": "passed-desktop-browser",
+  "instruction_sha": "1cd7da54f5faade668071843f1e3f36657905802",
+  "article_pr": "https://github.com/ishizakahiroshi/doxguard/pull/1",
+  "article_evidence_commit": "133007d14eff618eb19acdb0f8db43c71ba5a890",
+  "workflow_commit": "0003af305fe5ff6cf91ce9096389c729a6f6a04d",
+  "workflow_path": ".github/workflows/publish-one.yml",
+  "workflow_run_url": "https://github.com/ishizakahiroshi/qiita-content/actions/runs/37124608032",
+  "workflow_conclusion": "success",
+  "upstream_receipt_url": "https://github.com/ishizakahiroshi/qiita-content/blob/qiita-one/rust-prerelease-rollout/publication/rust-prerelease-rollout/publication.json",
+  "upstream_receipt_blob": "5400222fc2777879c81f6c63db7be816494bea2d",
+  "supersedes": "publication-receipt.md is retained as the pre-publication checkpoint; this JSON records the completed publication.",
+  "browser_review": {
+    "reviewed_at_window_utc": "2026-10-03T13:00:00Z/2026-10-03T13:02:59Z",
+    "reviewer": "Independent publication verification",
+    "browser": "dot cloud Chrome, signed out",
+    "viewport": [
+      1188,
+      761
+    ],
+    "article_title": "Rust候補を30リポジトリへ導入して、追加検査を15件保留にした理由",
+    "account": "ishizakahiroshi",
+    "title_account_body_code_readable": true,
+    "disclosures_and_author_footer_readable": true,
+    "article_image_count": 4,
+    "all_images_complete": true,
+    "qiita_cdn_natural_dimensions": [
+      1400,
+      788
+    ],
+    "all_image_urls_encode_reviewed_source_sha": true,
+    "roles_in_order": [
+      "hero",
+      "infographic",
+      "illustration",
+      "fig"
+    ],
+    "visual_findings": "No broken image, glyph defect, cropping, overlap, or horizontal page overflow in the desktop viewport.",
+    "screenshots": "Two screenshot pairs were inspected in the browser tool results. No local screenshot-file path is claimed.",
+    "mobile_viewport_tested": false
+  },
+  "original_pngs": [
+    {
+      "file": "01_2026-10-03_rust-prerelease-rollout_hero.png",
+      "bytes": 1997748,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "git_blob_sha": "204295f578899898fd6876bc4bbf18cb0e082e77",
+      "sha256": "7263073e324128cbca7b5885b103ec242ecdb7aca3995f34dca2e5f849d473fa"
+    },
+    {
+      "file": "02_2026-10-03_rust-prerelease-rollout_infographic.png",
+      "bytes": 389955,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "git_blob_sha": "4809f83d439e6683162b9bed61bc40f4a66d946d",
+      "sha256": "300016e70870dfc2331b4345777af4fee941696641755874f37dbe5b54e40b64"
+    },
+    {
+      "file": "03_2026-10-03_rust-prerelease-rollout_illustration.png",
+      "bytes": 2254545,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "git_blob_sha": "599e5f5e4ae79414732eed81d37699413b8a1e25",
+      "sha256": "a3a47a78a2c303144243a998b375a5ed8ccb2a2732d16454dc826029387ae9b0"
+    },
+    {
+      "file": "04_2026-10-03_rust-prerelease-rollout_fig.png",
+      "bytes": 234893,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "git_blob_sha": "50037331a3bf6d31e5eb14269366bd1b0c7ab76f",
+      "sha256": "c9a336d8d65f98c9b654d6242897761cbb76bbd38bd3c89cb233df41f11368ce"
+    }
+  ],
+  "scope": {
+    "public_article_count": 1,
+    "source_article_and_images_changed_after_review": false,
+    "product_code_changed": false,
+    "release_performed": false,
+    "other_media_or_x_posts": false,
+    "existing_articles_changed": false
+  },
+  "resumption": {
+    "item_id_must_be_preserved": true,
+    "publication_complete": true,
+    "do_not_create_duplicate_article": true,
+    "automatic_republication_requested": false
+  },
+  "prior_route_correction": {
+    "reported_issue": "Publication workflow local-path validation falsely matched the s:/ sequence inside HTTPS URLs. The local operator corrected its scheme/path boundary before the successful run.",
+    "fixed_workflow_commit": "0003af305fe5ff6cf91ce9096389c729a6f6a04d",
+    "article_source_changed": false
+  }
+}
+
