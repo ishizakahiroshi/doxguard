@@ -9,6 +9,7 @@
   "files": [
     "bin/doxguard.js",
     "README.md",
+    "README.ja.md",
     "LICENSE"
   ],
   "engines": {

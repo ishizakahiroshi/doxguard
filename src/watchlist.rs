@@ -241,6 +241,7 @@ fn directory_values(
     min_length: usize,
     max_depth: usize,
     max_entries: usize,
+    include_link_names: bool,
 ) -> Result<Vec<String>> {
     let root_metadata = fs::symlink_metadata(path)?;
     if is_link(&root_metadata) || !root_metadata.is_dir() {
@@ -257,20 +258,23 @@ fn directory_values(
                 bail!("directory entry limit exceeded");
             }
             let metadata = fs::symlink_metadata(entry.path())?;
-            if is_link(&metadata) {
+            let linked = is_link(&metadata);
+            if linked && !include_link_names {
                 bail!("directory contains a symbolic link or reparse point");
             }
-            if metadata.is_dir() {
-                if depth < max_depth {
-                    stack.push((entry.path(), depth + 1));
-                }
-            } else if metadata.is_file() {
+            // Link metadata describes the directory entry itself. Never inspect
+            // its target: the opt-in protects only the link's own basename.
+            if linked || metadata.is_file() {
                 let name = entry
                     .file_name()
                     .into_string()
                     .map_err(|_| anyhow!("non-UTF-8 filename"))?;
                 if name.chars().count() >= min_length {
                     values.push(name);
+                }
+            } else if metadata.is_dir() {
+                if depth < max_depth {
+                    stack.push((entry.path(), depth + 1));
                 }
             } else {
                 bail!("directory contains a non-regular entry");
@@ -352,8 +356,15 @@ fn read_values(source: &WatchlistSource, path: &Path) -> Result<Vec<String>> {
             min_name_length,
             max_depth,
             max_entries,
+            include_link_names,
             ..
-        } => directory_values(path, *min_name_length, *max_depth, *max_entries),
+        } => directory_values(
+            path,
+            *min_name_length,
+            *max_depth,
+            *max_entries,
+            *include_link_names,
+        ),
     }
 }
 

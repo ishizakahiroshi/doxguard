@@ -207,6 +207,127 @@ fn directory_watchlists_are_bounded_by_depth_length_and_entries() {
     }
 }
 
+#[cfg(any(unix, windows))]
+fn link_directory(target: &Path, link: &Path) {
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, link).unwrap();
+    #[cfg(windows)]
+    assert!(
+        Command::new("cmd.exe")
+            .args(["/c", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .output()
+            .unwrap()
+            .status
+            .success(),
+        "failed to create synthetic directory junction"
+    );
+}
+
+#[cfg(any(unix, windows))]
+#[test]
+fn directory_link_names_are_opt_in_and_never_traverse_targets() {
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    let root = temp.path().join("personal");
+    fs::create_dir(&root).unwrap();
+    fs::write(outside.path().join("synthetic-target-child-name"), "").unwrap();
+    let link = root.join("synthetic-directory-link-name");
+    link_directory(outside.path(), &link);
+
+    let default = config(r#"{"watchlists":[{"type":"directory","path":"personal"}]}"#);
+    assert!(watchlist::load(&default, temp.path(), &HashMap::new()).is_err());
+    let explicit_false = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":false}]}"#,
+    );
+    assert!(watchlist::load(&explicit_false, temp.path(), &HashMap::new()).is_err());
+    let enabled = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":true}]}"#,
+    );
+    let loaded = watchlist::load(&enabled, temp.path(), &HashMap::new()).unwrap();
+    assert_eq!(loaded.matcher.len(), 1);
+    assert_eq!(
+        loaded
+            .matcher
+            .matches("synthetic-directory-link-name")
+            .count(),
+        1
+    );
+    assert!(
+        loaded
+            .matcher
+            .matches("synthetic-target-child-name")
+            .next()
+            .is_none()
+    );
+
+    // A linked root remains invalid even when entry link names are enabled.
+    let linked_root = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal/synthetic-directory-link-name","includeLinkNames":true}]}"#,
+    );
+    assert!(watchlist::load(&linked_root, temp.path(), &HashMap::new()).is_err());
+
+    // Link entries still count against the same hard entry limit.
+    fs::write(root.join("synthetic-ordinary-file-name"), "").unwrap();
+    let bounded = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":true,"maxEntries":1}]}"#,
+    );
+    assert!(watchlist::load(&bounded, temp.path(), &HashMap::new()).is_err());
+    #[cfg(windows)]
+    fs::remove_dir(link).unwrap();
+    #[cfg(unix)]
+    fs::remove_file(link).unwrap();
+}
+
+#[cfg(any(unix, windows))]
+#[test]
+fn file_link_names_do_not_load_target_names_contents_or_require_live_targets() {
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    let root = temp.path().join("personal");
+    fs::create_dir(&root).unwrap();
+    let target = outside.path().join("synthetic-target-file-name");
+    fs::write(&target, "synthetic-target-content-name").unwrap();
+    let link = root.join("synthetic-file-link-name");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+    #[cfg(windows)]
+    if let Err(error) = std::os::windows::fs::symlink_file(&target, &link) {
+        if error.kind() == std::io::ErrorKind::PermissionDenied {
+            eprintln!(
+                "file symlink privilege unavailable; directory junction test remains required"
+            );
+            return;
+        }
+        panic!("failed to create synthetic file symlink: {error}");
+    }
+    let default = config(r#"{"watchlists":[{"type":"directory","path":"personal"}]}"#);
+    assert!(watchlist::load(&default, temp.path(), &HashMap::new()).is_err());
+    let enabled = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":true}]}"#,
+    );
+    for _ in 0..2 {
+        let loaded = watchlist::load(&enabled, temp.path(), &HashMap::new()).unwrap();
+        assert_eq!(loaded.matcher.len(), 1);
+        assert_eq!(
+            loaded.matcher.matches("synthetic-file-link-name").count(),
+            1
+        );
+        for hidden in [
+            "synthetic-target-file-name",
+            "synthetic-target-content-name",
+        ] {
+            assert!(loaded.matcher.matches(hidden).next().is_none());
+        }
+        // A dangling link proves the opt-in never needs to stat its target.
+        if target.exists() {
+            fs::remove_file(&target).unwrap();
+        }
+    }
+    fs::remove_file(link).unwrap();
+}
+
 #[test]
 fn files_list_scans_gitignored_submissions_and_preserves_cwd_and_names() {
     let temp = tempdir().unwrap();

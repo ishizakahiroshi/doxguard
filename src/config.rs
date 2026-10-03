@@ -79,6 +79,10 @@ pub enum WatchlistSource {
         max_depth: usize,
         #[serde(default = "default_directory_entries", rename = "maxEntries")]
         max_entries: usize,
+        /// Include link basenames without inspecting or traversing their targets.
+        /// The directory root must still be a real directory.
+        #[serde(default, rename = "includeLinkNames")]
+        include_link_names: bool,
     },
 }
 

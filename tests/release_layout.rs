@@ -149,7 +149,7 @@ fn npm_root_package_is_strictly_allowlisted() {
     assert_eq!(package["bin"]["doxguard"], "bin/doxguard.js");
     assert_eq!(
         package["files"],
-        serde_json::json!(["bin/doxguard.js", "README.md", "LICENSE"])
+        serde_json::json!(["bin/doxguard.js", "README.md", "README.ja.md", "LICENSE"])
     );
 }
 

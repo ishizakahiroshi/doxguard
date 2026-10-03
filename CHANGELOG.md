@@ -2,7 +2,13 @@
 
 All notable changes to doxguard are documented here.
 
+The latest published npm/GitHub release is 0.1.0. The source manifests are prepared
+for 0.2.0, but neither 0.1.1 nor 0.2.0 has been tagged or published. All changes below
+the Unreleased heading, up to the 0.1.0 section, belong to the next release; no release date is assigned yet.
+
 ## [Unreleased]
+
+### Added
 
 - Add bounded, read-only `scan --history` for blobs reachable from all refs, including
   deleted files. Findings identify the blob; incomplete local object databases are refused.
@@ -10,9 +16,7 @@ All notable changes to doxguard are documented here.
 - Add independent short-term boundaries, watchlist exclusion statistics, and an opt-in
   staged added-lines baseline. Full-file modes retain full coverage; Git comparison failures stop scans.
 
-### Added
-
-- Unreleased integration support: joined CSV columns, bounded directory filename sources,
+- Integration support: joined CSV columns, bounded directory filename sources,
   and `scan --files-from-list` for repository-local submission files.
 - `init` generates `doxguard.ci.json` for explicitly selected structural-only CI scanning.
 - Built-in structural suggestions include Japanese guidance and RFC5737 replacement addresses.
@@ -25,6 +29,8 @@ All notable changes to doxguard are documented here.
   finding locations (`file:line`, JSON `file`) are unchanged.
 - README section "Using doxguard with AI agents", with a measured table of which AI CLIs load
   `AGENTS.md` / `CLAUDE.md`.
+- Full Japanese README with language navigation, an agent execution protocol, and explicit
+  published/development version boundaries. The root npm package includes the Japanese README.
 
 ### Changed
 
@@ -34,12 +40,28 @@ All notable changes to doxguard are documented here.
 
 - Error messages and `--help` text now state the cause and the next step (for example, which
   environment variable to set, or to point the watchlist outside the repository).
+- Scan reports expose watchlist exclusion counts and staged baseline statistics without
+  exposing private terms. Consumers should parse the doxguard JSON report rather than legacy output.
+- Husky detection prepares the native cache and reports how to wire the existing hook;
+  existing Husky files and hooksPath are preserved.
+- Validation and release scans select an explicit structural-only config instead of
+  depending on missing private watchlist variables.
 
-## [0.2.0] - 2026-09-01
+### Fixed
 
-0.1.1 was prepared but never tagged or published; its entries are folded in here.
+- File-list scans accept equivalent Windows repository-root spellings, including canonical
+  verbatim paths, while retaining repository containment and link checks.
+- Short-term boundary matching checks later occurrences on the same line before deduplication,
+  so an earlier invalid boundary cannot hide a later valid hit.
 
-### Changed
+### Security
+
+- History scanning disables lazy fetch and replace-object interpretation, reads raw blobs,
+  and enforces finite object, byte, and time budgets. Incomplete local history is refused.
+- File-list scanning rejects external targets and unsafe link traversal rather than silently
+  reducing the requested submission coverage.
+
+### Changed (earlier 0.2.0 preparation, unpublished)
 
 - **Behavior change.** `exemptPaths` now skips only the built-in *structural* patterns.
   Watchlist matching still runs on an exempt path, so an "exempt" file can no longer hide a
@@ -60,7 +82,7 @@ All notable changes to doxguard are documented here.
 - npm publishing moved to trusted publishing (OIDC); no long-lived publish token is used.
   CI now runs on Node 22.
 
-### Security
+### Security (earlier 0.2.0 preparation, unpublished)
 
 - Config, watchlist, and `package.json` reads require a regular file, so a config or watchlist
   pointing at a character device (for example `/dev/zero`) can no longer hang a scan.
@@ -72,7 +94,7 @@ All notable changes to doxguard are documented here.
   packaged gate and the repository's own fallback hook run in `--strict` mode.
 - `cargo audit` runs on a weekly schedule, independent of push-event delivery.
 
-### Fixed
+### Fixed (earlier 0.2.0 preparation, unpublished)
 
 - `init` no longer refuses to scaffold inside a Cloud Filter API sync root (OneDrive and similar).
   Only symlinks and junctions are rejected now, not every reparse point.
@@ -149,6 +171,5 @@ All notable changes to doxguard are documented here.
 - Oversize staged blobs are size-checked with `git cat-file -s` before being read.
 - Watchlist hits report the original line casing under ASCII case-insensitive matching.
 
-[Unreleased]: https://github.com/ishizakahiroshi/doxguard/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/ishizakahiroshi/doxguard/compare/v0.1.0...v0.2.0
+[Unreleased]: https://github.com/ishizakahiroshi/doxguard/compare/v0.1.0...develop
 [0.1.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.1.0
