@@ -1,0 +1,46 @@
+[
+  {
+    "file": "01_2026-10-03_rust-prerelease-rollout_hero.png",
+    "format": "PNG",
+    "size": [
+      1600,
+      900
+    ],
+    "mode": "RGBA",
+    "bytes": 1997748,
+    "sha256": "7263073e324128cbca7b5885b103ec242ecdb7aca3995f34dca2e5f849d473fa"
+  },
+  {
+    "file": "02_2026-10-03_rust-prerelease-rollout_infographic.png",
+    "format": "PNG",
+    "size": [
+      1600,
+      900
+    ],
+    "mode": "RGBA",
+    "bytes": 389955,
+    "sha256": "300016e70870dfc2331b4345777af4fee941696641755874f37dbe5b54e40b64"
+  },
+  {
+    "file": "03_2026-10-03_rust-prerelease-rollout_illustration.png",
+    "format": "PNG",
+    "size": [
+      1600,
+      900
+    ],
+    "mode": "RGB",
+    "bytes": 2254545,
+    "sha256": "a3a47a78a2c303144243a998b375a5ed8ccb2a2732d16454dc826029387ae9b0"
+  },
+  {
+    "file": "04_2026-10-03_rust-prerelease-rollout_fig.png",
+    "format": "PNG",
+    "size": [
+      1600,
+      900
+    ],
+    "mode": "RGBA",
+    "bytes": 234893,
+    "sha256": "c9a336d8d65f98c9b654d6242897761cbb76bbd38bd3c89cb233df41f11368ce"
+  }
+]

@@ -1,0 +1,59 @@
+{
+  "checked_at": "2026-10-03",
+  "source_sha": "128ea0bce064e34023919e7256b6e968a3d866bd",
+  "scope": "GitHub immutable raw URLs before Qiita publication; not a live Qiita check",
+  "images": [
+    {
+      "file": "01_2026-10-03_rust-prerelease-rollout_hero.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/01_2026-10-03_rust-prerelease-rollout_hero.png",
+      "http_status": 200,
+      "bytes": 1997748,
+      "sha256": "7263073e324128cbca7b5885b103ec242ecdb7aca3995f34dca2e5f849d473fa",
+      "matches_reviewed_local_bytes": true,
+      "format": "PNG",
+      "dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "02_2026-10-03_rust-prerelease-rollout_infographic.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/02_2026-10-03_rust-prerelease-rollout_infographic.png",
+      "http_status": 200,
+      "bytes": 389955,
+      "sha256": "300016e70870dfc2331b4345777af4fee941696641755874f37dbe5b54e40b64",
+      "matches_reviewed_local_bytes": true,
+      "format": "PNG",
+      "dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "03_2026-10-03_rust-prerelease-rollout_illustration.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/03_2026-10-03_rust-prerelease-rollout_illustration.png",
+      "http_status": 200,
+      "bytes": 2254545,
+      "sha256": "a3a47a78a2c303144243a998b375a5ed8ccb2a2732d16454dc826029387ae9b0",
+      "matches_reviewed_local_bytes": true,
+      "format": "PNG",
+      "dimensions": [
+        1600,
+        900
+      ]
+    },
+    {
+      "file": "04_2026-10-03_rust-prerelease-rollout_fig.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/128ea0bce064e34023919e7256b6e968a3d866bd/docs/bot/article/rust-prerelease-rollout/04_2026-10-03_rust-prerelease-rollout_fig.png",
+      "http_status": 200,
+      "bytes": 234893,
+      "sha256": "c9a336d8d65f98c9b654d6242897761cbb76bbd38bd3c89cb233df41f11368ce",
+      "matches_reviewed_local_bytes": true,
+      "format": "PNG",
+      "dimensions": [
+        1600,
+        900
+      ]
+    }
+  ]
+}

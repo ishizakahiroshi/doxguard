@@ -1,0 +1,19 @@
+{
+  "observation_date": "2026-10-03",
+  "source_commit": "1cd7da54f5faade668071843f1e3f36657905802",
+  "source_path": "docs/bot/article/rust-prerelease-rollout/public-facts.md",
+  "deployment": {"installed_repositories": 30, "rust_gate_enabled": 15, "rust_gate_held": 15},
+  "comparison": {"total_repositories": 30, "old_clean": 29, "new_clean": 14, "new_block": 16, "both_block": 1},
+  "tests": {"rust_tests_passed": 103, "install_script_cases_passed": 18},
+  "detections": {"count": 139, "old_scanner_self_exclusion_related": 136, "unique_leaks": null},
+  "usage": {"natural_commits_observed": 0, "multi_day_trial_completed": false, "public_release_completed": false},
+  "preserved": ["actual Git index", "existing scanner", "existing CI"],
+  "hero_title": ["Rust候補を30リポジトリへ", "15有効・15保留で進めた導入"],
+  "palette": {"ivory": "#F5F1E8", "ink": "#182D3D", "teal": "#3E887F", "coral": "#D9826B"},
+  "notes": [
+    "Enabled 15 is new-clean 14 plus 1 repository already blocked by the old scanner.",
+    "The 139 detections and 136 related differences do not count unique leaks or people.",
+    "Rust tests and installer cases are distinct units and must not be summed.",
+    "The prerelease candidate includes local uncommitted changes; its base commit is not its complete source identity."
+  ]
+}
