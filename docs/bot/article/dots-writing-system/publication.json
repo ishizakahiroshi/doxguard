@@ -1,0 +1,22 @@
+{
+  "task": 9,
+  "article_key": "dots-writing-system-20261004",
+  "authoring": "dots",
+  "media": {
+    "qiita": {
+      "state": "prepared",
+      "url": null
+    },
+    "note": {
+      "state": "prepared",
+      "url": null
+    }
+  },
+  "reviewed_sha": null,
+  "scope": [
+    "qiita",
+    "note"
+  ],
+  "site_mirror": false,
+  "x_announcement": false
+}
