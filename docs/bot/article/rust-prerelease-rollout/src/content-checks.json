@@ -1,0 +1,44 @@
+{
+  "checked_at": "2026-10-03",
+  "result": "PASS",
+  "article_prose_characters": 2182,
+  "frontmatter": "PASS",
+  "tag_count": 5,
+  "relative_image_references_in_order": [
+    "01_2026-10-03_rust-prerelease-rollout_hero.png",
+    "02_2026-10-03_rust-prerelease-rollout_infographic.png",
+    "03_2026-10-03_rust-prerelease-rollout_illustration.png",
+    "04_2026-10-03_rust-prerelease-rollout_fig.png"
+  ],
+  "infographic_before_first_h2": true,
+  "no_em_or_fullwidth_dash": true,
+  "png_decode_and_dimensions": "4/4 PASS",
+  "image_manifest": [
+    {
+      "file": "01_2026-10-03_rust-prerelease-rollout_hero.png",
+      "size": 1997748,
+      "sha256": "7263073e324128cbca7b5885b103ec242ecdb7aca3995f34dca2e5f849d473fa",
+      "git_blob_sha": "204295f578899898fd6876bc4bbf18cb0e082e77"
+    },
+    {
+      "file": "02_2026-10-03_rust-prerelease-rollout_infographic.png",
+      "size": 389955,
+      "sha256": "300016e70870dfc2331b4345777af4fee941696641755874f37dbe5b54e40b64",
+      "git_blob_sha": "4809f83d439e6683162b9bed61bc40f4a66d946d"
+    },
+    {
+      "file": "03_2026-10-03_rust-prerelease-rollout_illustration.png",
+      "size": 2254545,
+      "sha256": "a3a47a78a2c303144243a998b375a5ed8ccb2a2732d16454dc826029387ae9b0",
+      "git_blob_sha": "599e5f5e4ae79414732eed81d37699413b8a1e25"
+    },
+    {
+      "file": "04_2026-10-03_rust-prerelease-rollout_fig.png",
+      "size": 234893,
+      "sha256": "c9a336d8d65f98c9b654d6242897761cbb76bbd38bd3c89cb233df41f11368ce",
+      "git_blob_sha": "50037331a3bf6d31e5eb14269366bd1b0c7ab76f"
+    }
+  ],
+  "canonical_article_lint_executed": false,
+  "live_publication_checked": false
+}

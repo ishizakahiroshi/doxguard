@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-10-03",
+  "subject": "Article Git example, independent synthetic disposable repository",
+  "result": "PASS",
+  "real_index_bytes_unchanged": true,
+  "default_index_staged_diff_empty": true,
+  "alternate_index_contains_expected_change": true,
+  "note": "This validates only the article example. It does not reproduce the authors 30-repository local measurement."
+}
