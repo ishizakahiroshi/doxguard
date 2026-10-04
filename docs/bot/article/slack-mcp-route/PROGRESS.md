@@ -16,8 +16,8 @@
 | 手元独立検収 | passed（手元修正4件） | 手元 | b692e8e4759bb8d6beb793f9ff5b0027959ca41a。article-lint 3本合格、5画像の目視とhash照合 |
 | Zenn公開 | published | 手元 | zenn-content 47c9305 |
 | Qiita公開 | published | 手元 | run 37179496253、id 6c7e68815711017c981b |
-| note公開 | draft saved | 手元・持ち主 | 下書き nd83cdb75570f。画像挿入と公開は持ち主 |
-| 3媒体の実表示 | Zenn・Qiita確認済み / note未公開 | 手元 | publication.json の receipt |
+| note公開 | published | 手元・持ち主 | https://note.com/ishizakahiroshi/n/nd83cdb75570f |
+| 3媒体の実表示 | 3媒体確認済み | 手元 | publication.json の receipt |
 
 ## 試行記録
 
@@ -45,3 +45,4 @@
 - Qiita: https://qiita.com/ishizakahiroshi/items/6c7e68815711017c981b
 - note: 下書き保存まで。画像5枚の挿入と公開は持ち主の操作。
 - 公開用の画像ファイル名は各媒体repoで NN_2026-10-04_dots-slack-instruction_<役割>.png に改名した。
+- note: 2026-10-04 14:27 に持ち主が画像を入れて公開。check-note-published.ps1 で確認。3媒体の公開と表示確認が揃った。

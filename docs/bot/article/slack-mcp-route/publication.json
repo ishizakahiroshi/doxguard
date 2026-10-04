@@ -23,12 +23,12 @@
       "image_action": "手元の公開時に相対画像参照を公開画像URLへ差し替える"
     },
     "note": {
-      "state": "draft_saved",
-      "url": null,
-      "published": false,
-      "display_verified": false,
+      "state": "published",
+      "url": "https://note.com/ishizakahiroshi/n/nd83cdb75570f",
+      "published": true,
+      "display_verified": true,
       "publication_attempted_by_dots": false,
-      "receipt": "下書きキー nd83cdb75570f に本文投入・構造検査合格・下書き保存。画像挿入と公開は持ち主の操作待ち",
+      "receipt": "持ち主が画像5枚を挿入して公開（2026-10-04 14:27:35）。check-note-published.ps1 で公開・見出し画像あり・本文画像4枚・目印の消し残しなしを確認",
       "image_action": "手元の公開時に5画像を本文位置へ挿入する"
     }
   },
@@ -67,13 +67,14 @@
     ],
     "article_lint": "3本とも全9項目合格"
   },
-  "published": false,
-  "display_verified": false,
+  "published": true,
+  "display_verified": true,
   "delivery_assets": [
     "01-slack-route-hero.png",
     "02-slack-route-infographic.png",
     "03-slack-route-illustration.png",
     "04-slack-route-process.png",
     "05-slack-route-setup.png"
-  ]
+  ],
+  "x_announcement_note": "持ち主が本アカで告知（範囲外の操作として持ち主自身が実施）"
 }
