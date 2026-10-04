@@ -1,0 +1,28 @@
+{
+  "task": 11,
+  "article_key": "dots-slack-instruction-20261004",
+  "authoring": "dots",
+  "media": {
+    "zenn": {
+      "state": "prepared",
+      "slug": null,
+      "url": null
+    },
+    "qiita": {
+      "state": "prepared",
+      "url": null
+    },
+    "note": {
+      "state": "prepared",
+      "url": null
+    }
+  },
+  "reviewed_sha": null,
+  "scope": [
+    "zenn",
+    "qiita",
+    "note"
+  ],
+  "site_mirror": false,
+  "x_announcement": false
+}
