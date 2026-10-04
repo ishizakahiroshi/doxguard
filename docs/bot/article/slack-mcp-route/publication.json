@@ -4,35 +4,35 @@
   "authoring": "dots",
   "media": {
     "zenn": {
-      "state": "draft_prepared",
-      "slug": "20261004-chatgpt-claude-slack-dots",
-      "url": null,
-      "published": false,
-      "display_verified": false,
+      "state": "published",
+      "slug": "20261004-dots-slack-instruction",
+      "url": "https://zenn.dev/ishizakahiroshi/articles/20261004-dots-slack-instruction",
+      "published": true,
+      "display_verified": true,
       "publication_attempted_by_dots": false,
-      "receipt": null,
+      "receipt": "zenn-content 47c9305c338fe33d40c6a78daa8bed7e66efe97c。公開ページHTTP 200、配信画像5枚のsha値が手元PNGと一致",
       "image_destination": "/images/"
     },
     "qiita": {
-      "state": "draft_prepared",
-      "url": null,
-      "published": false,
-      "display_verified": false,
+      "state": "published",
+      "url": "https://qiita.com/ishizakahiroshi/items/6c7e68815711017c981b",
+      "published": true,
+      "display_verified": true,
       "publication_attempted_by_dots": false,
-      "receipt": null,
+      "receipt": "qiita-content cd3686a67755c69f53a5b667d9b4ad3b83d74169、Publish run 37179496253 success、書戻し ada1a1c、id 6c7e68815711017c981b。画像raw URL 5本が200",
       "image_action": "手元の公開時に相対画像参照を公開画像URLへ差し替える"
     },
     "note": {
-      "state": "draft_prepared",
+      "state": "draft_saved",
       "url": null,
       "published": false,
       "display_verified": false,
       "publication_attempted_by_dots": false,
-      "receipt": null,
+      "receipt": "下書きキー nd83cdb75570f に本文投入・構造検査合格・下書き保存。画像挿入と公開は持ち主の操作待ち",
       "image_action": "手元の公開時に5画像を本文位置へ挿入する"
     }
   },
-  "reviewed_sha": null,
+  "reviewed_sha": "b692e8e4759bb8d6beb793f9ff5b0027959ca41a",
   "scope": [
     "zenn",
     "qiita",
@@ -42,8 +42,8 @@
   "x_announcement": false,
   "instruction_commit": "f5a4920cbd61cc6f0a7c58e5be487ee335731c7e",
   "source_branch": "dots/article-slack-mcp-route-11-production",
-  "source_commit": null,
-  "source_state": "branch_created_artifact_commit_prepared",
+  "source_commit": "b692e8e4759bb8d6beb793f9ff5b0027959ca41a",
+  "source_state": "artifact_committed_draft_pr_2",
   "remote_write": "2026-10-04 explicit authorization: same branch creation retried once and succeeded; artifact commit and develop Draft PR authorized",
   "publication_owner": "手元",
   "authoring_scope": "3媒体の原稿・5画像・制作側独立レビュー・手元検収指摘の修正",
@@ -57,9 +57,15 @@
     "git_sha": null
   },
   "local_acceptance": {
-    "state": "pending",
-    "reviewed_sha": null,
-    "findings": []
+    "state": "passed_after_local_fixes",
+    "reviewed_sha": "b692e8e4759bb8d6beb793f9ff5b0027959ca41a",
+    "findings": [
+      "qiita.md frontmatterを id:'' / organization_url_name:null / ignorePublish:false に修正",
+      "note.md のタイトルH1化・見出し##/###化・画像差し込み目印化・FACTS外の体験表現1文を修正",
+      "05図のClaude Code手順1を claude plugin install slack に修正し文字拡大、見出しを「接続方法は別々」に修正（src/local-fix、Chrome描画）",
+      "zenn/qiitaの「二重導入は不要」を弱め、FACTS外の統合担当の一文を削除"
+    ],
+    "article_lint": "3本とも全9項目合格"
   },
   "published": false,
   "display_verified": false,

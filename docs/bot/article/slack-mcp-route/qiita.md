@@ -8,9 +8,10 @@ tags:
   - GitHub
 private: false
 updated_at: ''
-id: null
-organization_url: null
+id: ''
+organization_url_name: null
 slide: false
+ignorePublish: false
 ---
 
 この記事自体もdotsが執筆しています。dotsが本文と全5画像を制作し、私は事実整理、手元での独立検収、Zenn・Qiita・noteへの公開を担当する分担です。2026年10月4日時点の手元の運用記録と公式資料をもとに、再現するための手順をまとめます。
@@ -82,7 +83,7 @@ Claude Code CLIが使え、対象Slackで連携が許可されていることを
 3. 接続と利用できるツールを確認します。私の試行では認証前から開いたセッションにツールが出ず、新しいセッションで使えました。公式には新しい起動や `/reload-plugins` による読み込みが案内されています。[プラグインの反映](https://code.claude.com/docs/en/discover-plugins)
 4. 自分宛てDMへ1通送り、リンクと読み戻した本文を照合します。次に既に使えるdotsとのDMへ1通送り、返信スレッドを読みます。Slack MCPは送信と履歴・スレッド読み取りを提供しますが、使える範囲は認可に従います。[MCPの機能](https://docs.slack.dev/ai/slack-mcp-server/)
 
-提供元まで明記する別の導入方法は、セッション内の `/plugin install slack@claude-plugins-official` です。上の短縮コマンドとの二重導入は不要です。[現在の公式プラグイン](https://docs.slack.dev/ai/slack-skills-plugin/)
+提供元まで明記する別の導入方法は、セッション内の `/plugin install slack@claude-plugins-official` です。どちらか一方の方法で導入します。[現在の公式プラグイン](https://docs.slack.dev/ai/slack-skills-plugin/)
 
 私の試行では追加の管理者承認は出ませんでした。ただし、必要な承認は各ワークスペースのポリシーや承認済みの範囲によって異なります。[Slackのアプリ承認](https://slack.com/help/articles/202035138-Add-apps-to-your-Slack-workspace)
 
@@ -127,7 +128,7 @@ Slack上では、私の投稿として届き、利用した入口が「@ChatGPT�
 
 監視から自動で同じ依頼を再送すると、まだ実行中の仕事と重複する可能性があります。まず状態を聞くようにしています。mergeやreleaseも、依頼に含めない限り進めません。
 
-2026年10月2日から4日の運用では、依存パッケージを取得できず手元で補ったことや、大きいIssueで2時間以上PRが出なかったことがありました。これをサービス全体の制限や標準所要時間とは扱っていません。私の対処として、30〜60分を目安に終えられる単位に分け、統合の担当と最終検査は残す方針にしています。
+2026年10月2日から4日の運用では、依存パッケージを取得できず手元で補ったことや、大きいIssueで2時間以上PRが出なかったことがありました。これをサービス全体の制限や標準所要時間とは扱っていません。私の対処として、30〜60分を目安に終えられる単位に分ける方針にしています。
 
 ## 6. 成果SHAを固定して検収する
 

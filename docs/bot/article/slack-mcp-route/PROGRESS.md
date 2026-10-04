@@ -13,11 +13,11 @@
 | PNG出力 | verified | dots | 5枚、各1600×900・3MB未満。実ピクセル目視、再ビルドhash一致 |
 | クラウドブラウザ | verified | dots | OpenAI公式ヘルプの公開画面を表示。投稿用認証は実施しない |
 | 独立制作レビュー | passed | dots別担当 | src/independent-review.md。P2指摘2件を修正・再確認、未解消0件 |
-| 手元独立検収 | pending | 手元 | 成果SHAとPNG提出後 |
-| Zenn公開 | pending | 手元 | dotsは投稿・投稿repo push・投稿認証を行わない |
-| Qiita公開 | pending | 手元 | 同上 |
-| note公開 | pending | 手元 | 同上 |
-| 3媒体の実表示 | pending | 手元 | 公開後のURLと画面証跡 |
+| 手元独立検収 | passed（手元修正4件） | 手元 | b692e8e4759bb8d6beb793f9ff5b0027959ca41a。article-lint 3本合格、5画像の目視とhash照合 |
+| Zenn公開 | published | 手元 | zenn-content 47c9305 |
+| Qiita公開 | published | 手元 | run 37179496253、id 6c7e68815711017c981b |
+| note公開 | draft saved | 手元・持ち主 | 下書き nd83cdb75570f。画像挿入と公開は持ち主 |
+| 3媒体の実表示 | Zenn・Qiita確認済み / note未公開 | 手元 | publication.json の receipt |
 
 ## 試行記録
 
@@ -36,3 +36,12 @@
 - 持ち主が同一branch作成の1回再試行、成果commit、develop向けDraft PRを明示承認。事前読取404の後、同じcreate_branch呼出を1回だけ再試行して成功。branchは固定指示commitを指すことを読み戻した。
 - 実行環境の作業ファイルが失われたため、保存済みのレビュー済みZIPをLibraryから復元。ZIP SHA-256と全35ファイルのhashが既存検査対象に一致。本文・完成PNG・生成原本は作り直していない。
 - 公開、投稿用認証、投稿repoへのpush、mergeは今回の再承認にも含まれない。手元検収は未実施のまま。
+
+## 手元検収と公開（2026-10-04 JST）
+
+- 成果 b692e8e4759bb8d6beb793f9ff5b0027959ca41a を独立検収。公開前の指摘4件は手元で修正した（dotsへの差し戻しなし。理由: 修正が小さく、dotsのGitHub書込ごとに持ち主の承認操作が要るため）。修正内容は publication.json の local_acceptance。
+- 05の図は src/local-fix の SVG を Chrome で描画して差し替えた。元のPNGは src/local-fix/05-slack-route-setup.dots-original.png に保存。フォントは Noto Sans JP で代替（元は Noto Sans CJK JP）。
+- Zenn: https://zenn.dev/ishizakahiroshi/articles/20261004-dots-slack-instruction
+- Qiita: https://qiita.com/ishizakahiroshi/items/6c7e68815711017c981b
+- note: 下書き保存まで。画像5枚の挿入と公開は持ち主の操作。
+- 公開用の画像ファイル名は各媒体repoで NN_2026-10-04_dots-slack-instruction_<役割>.png に改名した。
