@@ -1,0 +1,128 @@
+[
+  {
+    "file": "01-slack-route-hero.png",
+    "bytes": 1269612,
+    "sha256": "cd689a1ef8f74b9597ed44a97979e38207f2263e251f6a1408d7213766838ae7",
+    "pixels": [
+      1600,
+      900
+    ]
+  },
+  {
+    "file": "02-slack-route-infographic.png",
+    "bytes": 1359029,
+    "sha256": "fac5d1c5c4a3c556d7db3fd6a405d888b808b17a297ece49e665f43ffb0691ee",
+    "pixels": [
+      1600,
+      900
+    ]
+  },
+  {
+    "file": "03-slack-route-illustration.png",
+    "bytes": 1807276,
+    "sha256": "0856bb4b910dce8334a95a56e2f0d465c7341b123d8e22f687da3f22179a2498",
+    "pixels": [
+      1600,
+      900
+    ]
+  },
+  {
+    "file": "04-slack-route-process.png",
+    "bytes": 240148,
+    "sha256": "f2cd3ba8313da313413d3a43067a8401fe9118e5b4aac92cb341a65b4d9a3dbf",
+    "pixels": [
+      1600,
+      900
+    ]
+  },
+  {
+    "file": "05-slack-route-setup.png",
+    "bytes": 223844,
+    "sha256": "f6c880ce720390b165fbc27c5b5220da55782025310bb7f945340aa5047e4474",
+    "pixels": [
+      1600,
+      900
+    ]
+  },
+  {
+    "file": "assets/mascot_cats.png",
+    "bytes": 1485826,
+    "sha256": "46ef71ab89f6203785a6cf9aababb69e9516f33d14c4bad76bd76576f5d0b91d",
+    "pixels": [
+      1195,
+      896
+    ]
+  },
+  {
+    "file": "src/alt-texts.json",
+    "bytes": 1347,
+    "sha256": "faf3fc7dd90ca94eec60bc3e33888bf862a9d8d378e2c8508eadb2c7990cafb1"
+  },
+  {
+    "file": "src/build_visuals.py",
+    "bytes": 10189,
+    "sha256": "08eefd01eb7f7bcdcc1e88085bc804d9c5e71250e121a516dced84635dd69b13"
+  },
+  {
+    "file": "src/generated/hero-background.png",
+    "bytes": 1796403,
+    "sha256": "e83f8214a6e2abecacc2c9b4e0108b70af7f1e43b8e37749f7a86d02134e1400",
+    "pixels": [
+      1672,
+      941
+    ]
+  },
+  {
+    "file": "src/generated/infographic-background.png",
+    "bytes": 1558470,
+    "sha256": "d622754db94337dc50c1aaf169db06a43c8787fda7b5653c48aa88339452f2ff",
+    "pixels": [
+      1672,
+      941
+    ]
+  },
+  {
+    "file": "src/generated/two-entry-illustration.png",
+    "bytes": 1989250,
+    "sha256": "366f7409d201bd68633fc815067791bd9043d1503557f3a61fcdeb308e262423",
+    "pixels": [
+      1672,
+      941
+    ]
+  },
+  {
+    "file": "src/prompts.json",
+    "bytes": 4157,
+    "sha256": "f503814e3aac7a1812738194af5531d7243113dc9a9e77c2fa65c41189a23757"
+  },
+  {
+    "file": "src/svg/01-slack-route-hero.svg",
+    "bytes": 4378693,
+    "sha256": "777466661b99e1b8c500ecdbf996f6e25120835b80a063742684eb6ab8fc0afb"
+  },
+  {
+    "file": "src/svg/02-slack-route-infographic.svg",
+    "bytes": 2081491,
+    "sha256": "068a5bab8883c0b6e8ed5d42f9ca8fd06abad7b87f2370d5e29e5f1301c07c8c"
+  },
+  {
+    "file": "src/svg/03-slack-route-illustration.svg",
+    "bytes": 2653254,
+    "sha256": "c62d5cd5d3f8bb73c9d547eeb241fdea62b561a8fa46d1e5a86e777e7a1a1b80"
+  },
+  {
+    "file": "src/svg/04-slack-route-process.svg",
+    "bytes": 8658,
+    "sha256": "d34879fad0d725d01f8942a1ddd2aad4db586aa34e88bc50d7f44716caf8b196"
+  },
+  {
+    "file": "src/svg/05-slack-route-setup.svg",
+    "bytes": 6317,
+    "sha256": "834699ccabb73ca9c56510a07df836ce13f1ac0d8ad73f0167d4fe3134cb2c8c"
+  },
+  {
+    "file": "src/visual-receipt.json",
+    "bytes": 3928,
+    "sha256": "e75a4b5d75cf795c53220cf97bd02d32a5e3a5b3d85b1bf9c70f0cb9b431cbc0"
+  }
+]

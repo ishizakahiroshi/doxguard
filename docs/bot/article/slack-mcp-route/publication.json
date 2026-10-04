@@ -4,17 +4,32 @@
   "authoring": "dots",
   "media": {
     "zenn": {
-      "state": "prepared",
-      "slug": null,
-      "url": null
+      "state": "draft_prepared",
+      "slug": "20261004-chatgpt-claude-slack-dots",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false,
+      "receipt": null,
+      "image_destination": "/images/"
     },
     "qiita": {
-      "state": "prepared",
-      "url": null
+      "state": "draft_prepared",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false,
+      "receipt": null,
+      "image_action": "手元の公開時に相対画像参照を公開画像URLへ差し替える"
     },
     "note": {
-      "state": "prepared",
-      "url": null
+      "state": "draft_prepared",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false,
+      "receipt": null,
+      "image_action": "手元の公開時に5画像を本文位置へ挿入する"
     }
   },
   "reviewed_sha": null,
@@ -24,5 +39,35 @@
     "note"
   ],
   "site_mirror": false,
-  "x_announcement": false
+  "x_announcement": false,
+  "instruction_commit": "f5a4920cbd61cc6f0a7c58e5be487ee335731c7e",
+  "source_branch": "dots/article-slack-mcp-route-11-production",
+  "source_commit": null,
+  "source_state": "branch_created_artifact_commit_prepared",
+  "remote_write": "2026-10-04 explicit authorization: same branch creation retried once and succeeded; artifact commit and develop Draft PR authorized",
+  "publication_owner": "手元",
+  "authoring_scope": "3媒体の原稿・5画像・制作側独立レビュー・手元検収指摘の修正",
+  "production_review": {
+    "state": "passed",
+    "receipt": "src/independent-review.md",
+    "receipt_sha256": "e28ba77e31f6060770b7f2adfcb8fe4ea5389f56cb2c0bea375beba59695b4a5",
+    "resolved_findings": 2,
+    "unresolved_findings": 0,
+    "reviewed_artifact_hashes": "src/delivery-qa.json",
+    "git_sha": null
+  },
+  "local_acceptance": {
+    "state": "pending",
+    "reviewed_sha": null,
+    "findings": []
+  },
+  "published": false,
+  "display_verified": false,
+  "delivery_assets": [
+    "01-slack-route-hero.png",
+    "02-slack-route-infographic.png",
+    "03-slack-route-illustration.png",
+    "04-slack-route-process.png",
+    "05-slack-route-setup.png"
+  ]
 }

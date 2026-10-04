@@ -1,0 +1,86 @@
+{
+  "article": "11",
+  "date": "2026-10-04",
+  "status": "production visuals exported and visually inspected; independent user acceptance pending",
+  "authorization": {
+    "deterministic_compositing": "Explicitly authorized SVG/Inkscape compositing after built-in image generation. No additional paid API or authentication used."
+  },
+  "inputs_read": [
+    "README.md",
+    "FACTS.md",
+    "BRIEF.md",
+    "REVIEW.md"
+  ],
+  "generation": {
+    "tool": "built-in image_gen.imagegen",
+    "independent_calls": 3,
+    "calls": [
+      {
+        "role": "hero scene",
+        "prompt_key": "hero",
+        "original": "src/generated/hero-background.png"
+      },
+      {
+        "role": "infographic art",
+        "prompt_key": "infographic",
+        "original": "src/generated/infographic-background.png"
+      },
+      {
+        "role": "textless illustration",
+        "prompt_key": "illustration",
+        "original": "src/generated/two-entry-illustration.png"
+      }
+    ],
+    "reused_prior_article_images": false,
+    "originals_preserved": true,
+    "prompts": "src/prompts.json"
+  },
+  "compositing": {
+    "method": "Python writes editable SVG; Inkscape 1.4 renders PNG. Python does not edit raster pixels.",
+    "build_command": "python src/build_visuals.py",
+    "font": "Noto Sans CJK JP; Noto Sans Mono CJK JP for command",
+    "source_files": "src/svg/01..05-slack-route-*.svg",
+    "mascot_source": "assets/mascot_cats.png",
+    "mascot_git_blob_sha1_expected": "229e3a806e16cd636594704f91a193ac9b5c8fc8",
+    "mascot_git_blob_sha1_verified": "229e3a806e16cd636594704f91a193ac9b5c8fc8",
+    "mascot_placement": "hero lower right only; unmodified source PNG embedded, scaled uniformly; not regenerated",
+    "editable_labels": true
+  },
+  "export": {
+    "format": "PNG",
+    "pixels": [
+      1600,
+      900
+    ],
+    "all_below_3_000_000_bytes": true,
+    "same_source_second_build": "All five final PNG SHA-256 hashes identical after second Inkscape export.",
+    "profile_warning": "Non-fatal Pango/GTK wrapper warnings occurred; export exit codes were zero and final pixels verified."
+  },
+  "visual_qa": {
+    "method": "Opened each of the five final exported PNGs with view_image(detail=original) and inspected actual full-size pixels.",
+    "completed": "2026-10-04",
+    "checks": [
+      "All five final PNGs: Japanese glyphs present, no missing-glyph boxes, clipping, overflowing labels, or unintended overlap.",
+      "Hero: title readable, generated scene visible, two fixed cats in lower right, no title collision.",
+      "Infographic: editable Japanese labels remain separate from the generated textless art.",
+      "Textless illustration: no letters, numbers, logos, people, cats, or faces in generated content.",
+      "Process: six ordered stages; external read-only GitHub monitoring separated; stalled state does not claim a known cause.",
+      "Setup: two distinct connection routes; common self-DM, dots test, and reply-thread readback; no assertion that admin approval is always unnecessary.",
+      "All generated originals are new and each final role has its own correct source.",
+      "Setup updated after official research: Apps / Plugins wording; account attribution explicitly marked as this case’s observation; revised full-size PNG re-inspected."
+    ],
+    "independent_acceptance": "Pending parent review and the user’s independent inspection."
+  },
+  "content_sources": [
+    "FACTS.md",
+    "BRIEF.md",
+    "src/official-sources.md",
+    "https://docs.slack.dev/ai/slack-skills-plugin/",
+    "https://help.openai.com/en/articles/20001494-connecting-and-managing-app-accounts-in-chatgpt",
+    "https://help.openai.com/en/articles/12525822-using-slack-in-chatgpt",
+    "https://code.claude.com/docs/en/mcp",
+    "https://slack.com/help/articles/202035138-Add-apps-to-your-Slack-workspace"
+  ],
+  "alt_texts": "src/alt-texts.json",
+  "hashes": "src/visual-hashes.json"
+}

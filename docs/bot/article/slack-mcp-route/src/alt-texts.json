@@ -1,0 +1,7 @@
+{
+  "01-slack-route-hero.png": "ChatGPTとClaudeからSlack経由でdotsに依頼する。二つの入口が一つの経路に合流する生成背景と、日本語タイトル、右下の固定猫素材。",
+  "02-slack-route-infographic.png": "依頼をつなぐ三つの置き場。指示はGitHubの固定commit、会話はSlackの案件スレッド、証跡はPROGRESS.mdに残す。送信、受付、完了、検収を別々に確かめる。",
+  "03-slack-route-illustration.png": "色の異なる二つの入口から届く依頼が、一つの会話を表す器に合流し、整理された作業台へ進む文字なしの挿絵。",
+  "04-slack-route-process.png": "案件番号、GitHubの固定指示書、Slackでの依頼、dotsの受付、看板の更新、独立レビューと手元検収の順に進む。外側の読み取り専用監視はGitHubの更新状況を見て、停滞時にdotsへ理由を聞く。",
+  "05-slack-route-setup.png": "ChatGPTは設定のApps / PluginsからSlackを選びConnectで接続。Claude CodeはSlack公式プラグインを導入し、/mcpでOAuth認証後に新しいセッションを開く。両方で自分宛てDM、dotsへの一通、返信スレッドの読み取りを確かめる。 投稿名義と表示は今回の確認結果。権限や管理者承認は環境による。"
+}

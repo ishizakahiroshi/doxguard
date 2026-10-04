@@ -1,0 +1,58 @@
+{
+  "article_key": "dots-slack-instruction-20261004",
+  "checked_at": "2026-10-04",
+  "articles": {
+    "zenn": {
+      "utf8_bytes": 14778,
+      "body_characters_excluding_urls_and_image_markup": 5050,
+      "image_count": 5,
+      "sha256": "de51c29f5680374c008db2567b6df513824bc98e114214009f1483fde8bd944f"
+    },
+    "qiita": {
+      "utf8_bytes": 14905,
+      "body_characters_excluding_urls_and_image_markup": 5226,
+      "image_count": 5,
+      "sha256": "105f910f8c72f048850fb0f78710fd3c66c3d3ff18a17c04ed10204a05d94fe9"
+    },
+    "note": {
+      "utf8_bytes": 13848,
+      "body_characters_excluding_urls_and_image_markup": 4806,
+      "image_count": 5,
+      "sha256": "1aaa62d9cd33a0864f3930832b23a788db3a01193c8cfb61f5c77ec0a8dae3d8"
+    }
+  },
+  "images": {
+    "01-slack-route-hero.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1269612,
+      "sha256": "cd689a1ef8f74b9597ed44a97979e38207f2263e251f6a1408d7213766838ae7"
+    },
+    "02-slack-route-infographic.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1359029,
+      "sha256": "fac5d1c5c4a3c556d7db3fd6a405d888b808b17a297ece49e665f43ffb0691ee"
+    },
+    "03-slack-route-illustration.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 1807276,
+      "sha256": "0856bb4b910dce8334a95a56e2f0d465c7341b123d8e22f687da3f22179a2498"
+    },
+    "04-slack-route-process.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 240148,
+      "sha256": "f2cd3ba8313da313413d3a43067a8401fe9118e5b4aac92cb341a65b4d9a3dbf"
+    },
+    "05-slack-route-setup.png": {
+      "width": 1600,
+      "height": 900,
+      "bytes": 223844,
+      "sha256": "f6c880ce720390b165fbc27c5b5220da55782025310bb7f945340aa5047e4474"
+    }
+  },
+  "mascot_git_blob_sha1": "229e3a806e16cd636594704f91a193ac9b5c8fc8",
+  "result": "pass; mechanical validation only; independent visual and factual review separate"
+}
