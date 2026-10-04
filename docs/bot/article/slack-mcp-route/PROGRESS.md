@@ -46,3 +46,4 @@
 - note: 下書き保存まで。画像5枚の挿入と公開は持ち主の操作。
 - 公開用の画像ファイル名は各媒体repoで NN_2026-10-04_dots-slack-instruction_<役割>.png に改名した。
 - note: 2026-10-04 14:27 に持ち主が画像を入れて公開。check-note-published.ps1 で確認。3媒体の公開と表示確認が揃った。
+- 2026-10-04 JST: develop への取り込み前に、CI の dogfood スキャン(strict)が src/svg の 01〜03 をサイズ超過で読めず失敗した。SVG 内の base64 埋め込み画像 4 つを、ハッシュが完全一致する src/generated/*.png と assets/mascot_cats.png への相対参照に置き換えた(画像の中身は不変、完成 PNG も不変)。build_visuals.py を再実行すると埋め込み形式で出力される点は未変更。

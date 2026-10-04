@@ -98,17 +98,17 @@
   {
     "file": "src/svg/01-slack-route-hero.svg",
     "bytes": 4378693,
-    "sha256": "777466661b99e1b8c500ecdbf996f6e25120835b80a063742684eb6ab8fc0afb"
+    "sha256": "aab873c2c315e6012f1abeeb2d0eb949b28f02b9ff6f2fac9ae61e688bde3133"
   },
   {
     "file": "src/svg/02-slack-route-infographic.svg",
     "bytes": 2081491,
-    "sha256": "068a5bab8883c0b6e8ed5d42f9ca8fd06abad7b87f2370d5e29e5f1301c07c8c"
+    "sha256": "1e69faae611de5728a51a158f0dba0d072def4c50b7e4d1d76e71db1ba68cdb7"
   },
   {
     "file": "src/svg/03-slack-route-illustration.svg",
     "bytes": 2653254,
-    "sha256": "c62d5cd5d3f8bb73c9d547eeb241fdea62b561a8fa46d1e5a86e777e7a1a1b80"
+    "sha256": "1dec25eb830dddc167b5cbe4df63636e4e4e49915333c581ca780d84345380d6"
   },
   {
     "file": "src/svg/04-slack-route-process.svg",
