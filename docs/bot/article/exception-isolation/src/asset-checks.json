@@ -1,0 +1,54 @@
+{
+  "completed_pngs": [
+    {
+      "file": "hero.png",
+      "sha256": "5b42c1b13c8cc2088b2d0a272eabc61564282f58a4bfe1a69b93dcf3d34a15f1",
+      "pixels": [
+        1600,
+        900
+      ],
+      "format": "PNG"
+    },
+    {
+      "file": "infographic.png",
+      "sha256": "45b8f96e4ecf2c4e388f44b44920f88cd011e65df6becf56bb122d56223bc6cc",
+      "pixels": [
+        1600,
+        900
+      ],
+      "format": "PNG"
+    },
+    {
+      "file": "illustration.png",
+      "sha256": "88e10c7fcf55dfbfcdbd794536bfbe191f5bb96eb3d400320dbc3702cc48f79a",
+      "pixels": [
+        1600,
+        900
+      ],
+      "format": "PNG"
+    },
+    {
+      "file": "fig.png",
+      "sha256": "b120d8d4fcfc625624934c4dd224267ab5ecc5dd5e3d2db74c980c287702539f",
+      "pixels": [
+        1600,
+        900
+      ],
+      "format": "PNG"
+    }
+  ],
+  "hero_reserved_rectangle": {
+    "x": 1260,
+    "y": 650,
+    "width": 340,
+    "height": 250,
+    "uniform_rgb": [
+      234,
+      243,
+      251
+    ]
+  },
+  "qiita_frontmatter_parsed": true,
+  "relative_image_references_match": true,
+  "note": "Production artifact checks, not business-system runtime tests."
+}

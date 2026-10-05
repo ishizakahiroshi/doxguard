@@ -1,0 +1,19 @@
+{
+  "article_key": "exception-isolation",
+  "platform": "qiita",
+  "state": "draft-produced",
+  "scope": "draft-and-pr-only",
+  "publication_authorized": false,
+  "submission_repo": "ishizakahiroshi/doxguard",
+  "input_commit": "a36b8956158acc37cd035e09343c65fd86a5ce80",
+  "item_id": null,
+  "url": null,
+  "receipt": null,
+  "verification": "production-self-check-complete-independent-review-pending",
+  "category": "works",
+  "working_branch": "dots/article-exception-isolation-003",
+  "base_branch": "develop",
+  "base_commit": "4552da8ad53a248b62c9011732875b9f043b4ba4",
+  "owner_acceptance": "not_started",
+  "metadata_scope": "Instruction and production identifiers only; no incident or original-system identifiers."
+}
