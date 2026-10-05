@@ -1,13 +1,16 @@
 {
   "article_key": "20261005-si-domain",
   "platform": "note",
-  "status": "draft-pr-revision-awaiting-review",
+  "status": "published",
   "publication_authorized": false,
-  "url": null,
+  "url": "https://note.com/ishizakahiroshi/n/n9979f5001cf9",
   "source_commit": null,
   "reviewed_commit": "862c2a9294c414ce398f462b992ca3cdc5ef6e86",
   "hero_cat_overlay": "done-local",
   "visual_acceptance": "accepted-local",
   "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/7",
-  "hero_final_sha256": "7F32227C94AC745A9A0079D0353228DFE910F8061ED4E35C360264513EFC1548"
+  "hero_final_sha256": "7F32227C94AC745A9A0079D0353228DFE910F8061ED4E35C360264513EFC1548",
+  "published_at": "2026-10-05T14:39:20+09:00",
+  "verified_by": "local",
+  "site_mirror": "https://ishizakahiroshi.com/articles/2026/2026-10-05_ai-si-domain-anguilla/"
 }
