@@ -1,16 +1,24 @@
 {
   "article_key": "20261005-disk-storage",
   "platform": "qiita",
-  "status": "prepared-for-review",
+  "status": "draft-pr-submitted",
   "publication_authorized": false,
   "url": null,
-  "source_commit": null,
-  "reviewed_commit": null,
+  "source_commit": "6bf525e6c74406336c2d641ca298f2fffb361caa",
+  "reviewed_commit": "6bf525e6c74406336c2d641ca298f2fffb361caa",
   "hero_cat_overlay": "pending-local",
-  "visual_acceptance": "self-inspected-pixels-browser-unperformed",
+  "visual_acceptance": "independent-pixel-review-passed-local-cat-and-browser-pending",
   "published": false,
   "instruction_commit": "8a772259b81c1eff34f07238a93d74410c969e73",
   "production_branch": "dots/article-disk-storage-20261005-005",
   "browser_visual_inspection": "unperformed",
-  "browser_dom_overflow": "unperformed"
+  "browser_dom_overflow": "unperformed",
+  "pull_request_url": "https://github.com/ishizakahiroshi/doxguard/pull/6",
+  "independent_review": "pass-with-limits",
+  "body_character_count": 3921,
+  "completed_png_count": 4,
+  "png_dimensions": [
+    1600,
+    900
+  ]
 }

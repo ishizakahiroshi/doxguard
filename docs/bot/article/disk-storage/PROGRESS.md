@@ -7,10 +7,10 @@
 | 工程 | 担当 | 状態 | 証跡・次の一手 |
 |---|---|---|---|
 | 指示準備 | 手元 | prepared | 指定6ファイルを固定SHAで読了 |
-| 受付 | dots | in-progress | 番号確認済み。UTF-8書込・PNG作成・クラウドブラウザ起動を実試験済み |
-| 本文 | dots | prepared | 表示相当3,921字。4画像の相対リンクと直後説明あり |
-| 全4図版 | dots | prepared-with-limit | 1600×900の4PNG、HTML組版、実ピクセル自己目視。ブラウザ検査は未実施 |
-| 独立レビュー | dots別担当 | pending | 成果物SHA確定後に全差分・完成PNGを独立確認 |
+| 受付 | dots | done | 固定指示・専用branch・能力の実試験結果を報告済み |
+| 本文 | dots | submitted | 表示相当3,921字。4画像の相対リンクと直後説明あり |
+| 全4図版 | dots | submitted-with-limit | 1600×900の4PNG、HTML組版、実ピクセル自己目視。ブラウザ検査は未実施 |
+| 独立レビュー | dots別担当 | pass-with-limits | 6bf525e6c74406336c2d641ca298f2fffb361caaの全差分・36ファイル・完成PNGを確認。修正必須findingなし |
 | 固定猫・最終検収 | 手元 | pending | 提出物回収後に実施 |
 | 媒体公開 | 未割当 | outside-scope | 今回は制作とDraft PRまで |
 
@@ -30,4 +30,17 @@
 - 全図1600×900、全ラベルは縮小なしで枠内、hero右下340×250は1色の空白。猫なし。
 - 文字・数値・画像リンクの自己検査結果はsrc/validation.json、描画検査はsrc/render-checks.json。
 - 完成物のブラウザDOM overflow・目視は未実施。制限を回避せず、独立ピクセルレビューへ進む。
-- 次: 成果物commitを独立担当に渡し、finding対応後にmain向けDraft PR提出。
+- 制作成果物SHA: 6bf525e6c74406336c2d641ca298f2fffb361caa。
+- 独立レビュー対象SHA: 6bf525e6c74406336c2d641ca298f2fffb361caa。詳細はsrc/independent-review.md。
+- main向けDraft PR: https://github.com/ishizakahiroshi/doxguard/pull/6 。
+- 成果物SHAのValidate CI: success (https://github.com/ishizakahiroshi/doxguard/actions/runs/37260679948)。提出メタデータ更新後のheadはPR上で別途確認する。
+
+## 停止と再開
+- PNGの最初のGitHub blob作成時に実行承認待ちとなった。ユーザーの承認後に同じ呼出しが成功し、全成果物を転送した。別経路や認証追加は使用していない。
+- ブラウザ検査は前記制限で停止したまま。PyMuPDF枠検査やPNG目視をブラウザ検査の代わりにPASSとは記録しない。
+
+## 提出後の入口
+- 全4PNGは1600×900、本文は表示相当3,921字、採用生成元は内蔵image_gen。
+- この提出メタデータ自身のcommitを本ファイルで自己参照しない。最終headと最終メタデータ差分の独立確認はPR説明・提出会話で示す。
+- 手元で固定猫をhero予約領域へ重ね、全差分と4PNGを最終検収する。ブラウザでのHTML表示・overflow確認も残る。
+- published:false。Qiita、サイト、SNSへの公開とmergeは行っていない。
