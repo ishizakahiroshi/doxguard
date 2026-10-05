@@ -1,12 +1,12 @@
 {
   "article_key": "20261006-security-incidents",
   "platform": "note",
-  "status": "independent-review-pending",
+  "status": "draft-pr-submitted",
   "publication_authorized": false,
   "url": null,
-  "source_commit": null,
-  "reviewed_commit": null,
+  "source_commit": "7927534f224de22a72abac81d78d3b5fa7af6ec3",
+  "reviewed_commit": "7927534f224de22a72abac81d78d3b5fa7af6ec3",
   "hero_cat_overlay": "pending-local",
-  "visual_acceptance": "png-self-check-complete-browser-pending",
-  "draft_pr_url": null
+  "visual_acceptance": "independent-png-review-complete; final-local-acceptance-pending",
+  "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/8"
 }

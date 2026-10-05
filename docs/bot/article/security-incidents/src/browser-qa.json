@@ -60,12 +60,13 @@
     },
     {
       "file": "07_fig-protection.png",
-      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/07_fig-protection.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/7927534f224de22a72abac81d78d3b5fa7af6ec3/docs/bot/article/security-incidents/07_fig-protection.png",
       "natural_width": 1600,
       "natural_height": 900,
       "complete": true,
-      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
-      "artifact_sha256": "c23fae79eb6ff33996617ce26384ab54efab875b1ee8a66db3cf5c67b6a9d512"
+      "visual_check": "Corrected public PNG screenshot inspected; both commas visible, text legible, no missing art or clipping",
+      "artifact_sha256": "9d1e391dabacb8b144d39de7ba6be68bc7a644ecdd5a30d2cef1366f8e25bb98",
+      "supersedes_initial_check": "Initial visual check missed two punctuation glyphs. Independent review detected them; corrected source uses commas."
     },
     {
       "file": "08_illustration-response.png",
@@ -80,5 +81,8 @@
   "not_equivalent_to": "HTML browser render or HTML overflow test",
   "html_browser_overflow": "blocked: local file protocol rejected by browser URL policy; not bypassed",
   "screenshots": "Visually inspected during the browser session; screenshot binaries not retained in repository",
-  "result": "8/8 public PNG browser displays checked"
+  "result": "8/8 public PNG browser displays checked",
+  "corrected_figure_rechecked_at_utc": "2026-10-05T18:46:46Z",
+  "current_content_commit": "7927534f224de22a72abac81d78d3b5fa7af6ec3",
+  "unchanged_seven_pngs_verified": true
 }

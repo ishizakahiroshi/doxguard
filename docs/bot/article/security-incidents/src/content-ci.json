@@ -1,0 +1,9 @@
+{
+  "content_commit": "7927534f224de22a72abac81d78d3b5fa7af6ec3",
+  "previous_content_commit": "8ce746fc2d250e0b18c513450cc58c62412b4423",
+  "validation_workflow_url": "https://github.com/ishizakahiroshi/doxguard/actions/runs/37358461487",
+  "workflow_status": "completed",
+  "workflow_conclusion": "success",
+  "checked_at_utc": "2026-10-05T18:47:16Z",
+  "note": "This CI result is for the corrected content commit. Any subsequent evidence-only head needs its own CI check."
+}
