@@ -1,0 +1,62 @@
+{
+  "previous_head": "7a415bdf695573bffc0f18d45a6439cf72a06869",
+  "change_scope": "author voice only; same branch and Draft PR 8",
+  "changed_lines": {
+    "draft.md": [
+      40,
+      82,
+      89,
+      92,
+      101,
+      131,
+      188
+    ],
+    "x-post.md": [
+      1
+    ]
+  },
+  "checks": {
+    "body_under_10000": true,
+    "one_h1": true,
+    "no_forbidden_dash": true,
+    "bold_max_three": true,
+    "no_hyphen_list": true,
+    "thirteen_final_hashtags": true,
+    "x_quote_exact": true,
+    "footer_exact": true,
+    "intro_keywords": true,
+    "eight_markers": true,
+    "marker_order": true,
+    "five_line_markers_and_explanation": true,
+    "eight_root_png": true,
+    "all_1600_900": true,
+    "manifest_matches": true,
+    "image_no_forbidden_dash": true,
+    "image_no_missing_glyph_marker": true,
+    "x_post_url_placeholder": true,
+    "x_weight_under_280": true,
+    "scope_only": true,
+    "structural_privacy_screen": true
+  },
+  "existing_validator_passed": true,
+  "canonical_article_lint": {
+    "available": false,
+    "executed": false,
+    "lookup": "No matching repository/shared article script or executable in PATH; do not equate the bespoke validator with the named tool"
+  },
+  "images": {
+    "all_eight_png_bytes_unchanged": true,
+    "infographic_and_three_fig_labels_no_target_production_word": true,
+    "sync_required": false
+  },
+  "urls_headings_image_markers_line_count_unchanged": true,
+  "numbers_unchanged_except_removed_editorial_old_date": true,
+  "visible_body_characters": 9402,
+  "central_count_including_four_quote_markers": 9406,
+  "x_post_weight": 210,
+  "independent_voice_review": "all eight targeted text changes checked; no factual or wording blocker",
+  "file_sha256": {
+    "draft.md": "3d1ff2126738d21fec5f9297f39120102d73af178f013d6d21a023d2c0b6a0f1",
+    "x-post.md": "a8e0c3c308ce1fef3fdf1554923aaa1679a082de801ff6ddf68c5c272e1c66d5"
+  }
+}

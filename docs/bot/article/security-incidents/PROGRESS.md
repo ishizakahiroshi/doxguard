@@ -39,3 +39,15 @@ Draft PR: https://github.com/ishizakahiroshi/doxguard/pull/8
 内容SHAのValidateは全5ジョブ成功。最新の証跡headのCIはPRと提出会話で別途確認する。独立レビュー記録はsrc/independent-review.md、ブラウザ検査はsrc/browser-qa.json、統合検査の区分はsrc/submission-checks.md。
 
 未実施はローカルHTMLのブラウザoverflow、私有watchlist検査、手元での固定猫合成と全行・全画像の最終検収。次の入口はこのPRとsrc/independent-review.md。媒体公開権限はfalseのまま。
+
+## 同一案件の語り方修正（2026-10-06 04:38 JST）
+
+同じbranch・Draft PR #8で、読者向け本文に残っていた制作用の言い回しを修正。制作の再起動ではない。開始時に公開headと作業treeが7a415bdf695573bffc0f18d45a6439cf72a06869で一致し、並行変更がないことを確認した。
+
+変更はdraft.mdの40・82・89・92・101・131・188行と、x-post.mdの1行。確認済みと未確認を著者の言葉で区別し、佐川の公表に項目がないとは書かない。事実・数値・URL・構成・画像は変更しない。イープラスの旧日付に触れる制作注記だけを取り除き、公表日9月29日を保持した。
+
+infographicとfig3枚のHTML・抽出文字・PNGを確認し、同じ制作用語はなかったため画像修正なし。8PNGは直前headと全バイト一致。本文は9,402字（引用記号を数える中央検査9,406字）、X告知は210/280。
+
+既存validatorの21項目、変更行・URL列・見出し列・画像目印・行数・数字の差分検査、独立した語り方確認は成功。正規article-lintはこのrepo・実行環境に見つからず未実施のため、その合格とは表記しない。手元で実施済みのarticle-lint 9項目・私有watchlist検査は依頼者の検収結果であり、この修正後にこちらで再実行したとは扱わない。
+
+直前の内容レビュー・字数・CI記録は旧版に紐づく履歴として残す。今回の修正headと最新CIは同じPRの冒頭・提出会話で確認する。固定猫合成と最終画像確認は引き続き手元。
