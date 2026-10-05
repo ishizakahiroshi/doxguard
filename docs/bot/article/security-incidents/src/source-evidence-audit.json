@@ -1,0 +1,218 @@
+{
+  "instruction_commit": "624fbe1c80f748ef53e9d48a16c4bf5c6c570469",
+  "snapshot_date": "2026-10-06",
+  "inspection_date_jst": "2026-10-06",
+  "source_scope": "17 items in supplied manuscript, no additional incidents",
+  "record_type": "verification index; not a full-page archival capture",
+  "original_url_attempts": 17,
+  "individual_sources_found_for_all_seven_upper_urls": true,
+  "numerical_figures": "Park24, Seicomart, eplus, Monogatari confirmed; dates and units preserved as documented",
+  "separation_figures": "eplus, Japan Times, Daiki Suisan, Moonstar, Abahouse, Monogatari confirmed",
+  "methods": [
+    "Web page open and official PDF extraction",
+    "Cloud browser direct page reading when Web extraction failed"
+  ],
+  "limits": [
+    "Sagawa FAQ initial October 3 publication date unconfirmed; current display October 5",
+    "Moonstar September 30 announcement date unconfirmed; supplied continuation displays October 2",
+    "Specific Osaka Metropolitan University library impact unconfirmed"
+  ],
+  "items": [
+    {
+      "number": 1,
+      "name": "パーク24（タイムズカー）",
+      "original_url": "https://www.park24.co.jp/news/2026/09/20260928-1.html",
+      "opened_or_discovered_source_urls": [
+        "https://www.park24.co.jp/news/2026/09/20260928-1.html",
+        "https://www.park24.co.jp/news/2026/09/20260929-1.html"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 2,
+      "name": "セイコーマート",
+      "original_url": "https://online.seicomart.co.jp/delivery/cms/preview.php?disp_flg=pc&pre_no=121",
+      "opened_or_discovered_source_urls": [
+        "https://online.seicomart.co.jp/delivery/cms/preview.php?disp_flg=pc&pre_no=121",
+        "https://online.seicomart.co.jp/delivery/cms/preview.php?pre_no=121",
+        "https://online.seicomart.co.jp/delivery/cms/preview.php?pre_no=119",
+        "https://online.seicomart.co.jp/delivery/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 3,
+      "name": "イープラス",
+      "original_url": "https://support-qa.eplus.jp/hc/ja/articles/62711500727961",
+      "opened_or_discovered_source_urls": [
+        "https://support-qa.eplus.jp/hc/ja/articles/62711500727961"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 4,
+      "name": "佐川急便（原稿は上位URL）",
+      "original_url": "https://www.sagawa-exp.co.jp/customer/",
+      "opened_or_discovered_source_urls": [
+        "https://www.sagawa-exp.co.jp/customer/",
+        "https://www2.sagawa-exp.co.jp/information/detail/419/",
+        "https://www2.sagawa-exp.co.jp/information/detail/420/",
+        "https://www2.sagawa-exp.co.jp/information/detail/421/",
+        "https://www2.sagawa-exp.co.jp/information/detail/425/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 5,
+      "name": "ヤマト運輸（原稿は上位URL）",
+      "original_url": "https://www.kuronekoyamato.co.jp/ytc/corp/",
+      "opened_or_discovered_source_urls": [
+        "https://www.kuronekoyamato.co.jp/ytc/corp/",
+        "https://www.yamato-hd.co.jp/important/info_260929_1.html",
+        "https://www.yamato-hd.co.jp/important/img/impo_261002_1_1.pdf",
+        "https://business.kuronekoyamato.co.jp/service/lineup/payment/banner/afterpayment_02.html"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 6,
+      "name": "ムーンスター",
+      "original_url": "https://www.moonstar.co.jp/information/2026/10/post-4.html",
+      "opened_or_discovered_source_urls": [
+        "https://www.moonstar.co.jp/information/2026/10/post-4.html",
+        "https://www.moonstar.co.jp/corporate/news/archive/post-74.html"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 7,
+      "name": "アバハウスインターナショナル",
+      "original_url": "https://abahouse.co.jp/news/2005/",
+      "opened_or_discovered_source_urls": [
+        "https://abahouse.co.jp/news/2005/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 8,
+      "name": "The Japan Times",
+      "original_url": "https://www.japantimes.co.jp/press/2026/10/02/notice-ransomware-incident/",
+      "opened_or_discovered_source_urls": [
+        "https://www.japantimes.co.jp/press/2026/10/02/notice-ransomware-incident/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 9,
+      "name": "第一生命（原稿は上位URL）",
+      "original_url": "https://www.dai-ichi-life.co.jp/",
+      "opened_or_discovered_source_urls": [
+        "https://www.dai-ichi-life.co.jp/",
+        "https://www.dai-ichi-life.co.jp/information/pdf/index_192.pdf"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 10,
+      "name": "大阪公立大学（原稿は上位URL）",
+      "original_url": "https://e.omu.ac.jp/announce/",
+      "opened_or_discovered_source_urls": [
+        "https://e.omu.ac.jp/announce/",
+        "https://www.omu.moe/news/2026-10-02-outage-2.html",
+        "https://www.omu.moe/news/2026-10-02-class-cancel.html",
+        "https://www.omu.moe/news/2026-10-02-scholarship.html",
+        "https://e.omu.ac.jp/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 11,
+      "name": "JPCERT/CC",
+      "original_url": "https://www.jpcert.or.jp/m/at/2026/at260029.html",
+      "opened_or_discovered_source_urls": [
+        "https://www.jpcert.or.jp/m/at/2026/at260029.html"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 12,
+      "name": "日本経済新聞社（原稿は上位URL）",
+      "original_url": "https://www.nikkei.com/",
+      "opened_or_discovered_source_urls": [
+        "https://www.nikkei.com/",
+        "https://www.nikkei.co.jp/nikkeiinfo/news/information/1547.html",
+        "https://www.nikkei.co.jp/nikkeiinfo/news/information/1554.html"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 13,
+      "name": "物語コーポレーション（焼肉きんぐ）",
+      "original_url": "https://www.monogatari.co.jp/news/261005_news/",
+      "opened_or_discovered_source_urls": [
+        "https://www.monogatari.co.jp/news/261005_news/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 14,
+      "name": "大起水産（原稿は上位URL）",
+      "original_url": "https://www.daiki-suisan.co.jp/",
+      "opened_or_discovered_source_urls": [
+        "https://www.daiki-suisan.co.jp/",
+        "https://www.daiki-suisan.co.jp/files/optionallink/00000164_file.pdf"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 15,
+      "name": "GMOリサーチ＆AI（infoQ）",
+      "original_url": "https://gmo-research.ai/pressroom/notice/notice-20261005",
+      "opened_or_discovered_source_urls": [
+        "https://gmo-research.ai/pressroom/notice/notice-20261005"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 16,
+      "name": "大和証券（原稿は上位URL）",
+      "original_url": "https://www.daiwa.jp/",
+      "opened_or_discovered_source_urls": [
+        "https://www.daiwa.jp/",
+        "https://ssl4.eir-parts.net/doc/8601/tdnet/2891437/00.pdf",
+        "https://www.daiwa-grp.jp/press/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    },
+    {
+      "number": 17,
+      "name": "くふうカンパニー（くふう まちトークβ版）",
+      "original_url": "https://kufu.co.jp/2026/10/05/kufu-announce/",
+      "opened_or_discovered_source_urls": [
+        "https://kufu.co.jp/2026/10/05/kufu-announce/"
+      ],
+      "has_verified_section": true,
+      "has_limits_section": true
+    }
+  ],
+  "additional_checks": {
+    "Yamato first report": "Cloud browser full one-page PDF screenshot verified; title and 2026-09-29 date match original manuscript",
+    "Daiwa official publication route": "Cloud browser verified October 5 release anchor on official /press/ points to the exact eir-parts disclosure PDF"
+  }
+}

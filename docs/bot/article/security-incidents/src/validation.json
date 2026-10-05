@@ -1,0 +1,99 @@
+{
+  "body_characters": 9386,
+  "body_count_method": "Title, URLs, image-marker blocks, fixed footer, whitespace excluded. Headings, image explanations and X quote included.",
+  "x_post_weight": 218,
+  "checks": {
+    "body_under_10000": true,
+    "one_h1": true,
+    "no_forbidden_dash": true,
+    "bold_max_three": true,
+    "no_hyphen_list": true,
+    "thirteen_final_hashtags": true,
+    "x_quote_exact": true,
+    "footer_exact": true,
+    "intro_keywords": true,
+    "eight_markers": true,
+    "marker_order": true,
+    "five_line_markers_and_explanation": true,
+    "eight_root_png": true,
+    "all_1600_900": true,
+    "manifest_matches": true,
+    "image_no_forbidden_dash": true,
+    "x_post_url_placeholder": true,
+    "x_weight_under_280": true,
+    "scope_only": true,
+    "structural_privacy_screen": true
+  },
+  "images": [
+    {
+      "file": "01_hero.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "25e5ff81b1b3a1e934dfb0174306a507a013df02ea46f58f793cd464696e6f5a"
+    },
+    {
+      "file": "02_infographic.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "d51f0def6a94e5adf2c5d50dfd85dfe0665e098fd3fc59c7bde5c7033d69ca0c"
+    },
+    {
+      "file": "03_illustration-news.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "4aac4585fdb7cb7331a4a147cf536933d096c412039e8e33658a754ef97bd5bf"
+    },
+    {
+      "file": "04_fig-counts.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "2397e8f452afad8e4f957cf47ba6a13e1213f2e196f4059a56d73353e287ef80"
+    },
+    {
+      "file": "05_fig-separation.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "202ffded35f81c8c10e5e2bda09f06e8dff990aa8f27726dee0cab22c319c572"
+    },
+    {
+      "file": "06_illustration-storage.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "d20b6561dcb279bb0ff035f3a707dc9541ec96e1dd6af4abc71d507c62da4b75"
+    },
+    {
+      "file": "07_fig-protection.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "c23fae79eb6ff33996617ce26384ab54efab875b1ee8a66db3cf5c67b6a9d512"
+    },
+    {
+      "file": "08_illustration-response.png",
+      "size": [
+        1600,
+        900
+      ],
+      "sha256": "78f10800a5fb953464da5ba955edbfca57576f51f4a1f34d0d10c8dba97f59b1"
+    }
+  ],
+  "privacy_flagged_paths": [],
+  "not_run": [
+    "Browser HTML overflow: file URL policy blocked",
+    "User private watchlist scan: not accessed"
+  ],
+  "passed": true
+}

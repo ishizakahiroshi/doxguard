@@ -1,0 +1,1096 @@
+{
+  "renderer": "MuPDF HTML Story + native geometry, not Chromium",
+  "all_text_fits_without_downscaling": true,
+  "all_rendered_glyph_boxes_inside_canvas": true,
+  "all_dimensions_exact": true,
+  "image_count": 8,
+  "forbidden_dashes_in_labels": false,
+  "text_boxes": [
+    {
+      "figure": "01_hero",
+      "text": "国内インシデントを読み直す",
+      "box": [
+        63,
+        39,
+        571,
+        86
+      ],
+      "font_size": 23,
+      "spare_height": 13.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "01_hero",
+      "text": "この1週間、\n漏えい多すぎないか",
+      "box": [
+        62,
+        99,
+        591,
+        240
+      ],
+      "font_size": 48,
+      "spare_height": 9.4,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "発表を追うと、見るところが変わってきた",
+      "box": [
+        67,
+        40,
+        1530,
+        114
+      ],
+      "font_size": 45,
+      "spare_height": 11.25,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "公表が続いた",
+      "box": [
+        63,
+        161,
+        504,
+        246
+      ],
+      "font_size": 35,
+      "spare_height": 35.75,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "漏れた後に\n何が読めたか",
+      "box": [
+        578,
+        147,
+        1020,
+        255
+      ],
+      "font_size": 35,
+      "spare_height": 11.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "今後\n見ておきたいもの",
+      "box": [
+        1098,
+        147,
+        1540,
+        255
+      ],
+      "font_size": 35,
+      "spare_height": 11.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "→",
+      "box": [
+        500,
+        168,
+        581,
+        232
+      ],
+      "font_size": 43,
+      "spare_height": 3.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "→",
+      "box": [
+        1013,
+        168,
+        1098,
+        232
+      ],
+      "font_size": 43,
+      "spare_height": 3.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "各社の単位はバラバラ",
+      "box": [
+        70,
+        704,
+        506,
+        759
+      ],
+      "font_size": 30,
+      "spare_height": 12.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "アカウント・人・件\n単位が違うので足さない",
+      "box": [
+        63,
+        766,
+        513,
+        842
+      ],
+      "font_size": 27,
+      "spare_height": 1.1,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "持たない・分ける・消す",
+      "box": [
+        577,
+        704,
+        1025,
+        759
+      ],
+      "font_size": 30,
+      "spare_height": 12.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "侵入を防ぐことに加えて\n読めるデータを減らす",
+      "box": [
+        575,
+        766,
+        1027,
+        842
+      ],
+      "font_size": 27,
+      "spare_height": 1.1,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "原因・侵入期間",
+      "box": [
+        1094,
+        704,
+        1546,
+        759
+      ],
+      "font_size": 30,
+      "spare_height": 12.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "二次被害・保持期間\n調査中のことは断定しない",
+      "box": [
+        1094,
+        766,
+        1546,
+        842
+      ],
+      "font_size": 27,
+      "spare_height": 1.1,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "同じ「件数」でも、数えているものが違う",
+      "box": [
+        97,
+        37,
+        1538,
+        112
+      ],
+      "font_size": 44,
+      "spare_height": 13.6,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "各社が公表した数値と単位を、そのまま並べる",
+      "box": [
+        97,
+        116,
+        1538,
+        162
+      ],
+      "font_size": 25,
+      "spare_height": 10.25,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "会社・発表",
+      "box": [
+        84,
+        181,
+        430,
+        221
+      ],
+      "font_size": 23,
+      "spare_height": 6.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "対象・数え方",
+      "box": [
+        464,
+        181,
+        991,
+        221
+      ],
+      "font_size": 23,
+      "spare_height": 6.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "公表された数値",
+      "box": [
+        1080,
+        181,
+        1517,
+        221
+      ],
+      "font_size": 23,
+      "spare_height": 6.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "パーク24  第2報",
+      "box": [
+        84,
+        255,
+        446,
+        309
+      ],
+      "font_size": 30,
+      "spare_height": 11.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "漏えいしたアカウント数",
+      "box": [
+        464,
+        245,
+        1015,
+        323
+      ],
+      "font_size": 27,
+      "spare_height": 39.55,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "約660万件",
+      "box": [
+        1065,
+        246,
+        1520,
+        315
+      ],
+      "font_size": 42,
+      "spare_height": 10.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "パーク24  第3報",
+      "box": [
+        84,
+        356,
+        446,
+        410
+      ],
+      "font_size": 30,
+      "spare_height": 11.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "本人確認書類が漏えいした\nアカウント数",
+      "box": [
+        464,
+        346,
+        1015,
+        424
+      ],
+      "font_size": 27,
+      "spare_height": 3.1,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "約160万件",
+      "box": [
+        1065,
+        347,
+        1520,
+        416
+      ],
+      "font_size": 42,
+      "spare_height": 10.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "セイコーマート",
+      "box": [
+        84,
+        457,
+        446,
+        511
+      ],
+      "font_size": 30,
+      "spare_height": 11.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "情報を閲覧された会員",
+      "box": [
+        464,
+        447,
+        1015,
+        525
+      ],
+      "font_size": 27,
+      "spare_height": 39.55,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "572,022人",
+      "box": [
+        1065,
+        448,
+        1520,
+        517
+      ],
+      "font_size": 42,
+      "spare_height": 10.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "イープラス",
+      "box": [
+        84,
+        558,
+        446,
+        612
+      ],
+      "font_size": 30,
+      "spare_height": 11.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "漏えいした個人情報",
+      "box": [
+        464,
+        548,
+        1015,
+        626
+      ],
+      "font_size": 27,
+      "spare_height": 39.55,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "1,463件",
+      "box": [
+        1065,
+        549,
+        1520,
+        618
+      ],
+      "font_size": 42,
+      "spare_height": 10.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "焼肉きんぐ",
+      "box": [
+        84,
+        659,
+        446,
+        713
+      ],
+      "font_size": 30,
+      "spare_height": 11.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "登録ユーザーのうち\n漏えいした情報",
+      "box": [
+        464,
+        649,
+        1015,
+        727
+      ],
+      "font_size": 27,
+      "spare_height": 3.1,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "10,788,963件",
+      "box": [
+        1065,
+        639,
+        1520,
+        706
+      ],
+      "font_size": 42,
+      "spare_height": 8.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "登録ユーザー数 10,808,784件",
+      "box": [
+        1068,
+        701,
+        1524,
+        732
+      ],
+      "font_size": 20,
+      "spare_height": 2.0,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "単位が違うので、足さない。合計の被害人数は作らない。",
+      "box": [
+        88,
+        768,
+        1516,
+        820
+      ],
+      "font_size": 31,
+      "spare_height": 8.15,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "04_fig-counts",
+      "text": "各社の一次情報を照合。発表ごとに対象と単位が異なります。出典は本文を参照。",
+      "box": [
+        67,
+        848,
+        1535,
+        892
+      ],
+      "font_size": 22,
+      "spare_height": 12.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "「元に戻す必要があるか」で、使い分ける",
+      "box": [
+        97,
+        37,
+        1538,
+        112
+      ],
+      "font_size": 44,
+      "spare_height": 13.6,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "ハッシュ化・暗号化・検索用のHMACは、役割が違う",
+      "box": [
+        97,
+        116,
+        1538,
+        162
+      ],
+      "font_size": 25,
+      "spare_height": 10.25,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "元に戻す必要がある？",
+      "box": [
+        488,
+        187,
+        1112,
+        247
+      ],
+      "font_size": 35,
+      "spare_height": 10.75,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "いいえ",
+      "box": [
+        226,
+        294,
+        360,
+        340
+      ],
+      "font_size": 25,
+      "spare_height": 10.25,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "はい",
+      "box": [
+        1240,
+        294,
+        1374,
+        340
+      ],
+      "font_size": 25,
+      "spare_height": 10.25,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "ハッシュ化",
+      "box": [
+        91,
+        385,
+        720,
+        450
+      ],
+      "font_size": 42,
+      "spare_height": 6.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "例：パスワード\n元の値へ戻さず、一致を確認する。\nArgon2idやbcryptなどを使う。",
+      "box": [
+        93,
+        456,
+        718,
+        577
+      ],
+      "font_size": 29,
+      "spare_height": 1.55,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "暗号化 ＋ 鍵を分ける",
+      "box": [
+        880,
+        385,
+        1508,
+        450
+      ],
+      "font_size": 39,
+      "spare_height": 10.35,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "例：メールアドレス・住所\n必要なときに復号して使う。\nデータと鍵、利用権限を分ける。",
+      "box": [
+        880,
+        456,
+        1504,
+        577
+      ],
+      "font_size": 29,
+      "spare_height": 1.55,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "暗号化だけで安心とは言えない。\n権限・ログ・バックアップ・コピー先も\nあわせて考える。",
+      "box": [
+        91,
+        637,
+        720,
+        760
+      ],
+      "font_size": 28,
+      "spare_height": 7.6,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "検索も必要なら、検索用のHMAC",
+      "box": [
+        880,
+        636,
+        1507,
+        682
+      ],
+      "font_size": 29,
+      "spare_height": 4.85,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "元データは暗号化したまま、\n検索用には別の値を持つ。",
+      "box": [
+        880,
+        689,
+        1507,
+        759
+      ],
+      "font_size": 27,
+      "spare_height": 5.9,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "05_fig-separation",
+      "text": "そもそも不要なら持たない。役目を終えたデータは、保持要件を見て消す。",
+      "box": [
+        83,
+        807,
+        1518,
+        851
+      ],
+      "font_size": 28,
+      "spare_height": 4.2,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "別サーバー・別インフラ・保存しない",
+      "box": [
+        97,
+        37,
+        1538,
+        112
+      ],
+      "font_size": 44,
+      "spare_height": 13.6,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "各社の一次情報に書かれた、分離と非保持の説明を整理しました。",
+      "box": [
+        97,
+        116,
+        1538,
+        162
+      ],
+      "font_size": 25,
+      "spare_height": 10.25,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "イープラス",
+      "box": [
+        89,
+        196,
+        748,
+        248
+      ],
+      "font_size": 31,
+      "spare_height": 8.15,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "独立したシステム",
+      "box": [
+        89,
+        245,
+        748,
+        286
+      ],
+      "font_size": 23,
+      "spare_height": 7.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "払戻し情報のシステムは\n通常の会員情報DBから独立。\nクレジットカード情報は保持していない。",
+      "box": [
+        89,
+        284,
+        751,
+        367
+      ],
+      "font_size": 24,
+      "spare_height": 3.24,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "The Japan Times",
+      "box": [
+        849,
+        196,
+        1508,
+        248
+      ],
+      "font_size": 31,
+      "spare_height": 8.15,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "独立したインフラ",
+      "box": [
+        849,
+        245,
+        1508,
+        286
+      ],
+      "font_size": 23,
+      "spare_height": 7.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "Online・購読者DB・決済システムは\n影響を受けたサーバーとは\n別の独立したインフラで稼働。",
+      "box": [
+        849,
+        284,
+        1511,
+        367
+      ],
+      "font_size": 24,
+      "spare_height": 3.24,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "大起水産",
+      "box": [
+        89,
+        401,
+        748,
+        453
+      ],
+      "font_size": 31,
+      "spare_height": 8.15,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "別サーバー",
+      "box": [
+        89,
+        450,
+        748,
+        491
+      ],
+      "font_size": 23,
+      "spare_height": 7.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "パスワードは別サーバーで管理。\nそのため今回の対象外とする説明。",
+      "box": [
+        89,
+        489,
+        751,
+        572
+      ],
+      "font_size": 24,
+      "spare_height": 29.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "ムーンスター",
+      "box": [
+        849,
+        401,
+        1508,
+        453
+      ],
+      "font_size": 31,
+      "spare_height": 8.15,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "当該サーバーに保存せず",
+      "box": [
+        849,
+        450,
+        1508,
+        491
+      ],
+      "font_size": 23,
+      "spare_height": 7.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "クレジットカード番号とパスワードは\n当該システムサーバーに\n保存していなかった。",
+      "box": [
+        849,
+        489,
+        1511,
+        572
+      ],
+      "font_size": 24,
+      "spare_height": 3.24,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "アバハウス",
+      "box": [
+        89,
+        606,
+        748,
+        658
+      ],
+      "font_size": 31,
+      "spare_height": 8.15,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "決済代行会社が管理",
+      "box": [
+        89,
+        655,
+        748,
+        696
+      ],
+      "font_size": 23,
+      "spare_height": 7.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "カード番号とセキュリティコードは\n決済代行会社側で管理。\n自社システムには保存していない。",
+      "box": [
+        89,
+        694,
+        751,
+        777
+      ],
+      "font_size": 24,
+      "spare_height": 3.24,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "焼肉きんぐ",
+      "box": [
+        849,
+        606,
+        1508,
+        658
+      ],
+      "font_size": 31,
+      "spare_height": 8.15,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "会社側で保持せず",
+      "box": [
+        849,
+        655,
+        1508,
+        696
+      ],
+      "font_size": 23,
+      "spare_height": 7.95,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "クレジットカード等の決済情報は\n会社側では保持していない。",
+      "box": [
+        849,
+        694,
+        1511,
+        777
+      ],
+      "font_size": 24,
+      "spare_height": 29.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    },
+    {
+      "figure": "07_fig-protection",
+      "text": "「対象外」の説明があっても、ほかの情報の漏えいや二次被害まで否定するものではありません。",
+      "box": [
+        82,
+        830,
+        1519,
+        871
+      ],
+      "font_size": 24,
+      "spare_height": 6.6,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits_without_downscaling": true
+    }
+  ],
+  "hero_reserved_area": [
+    1260,
+    650,
+    1600,
+    900
+  ],
+  "hero_reserved_area_overlay_applied": false,
+  "hero_title_intersects_reserved_area": false,
+  "browser_inspection": "coordinator owns separate check; not asserted here",
+  "visual_inspection": "PASS: all 8 final PNGs individually inspected with view_image on 2026-10-05 UTC; see image-qa.md",
+  "deterministic_rerender_sha256_match": true,
+  "final_png_sha256": {
+    "06_illustration-storage.png": "d20b6561dcb279bb0ff035f3a707dc9541ec96e1dd6af4abc71d507c62da4b75",
+    "08_illustration-response.png": "78f10800a5fb953464da5ba955edbfca57576f51f4a1f34d0d10c8dba97f59b1",
+    "04_fig-counts.png": "2397e8f452afad8e4f957cf47ba6a13e1213f2e196f4059a56d73353e287ef80",
+    "07_fig-protection.png": "c23fae79eb6ff33996617ce26384ab54efab875b1ee8a66db3cf5c67b6a9d512",
+    "03_illustration-news.png": "4aac4585fdb7cb7331a4a147cf536933d096c412039e8e33658a754ef97bd5bf",
+    "05_fig-separation.png": "202ffded35f81c8c10e5e2bda09f06e8dff990aa8f27726dee0cab22c319c572",
+    "01_hero.png": "25e5ff81b1b3a1e934dfb0174306a507a013df02ea46f58f793cd464696e6f5a",
+    "02_infographic.png": "d51f0def6a94e5adf2c5d50dfd85dfe0665e098fd3fc59c7bde5c7033d69ca0c"
+  }
+}

@@ -1,0 +1,195 @@
+{
+  "canvas": [
+    1600,
+    900
+  ],
+  "palette": {
+    "navy": "#18344f",
+    "pale_blue": "#eef6fc",
+    "white": "#ffffff",
+    "amber": "#b8751b"
+  },
+  "generation": {
+    "provider": "OpenAI built-in image generation",
+    "calls": 5,
+    "separate_calls_per_asset": true,
+    "paid_api_or_cli_fallback": false,
+    "returned_artifact_paths_used": true,
+    "sources_preserved": true
+  },
+  "stages": [
+    "built-in image generation",
+    "HTML text composition",
+    "MuPDF PNG rendering",
+    "individual final PNG visual inspection (recorded separately)"
+  ],
+  "images": [
+    {
+      "file": "01_hero.png",
+      "role": "hero",
+      "width": 1600,
+      "height": 900,
+      "sha256": "25e5ff81b1b3a1e934dfb0174306a507a013df02ea46f58f793cd464696e6f5a",
+      "html": "src/01_hero.html",
+      "art_sources": [
+        {
+          "file": "src/hero-art-generated.png",
+          "width": 1672,
+          "height": 941,
+          "sha256": "e4721faad8eccd6a404f48b0f675cb497730cfa9c56fc4a3142e49ae8b0cbe9b",
+          "operation": "fit preserved artwork to canvas",
+          "prompt": "src/hero-prompt.txt",
+          "prompt_sha256": "c249845d354a747b4ad318d42f9696880e3ec7b3dd47a7b87722d17eab7dbc9b"
+        }
+      ],
+      "factual_sources": [],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": "built-in imagegen (model identifier not exposed)"
+    },
+    {
+      "file": "02_infographic.png",
+      "role": "infographic",
+      "width": 1600,
+      "height": 900,
+      "sha256": "d51f0def6a94e5adf2c5d50dfd85dfe0665e098fd3fc59c7bde5c7033d69ca0c",
+      "html": "src/02_infographic.html",
+      "art_sources": [
+        {
+          "file": "src/infographic-art-generated.png",
+          "width": 1672,
+          "height": 940,
+          "sha256": "cfd1ac9b3ba97dd10ff05f8cf49972d90d9f5d7dd316975a513e5008192383bd",
+          "operation": "fit preserved artwork to canvas",
+          "prompt": "src/infographic-prompt.txt",
+          "prompt_sha256": "0861605ab1cf0c5de3a9118e765e1a7736f5280551a0b50bd4a3491f2693a293"
+        }
+      ],
+      "factual_sources": [
+        "BRIEF.md: 画像",
+        "SOURCE.md: 導入と今後見ておきたいもの"
+      ],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": "built-in imagegen (model identifier not exposed)"
+    },
+    {
+      "file": "03_illustration-news.png",
+      "role": "text-free narrative illustration",
+      "width": 1600,
+      "height": 900,
+      "sha256": "4aac4585fdb7cb7331a4a147cf536933d096c412039e8e33658a754ef97bd5bf",
+      "html": "src/03_illustration-news.html",
+      "art_sources": [
+        {
+          "file": "src/illustration-news-art-generated.png",
+          "width": 1672,
+          "height": 941,
+          "sha256": "f9d667ab4d76e8d7d4515165a4e1955299c503c541eb292e9e3b7c4cbdeffb02",
+          "operation": "fit preserved artwork to canvas",
+          "prompt": "src/illustration-news-prompt.txt",
+          "prompt_sha256": "a8d24cb21e2b0580e6de8372ce6fc9f69c3b8339c396ab7681c423e47dac7ba1"
+        }
+      ],
+      "factual_sources": [],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": "built-in imagegen (model identifier not exposed)"
+    },
+    {
+      "file": "04_fig-counts.png",
+      "role": "numerical comparison",
+      "width": 1600,
+      "height": 900,
+      "sha256": "2397e8f452afad8e4f957cf47ba6a13e1213f2e196f4059a56d73353e287ef80",
+      "html": "src/04_fig-counts.html",
+      "art_sources": [],
+      "factual_sources": [
+        "FACTS.md: 1,2,3,13",
+        "SOURCE.md: 各社の該当節",
+        "SOURCES.md: 一次情報の照合結果"
+      ],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": null
+    },
+    {
+      "file": "05_fig-separation.png",
+      "role": "protection decision diagram",
+      "width": 1600,
+      "height": 900,
+      "sha256": "202ffded35f81c8c10e5e2bda09f06e8dff990aa8f27726dee0cab22c319c572",
+      "html": "src/05_fig-separation.html",
+      "art_sources": [],
+      "factual_sources": [
+        "SOURCE.md: ハッシュ化、暗号化、検索、保持期間"
+      ],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": null
+    },
+    {
+      "file": "06_illustration-storage.png",
+      "role": "text-free storage metaphor",
+      "width": 1600,
+      "height": 900,
+      "sha256": "d20b6561dcb279bb0ff035f3a707dc9541ec96e1dd6af4abc71d507c62da4b75",
+      "html": "src/06_illustration-storage.html",
+      "art_sources": [
+        {
+          "file": "src/illustration-storage-art-generated.png",
+          "width": 1672,
+          "height": 941,
+          "sha256": "c738388baca16b69647d367dc0daabfb77f2226c13ab19ee44d73a87f93c4ab9",
+          "operation": "fit preserved artwork to canvas",
+          "prompt": "src/illustration-storage-prompt.txt",
+          "prompt_sha256": "486fd227f1bced0e39302a6fc2caea7b842dd4efed62c8cc385874af7078eff2"
+        }
+      ],
+      "factual_sources": [],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": "built-in imagegen (model identifier not exposed)"
+    },
+    {
+      "file": "07_fig-protection.png",
+      "role": "company separation and non-retention",
+      "width": 1600,
+      "height": 900,
+      "sha256": "c23fae79eb6ff33996617ce26384ab54efab875b1ee8a66db3cf5c67b6a9d512",
+      "html": "src/07_fig-protection.html",
+      "art_sources": [],
+      "factual_sources": [
+        "FACTS.md: 3,6,7,8,13,14",
+        "SOURCE.md: 各社の該当節",
+        "SOURCES.md: 一次情報の照合結果"
+      ],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": null
+    },
+    {
+      "file": "08_illustration-response.png",
+      "role": "text-free security response illustration",
+      "width": 1600,
+      "height": 900,
+      "sha256": "78f10800a5fb953464da5ba955edbfca57576f51f4a1f34d0d10c8dba97f59b1",
+      "html": "src/08_illustration-response.html",
+      "art_sources": [
+        {
+          "file": "src/illustration-response-art-generated.png",
+          "width": 1672,
+          "height": 941,
+          "sha256": "f592984307d91baa729a20a2df733d56b849ff3fecc7ea6f909a6f1312353357",
+          "operation": "fit preserved artwork to canvas",
+          "prompt": "src/illustration-response-prompt.txt",
+          "prompt_sha256": "4be9b6e9a26078534099e10dce72d62b2702064a8442ac196876b98ee8c8bc33"
+        }
+      ],
+      "factual_sources": [],
+      "renderer": "MuPDF HTML Story text + native vector geometry",
+      "model": "built-in imagegen (model identifier not exposed)"
+    }
+  ],
+  "render_environment": {
+    "PyMuPDF": "1.26.6",
+    "Pillow": "12.3.0",
+    "canvas_pixels": [
+      1600,
+      900
+    ]
+  }
+}

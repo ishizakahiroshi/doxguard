@@ -1,12 +1,12 @@
 {
   "article_key": "20261006-security-incidents",
   "platform": "note",
-  "status": "prepared",
+  "status": "independent-review-pending",
   "publication_authorized": false,
   "url": null,
   "source_commit": null,
   "reviewed_commit": null,
   "hero_cat_overlay": "pending-local",
-  "visual_acceptance": "pending",
+  "visual_acceptance": "png-self-check-complete-browser-pending",
   "draft_pr_url": null
 }

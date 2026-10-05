@@ -24,3 +24,7 @@ README、FACTS、BRIEF、REVIEW、PROGRESS、publication.json、SOURCE を固定
 ブラウザで未実施のHTMLあふれ検査をPASSに数えない。代替として、HTML文字組版の枠内適合、PNG実寸法とピクセル目視を行う。成果物の認可済みrepoへのpush後、完成PNGの公開HTTPS表示をブラウザで確認する。これはローカルHTMLのブラウザ描画検査とは区別する。
 
 課金・認証設定・媒体投稿・mergeは行わない。失敗した工程の範囲だけを止め、独立して可能な本文・調査・素材制作は継続する。
+
+## 保存経路
+
+GitHubの通常のgit pushは、実行環境に認証経路がないため失敗した。認証情報の取得・保存・設定はせず、接続済みGitHub機能でblob、tree、commit、refを順次作成する経路へ切り替えた。開始看板の公開保存と再読込みに成功した。PNGはローカルGit blob SHAと返却SHAを一致確認して保存する。
