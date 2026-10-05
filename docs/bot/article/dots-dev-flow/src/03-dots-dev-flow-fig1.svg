@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+<title id="title">1回の承認で進め、最後は人が受け入れる</title><desc id="desc">次回に使う開発の型。人が手順・担当・範囲・止まる条件を最初に1回承認し、dotsが工程0のDraft PRから工程1〜4へ進む。各工程でPRのCIの成功を確認し、実装とは別の担当がレビューする。止まる条件に当たれば止めて人へ戻す。最後に別の製品のAIが全行をレビューし、人の受入と取り込みへ進む。実際の初回の別製品AIレビューは取り込み後に行われた。この図は振り返りをもとに次回の取り込み前へ置くモデル。</desc>
+<rect width="1600" height="900" fill="#F6F0E6"/>
+<rect x="66" y="54" width="12" height="67" rx="6" fill="#C97061"/>
+<text x="100" y="101" font-family="Noto Sans CJK JP, sans-serif" font-size="48" font-weight="700" text-anchor="start" fill="#382A43">1回の承認で進め、最後は人が受け入れる</text>
+<text x="100" y="153" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">今回の振り返りから、次回に使う進め方</text>
+<text x="68" y="228" font-family="Noto Sans CJK JP, sans-serif" font-size="30" font-weight="700" text-anchor="start" fill="#795773">人｜最初の1回</text>
+<rect x="64" y="262" width="250" height="216" rx="18" fill="#382A43"/>
+<text x="189" y="314" font-family="Noto Sans CJK JP, sans-serif" font-size="42" font-weight="700" text-anchor="middle" fill="#F6F0E6">承認</text>
+<polyline points="91,339 287,339" fill="none" stroke="#795773" stroke-width="2" stroke-linejoin="round"/>
+<text x="189" y="387" font-family="Noto Sans CJK JP, sans-serif" font-size="25" font-weight="400" text-anchor="middle" fill="#F6F0E6">手順・担当・範囲</text>
+<text x="189" y="431" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="middle" fill="#F6F0E6">止まる条件</text>
+<polyline points="316,370 341,370" fill="none" stroke="#382A43" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="341,370 328,364 328,376" fill="#382A43"/>
+<rect x="341" y="202" width="1193" height="276" rx="18" fill="#F6F0E6" stroke="#819786" stroke-width="3"/>
+<text x="366" y="248" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="start" fill="#382A43">dots｜工程ごとに、実装とは別の担当がレビュー</text>
+<rect x="362" y="282" width="211" height="166" rx="13" fill="#F6F0E6" stroke="#795773" stroke-width="2"/>
+<rect x="362" y="282" width="211" height="49" rx="13" fill="#819786"/>
+<rect x="362" y="310" width="211" height="21" rx="0" fill="#819786"/>
+<text x="467.5" y="318" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="middle" fill="#382A43">工程0</text>
+<text x="467.5" y="392" font-family="Noto Sans CJK JP, sans-serif" font-size="32" font-weight="700" text-anchor="middle" fill="#382A43">Draft PR</text>
+<polyline points="574,369 594,369" fill="none" stroke="#382A43" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="594,369 581,363 581,375" fill="#382A43"/>
+<rect x="596" y="282" width="211" height="166" rx="13" fill="#F6F0E6" stroke="#795773" stroke-width="2"/>
+<rect x="596" y="282" width="211" height="49" rx="13" fill="#819786"/>
+<rect x="596" y="310" width="211" height="21" rx="0" fill="#819786"/>
+<text x="701.5" y="318" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="middle" fill="#382A43">工程1</text>
+<text x="701.5" y="380" font-family="Noto Sans CJK JP, sans-serif" font-size="30" font-weight="700" text-anchor="middle" fill="#382A43">PRのCI</text>
+<text x="701.5" y="422" font-family="Noto Sans CJK JP, sans-serif" font-size="26" font-weight="400" text-anchor="middle" fill="#795773">成功を確認</text>
+<polyline points="808,369 828,369" fill="none" stroke="#382A43" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="828,369 815,363 815,375" fill="#382A43"/>
+<rect x="830" y="282" width="211" height="166" rx="13" fill="#F6F0E6" stroke="#795773" stroke-width="2"/>
+<rect x="830" y="282" width="211" height="49" rx="13" fill="#819786"/>
+<rect x="830" y="310" width="211" height="21" rx="0" fill="#819786"/>
+<text x="935.5" y="318" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="middle" fill="#382A43">工程2</text>
+<text x="935.5" y="380" font-family="Noto Sans CJK JP, sans-serif" font-size="30" font-weight="700" text-anchor="middle" fill="#382A43">PRのCI</text>
+<text x="935.5" y="422" font-family="Noto Sans CJK JP, sans-serif" font-size="26" font-weight="400" text-anchor="middle" fill="#795773">成功を確認</text>
+<polyline points="1042,369 1062,369" fill="none" stroke="#382A43" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="1062,369 1049,363 1049,375" fill="#382A43"/>
+<rect x="1064" y="282" width="211" height="166" rx="13" fill="#F6F0E6" stroke="#795773" stroke-width="2"/>
+<rect x="1064" y="282" width="211" height="49" rx="13" fill="#819786"/>
+<rect x="1064" y="310" width="211" height="21" rx="0" fill="#819786"/>
+<text x="1169.5" y="318" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="middle" fill="#382A43">工程3</text>
+<text x="1169.5" y="380" font-family="Noto Sans CJK JP, sans-serif" font-size="30" font-weight="700" text-anchor="middle" fill="#382A43">PRのCI</text>
+<text x="1169.5" y="422" font-family="Noto Sans CJK JP, sans-serif" font-size="26" font-weight="400" text-anchor="middle" fill="#795773">成功を確認</text>
+<polyline points="1276,369 1296,369" fill="none" stroke="#382A43" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="1296,369 1283,363 1283,375" fill="#382A43"/>
+<rect x="1298" y="282" width="211" height="166" rx="13" fill="#F6F0E6" stroke="#795773" stroke-width="2"/>
+<rect x="1298" y="282" width="211" height="49" rx="13" fill="#819786"/>
+<rect x="1298" y="310" width="211" height="21" rx="0" fill="#819786"/>
+<text x="1403.5" y="318" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="middle" fill="#382A43">工程4</text>
+<text x="1403.5" y="380" font-family="Noto Sans CJK JP, sans-serif" font-size="30" font-weight="700" text-anchor="middle" fill="#382A43">PRのCI</text>
+<text x="1403.5" y="422" font-family="Noto Sans CJK JP, sans-serif" font-size="26" font-weight="400" text-anchor="middle" fill="#795773">成功を確認</text>
+<polyline points="498,478 498,527 305,527 305,574" fill="none" stroke="#C97061" stroke-width="4" stroke-linejoin="round"/>
+<polygon points="305,574 311,561 299,561" fill="#C97061"/>
+<text x="331" y="514" font-family="Noto Sans CJK JP, sans-serif" font-size="25" font-weight="700" text-anchor="start" fill="#C97061">条件に該当</text>
+<rect x="65" y="577" width="478" height="174" rx="18" fill="#F6F0E6" stroke="#C97061" stroke-width="3"/>
+<text x="90" y="618" font-family="Noto Sans CJK JP, sans-serif" font-size="27" font-weight="700" text-anchor="start" fill="#C97061">止まる条件に当たったら</text>
+<text x="90" y="673" font-family="Noto Sans CJK JP, sans-serif" font-size="40" font-weight="700" text-anchor="start" fill="#382A43">止めて人へ</text>
+<text x="90" y="719" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">条件の外へは進めない</text>
+<polyline points="1403,448 1403,522 895,522 895,574" fill="none" stroke="#382A43" stroke-width="4" stroke-linejoin="round"/>
+<polygon points="895,574 901,561 889,561" fill="#382A43"/>
+<text x="1115" y="560" font-family="Noto Sans CJK JP, sans-serif" font-size="25" font-weight="400" text-anchor="start" fill="#795773">連鎖の最後に</text>
+<rect x="674" y="577" width="441" height="174" rx="18" fill="#F6F0E6" stroke="#795773" stroke-width="3"/>
+<text x="700" y="624" font-family="Noto Sans CJK JP, sans-serif" font-size="36" font-weight="700" text-anchor="start" fill="#382A43">別の製品のAI</text>
+<text x="700" y="674" font-family="Noto Sans CJK JP, sans-serif" font-size="36" font-weight="700" text-anchor="start" fill="#382A43">全行をレビュー</text>
+<text x="700" y="718" font-family="Noto Sans CJK JP, sans-serif" font-size="27" font-weight="400" text-anchor="start" fill="#795773">取り込む前に置く</text>
+<polyline points="1120,663 1190,663" fill="none" stroke="#382A43" stroke-width="4" stroke-linejoin="round"/>
+<polygon points="1190,663 1177,657 1177,669" fill="#382A43"/>
+<rect x="1194" y="577" width="340" height="174" rx="18" fill="#382A43"/>
+<text x="1220" y="624" font-family="Noto Sans CJK JP, sans-serif" font-size="36" font-weight="700" text-anchor="start" fill="#F6F0E6">人の受入</text>
+<text x="1220" y="674" font-family="Noto Sans CJK JP, sans-serif" font-size="36" font-weight="700" text-anchor="start" fill="#F6F0E6">取り込み</text>
+<text x="1220" y="718" font-family="Noto Sans CJK JP, sans-serif" font-size="23" font-weight="400" text-anchor="start" fill="#F6F0E6">持ち主の承認で手元が実施</text>
+<polyline points="65,787 1534,787" fill="none" stroke="#819786" stroke-width="2" stroke-linejoin="round"/>
+<text x="65" y="828" font-family="Noto Sans CJK JP, sans-serif" font-size="30" font-weight="700" text-anchor="start" fill="#382A43">人が関わるのは、最初・最後・止まったとき。</text>
+<text x="65" y="872" font-family="Noto Sans CJK JP, sans-serif" font-size="26" font-weight="400" text-anchor="start" fill="#795773">実際の初回レビューは取り込み後。この図は、次回の取り込み前に置く型。</text>
+</svg>

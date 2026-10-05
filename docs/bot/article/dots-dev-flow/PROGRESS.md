@@ -1,62 +1,49 @@
 # #20261005-002 進捗
 
 指示branch: dots/article-dots-dev-flow-16。固定commit: 9fa20de9cc466e71c5890f9ceec083f727f26eab。
-成果branch: dots/article-dots-dev-flow-16-production。PR base: develop。制作範囲はこのディレクトリのみ。
+成果branch: dots/article-dots-dev-flow-16-production。PR base: develop。制作変更はこのディレクトリのみ。
 
-## 現在の状態: 再開
+## 現在の状態: 制作・再レビュー済み、Draft PR提出準備
 
-持ち主から受け取った無圧縮ZIPから固定猫素材を取り出し、指定blobとの一致を確認しました。停止した素材取得工程から制作を再開します。
-
-### 解消済みの停止履歴
-
-固定猫素材 assets/mascot_cats.png の保存に使うクラウドブラウザの「Download raw file」操作が承認されませんでした。
-持ち主の操作が要る停止条件として停止しています。再試行・別経路での取得・素材の描き直しはしていません。
-承認依頼IDやelicitation IDはtool結果にありません。
-
-持ち主から再開用の猫PNGを受け取りましたが、同一性検証が不一致のためSTOPを維持します。
-受信実体: 1,485,776 bytes、git blob SHA `8345e00aac0e8d47667661059d8e4565e0b83d5f`。
-指定された実体: 1,485,826 bytes、git blob SHA `229e3a806e16cd636594704f91a193ac9b5c8fc8`。
-受信PNGは素材として使用していません。指定blobと一致する実体、または差し替えの明示指示が必要です。
+3媒体の原稿、完成PNG5枚、編集可能な図版、生成元、プロンプトとreceiptを用意しました。
+同じ製品内の別担当による文章・画像レビューの指摘へ対応し、修正後を再読・再目視しました。
+手元の独立検収と、その指摘への対応はまだ完了していません。公開と実表示確認も手元の担当です。
 
 | 工程 | 状態 | 担当 | 証跡 / 次の一手 |
 |---|---|---|---|
 | 固定指示準備 | read | dots | 指定6ファイル全文読了 |
-| dots受付 | checked | dots | 開始前の成果branch衝突なし。同番号検索はIssue #3のみ |
-| 3媒体の原稿 | pending | dots | 未制作 |
-| 画像生成 | pending | dots | 公式image_genは利用可能。生成は未試行 |
-| 文字合成・固定猫合成 | in_progress | dots | 再開用ZIPの固定素材はblob一致を確認済み |
-| PNG出力 | capability_checked | dots | 既存PillowでPNG出力・再読込を確認。完成5枚は未制作 |
-| 独立制作レビュー | pending | dots別担当 | |
-| Draft PR提出 | pending | dots | 未作成 |
+| dots受付 | completed | dots | 開始前の成果branch衝突なし。同番号検索はIssue #3のみ |
+| 3媒体の原稿 | ready | dots | zenn.md / qiita.md / note.md |
+| 画像生成 | completed | dots | 公式image_genで文字なし3素材。src/image-prompts.json |
+| 文字合成・固定猫合成 | completed | dots | 編集可能SVG、指定blob一致の固定猫をhero右下に使用 |
+| PNG出力 | completed | dots | 全5枚1600×900、各3MB未満、実画素確認 |
+| 独立制作レビュー | passed_after_corrections | dots別担当 | src/independent-text-review.md / src/independent-image-review.md |
+| Draft PR提出 | preparing | dots | develop向け、mergeなし |
 | 手元独立検収 | pending | 手元 | article-lint、5画像の目視とhash照合 |
 | 3媒体公開 | pending | 手元 | 投稿の試行なし |
 | 3媒体の実表示 | pending | 手元 | |
 
 ## 試行記録
 
-- 固定commitのREADME / FACTS / BRIEF / REVIEW / PROGRESS / publication.jsonを全文読了。
-- 成果branchを指定固定commitから作成。停止記録だけを同branchのこのディレクトリへ保存。
-- dotのクラウドブラウザで固定commitの猫素材ページを表示できた。画面上のファイルサイズは1.42 MB。素材のダウンロードと画素検査は未完了。
-- 既存Pillowで32x32 PNGの保存・再読込を確認。完成図版の成功を示すものではない。
-- 既存Chromiumのheadless起動は次のエラーでPNG出力に至らず: `Failed to create headless user data directory container.`
-- GitHub connectorの画像取得はtext-only制約のため画像バイトを取得できなかった。公開素材ページの「Download raw file」を試したところ、次の結果で停止。
-- エラー原文: `JavaScript execution did not receive approval`
-- 詳細: [src/receipt-stop.json](src/receipt-stop.json)
-- 依存の取得・pnpm実行・merge・投稿・他ディレクトリの変更は行っていない。
+### 素材取得の停止と再開
+- 固定猫のGitHubページはdotのクラウドブラウザで表示できたが、Download raw file操作は承認されず停止した。エラー原文: `JavaScript execution did not receive approval`。
+- 詳細は [src/receipt-stop.json](src/receipt-stop.json)。拒否後の再試行や別経路の取得は行わなかった。
+- 最初の再開用画像添付は1,485,776 bytes、git blob `8345e00aac0e8d47667661059d8e4565e0b83d5f`で指定と不一致。使用せずSTOPを維持した。
+- 持ち主が改めて添付した無圧縮ZIPは1,485,954 bytes。展開後は1,485,826 bytes、git blob `229e3a806e16cd636594704f91a193ac9b5c8fc8`で一致した。
+- 一致を看板へ記録してから、持ち主の指示に従い停止工程から再開した。
 
-### 再開用添付の検証
+### 本文と画像
+- 公式image_genの生成は3素材とも成功。生成元をsrcへ保存し、早期にバックアップを確保。
+- heroは生成シーン＋日本語＋固定猫、infographicは生成絵＋日本語。挿絵は文字なし。図2枚は編集可能な図形から描画。
+- 日本語の後合成は既存Inkscape、図とリサイズは既存Pillowを使用。依存取得・pnpm実行なし。
+- 既存Chromiumの初回headless起動は `Failed to create headless user data directory container.` でPNG出力に至らなかった。完成PNGには使っていない。
+- クラウドブラウザは公開GitHubページを閲覧可能。file:のローカルプレビューはURLポリシーで拒否されたため迂回していない。全PNGは画像ビューアーで制作担当・別担当が実物を開いて検査した。
+- 文章レビューの指摘を修正し再読。noteの推奨タグはsrc/note-tags.txtへ分離。
+- 画像レビューの指摘で要約図の主見出しを48pxへ拡大。詳細図は画像拡大を前提とし、各原稿に案内と本文の要点を記載。
+- lint初回は許可済み前作URL中のslackを誤検出したため、slack.comのURLだけを検出する条件へ直して合格。CIの失敗ではない。
 
-- 指定の形式 `SHA1("blob " + byte length + NUL + bytes)` で計算。
-- 実測: 1,485,776 bytes。
-- 実測git blob SHA: `8345e00aac0e8d47667661059d8e4565e0b83d5f`。
-- 実測SHA-256: `070437a680ac11fa0beef6ac07eed1aa79ae9499656338d144ca14ba40379a8a`。
-- 指定blob SHAと不一致。制作を再開せず、STOPを維持。
-
-### 無圧縮ZIPによる再開
-
-- 受信ZIP: 1,485,954 bytes。格納物は `mascot_cats.png` 1個、無圧縮。
-- 展開後PNG: 1,485,826 bytes。
-- git blob SHA: `229e3a806e16cd636594704f91a193ac9b5c8fc8`。固定commitの指定値と一致。
-- SHA-256: `46ef71ab89f6203785a6cf9aababb69e9516f33d14c4bad76bd76576f5d0b91d`。
-- 前回の不一致PNGは使用しない。拒否されたブラウザダウンロードも再試行していない。
-- 持ち主の再開指示に従い、停止した素材取得工程から再開。
+### リモート保存と提出
+- PNG7個のGitHub blob保存は成功した。保存待機中に持ち主の承認操作があり、成功結果後に続行。承認UIと個々のblobの対応はtool結果からは特定できないため断定しない。
+- repositoryの既存ラベル9個を公開画面で確認。dotラベルは存在せず、新規作成しない。
+- developと固定commitの間には、指示準備に含まれる `.omitnix/index.json` の既存差分がある。制作で同ファイルを変更・復元していない。固定commitからの制作差分はこのディレクトリ内のみ。
+- merge・投稿・投稿用repoへのpush・新しい依存・追加有料API・認証情報の追加は行っていない。

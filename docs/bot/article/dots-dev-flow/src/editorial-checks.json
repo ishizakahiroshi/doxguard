@@ -1,0 +1,117 @@
+{
+  "zenn.md": {
+    "all_structural_checks_passed": true,
+    "raw_characters": 5697,
+    "body_characters_excluding_whitespace_urls_images_frontmatter_footer": 3908,
+    "sha256": "232806376c8fe5a93318f743a0f360792c32759f8ece27324122c9f9da130f23",
+    "frontmatter": {
+      "title": "dotsに複数工程を任せる開発の型 取り決めと1回の承認と独立レビュー",
+      "emoji": "🔗",
+      "type": "idea",
+      "topics": [
+        "ai",
+        "github",
+        "ci",
+        "test",
+        "開発プロセス"
+      ],
+      "published": false
+    },
+    "previous_article_link_count": 2,
+    "image_filenames_in_order": [
+      "01-dots-dev-flow-hero.png",
+      "02-dots-dev-flow-infographic.png",
+      "03-dots-dev-flow-fig1.png",
+      "04-dots-dev-flow-illustration.png",
+      "05-dots-dev-flow-fig2.png"
+    ]
+  },
+  "qiita.md": {
+    "all_structural_checks_passed": true,
+    "raw_characters": 5744,
+    "body_characters_excluding_whitespace_urls_images_frontmatter_footer": 3978,
+    "sha256": "57806dbd2cd673a6491cdf32a1a44494631dc1bf015865543d8b1605a2e67636",
+    "frontmatter": {
+      "title": "dotsへの開発依頼を連鎖にする 指示書とCIと独立レビューの実例",
+      "tags": [
+        "AI",
+        "GitHub",
+        "CI",
+        "テスト",
+        "ChatGPT"
+      ],
+      "private": false,
+      "updated_at": "",
+      "id": "",
+      "organization_url_name": null,
+      "slide": false,
+      "ignorePublish": false
+    },
+    "previous_article_link_count": 2,
+    "image_filenames_in_order": [
+      "01-dots-dev-flow-hero.png",
+      "02-dots-dev-flow-infographic.png",
+      "03-dots-dev-flow-fig1.png",
+      "04-dots-dev-flow-illustration.png",
+      "05-dots-dev-flow-fig2.png"
+    ]
+  },
+  "note.md": {
+    "all_structural_checks_passed": true,
+    "raw_characters": 7232,
+    "body_characters_excluding_whitespace_urls_images_frontmatter_footer": 4252,
+    "sha256": "11ddb71ce962e686cd6728e405bd6eaf649365ca19afce361b45e8de2b952fd4",
+    "frontmatter": null,
+    "previous_article_link_count": 2,
+    "image_filenames_in_order": [
+      "01-dots-dev-flow-hero.png",
+      "02-dots-dev-flow-infographic.png",
+      "03-dots-dev-flow-fig1.png",
+      "04-dots-dev-flow-illustration.png",
+      "05-dots-dev-flow-fig2.png"
+    ]
+  },
+  "shared_footer_identical": true,
+  "images": {
+    "01-dots-dev-flow-hero.png": {
+      "size_bytes": 2074301,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "1d695ae6b9d817b66ad2622e6a61493cc7bde1c4d15ad96f62659dcbe611a994"
+    },
+    "02-dots-dev-flow-infographic.png": {
+      "size_bytes": 796849,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "d58a858c821c0d1ff7005433a680a0b20c466dd58caa6fd12b4ce3725b59f26e"
+    },
+    "03-dots-dev-flow-fig1.png": {
+      "size_bytes": 330673,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "ab1743bccd92b806c8441f447a23a037de169ee4d5f9a7671b3ede830d2c4ca9"
+    },
+    "04-dots-dev-flow-illustration.png": {
+      "size_bytes": 1951279,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "d5f5921b8f742a15fbe7fcefe544036c210bc9dfac8c04c96a232c69f5c5314d"
+    },
+    "05-dots-dev-flow-fig2.png": {
+      "size_bytes": 374421,
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "d016f119d7338d3c05d864b97aa0338c0d9404e7f5592ea4fc1f7a18845173bb"
+    }
+  }
+}
