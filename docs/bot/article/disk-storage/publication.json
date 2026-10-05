@@ -1,11 +1,16 @@
 {
   "article_key": "20261005-disk-storage",
   "platform": "qiita",
-  "status": "draft-requested",
+  "status": "prepared-for-review",
   "publication_authorized": false,
   "url": null,
   "source_commit": null,
   "reviewed_commit": null,
   "hero_cat_overlay": "pending-local",
-  "visual_acceptance": "pending"
+  "visual_acceptance": "self-inspected-pixels-browser-unperformed",
+  "published": false,
+  "instruction_commit": "8a772259b81c1eff34f07238a93d74410c969e73",
+  "production_branch": "dots/article-disk-storage-20261005-005",
+  "browser_visual_inspection": "unperformed",
+  "browser_dom_overflow": "unperformed"
 }
