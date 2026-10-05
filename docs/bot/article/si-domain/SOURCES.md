@@ -90,8 +90,8 @@
 
 ### S13: 売出し・転売だけで悪意を断定できない
 
-- URL: https://www.wipo.int/en/web/amc/domain-name-disputes/overview/3.0
-- 種別: 一次: WIPO仲裁パネル見解集
+- URL: https://www.wipo.int/en/web/amc/domain-name-disputes/overview/index
+- 種別: 一次: WIPO仲裁パネル見解集3.1
 - 確認日: 2026-10-05
 - 確認できた範囲: section3.1.1。権利、正当な利益、商標を狙ったか等の文脈が要る。特定所有者への法的判断はしない。
 

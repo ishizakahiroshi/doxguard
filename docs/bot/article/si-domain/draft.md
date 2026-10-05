@@ -91,7 +91,7 @@ https://rdap.verisign.com/com/v1/domain/spacexsi.com
 つまり、ニュースを見て誰かがすぐ先回りした、とこの例から断定することもできません。値札のインパクトは強いのですが、そこで分かることは限られます。
 
 ドメインの転売や商標をめぐる争いには、権利や利用実態、悪意の有無などを確かめる手続きがあります。WIPOの整理でも、利益を得るために売り出しているというだけで悪意が確定するわけではありません。.siにも独自の紛争処理制度がありますが、この.comとは適用される仕組みが異なります。
-https://www.wipo.int/en/web/amc/domain-name-disputes/overview/3.0
+https://www.wipo.int/en/web/amc/domain-name-disputes/overview/index
 https://www.icann.org/resources/pages/policy-2024-02-21-en
 https://www.register.si/en/ards-rules-of-procedure/
 

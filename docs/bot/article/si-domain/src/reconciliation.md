@@ -65,3 +65,10 @@ built-in imagegenによる文字なし素材3点を採用し統一。HTMLの日�
 - Identity Digitalとの厳密な収益配分条件の原契約
 - アンギラの2025決算確定値を示す追加一次資料
 
+
+## 独立レビュー後の小修正
+
+WIPOのOverview3.0は現行3.1に更新されていたため、本文の引用先を3.1 section3.1.1へ更新した。転売で利益を得ること自体では悪意の標的化にならないという原則は新しい版でも確認。過去の調査記録はその時点で読んだ3.0への参照として保持する。
+https://www.wipo.int/en/web/amc/domain-name-disputes/overview/index
+
+infographicの図中出典案内を、公開note読者向けに「本文へ」へ修正した。数値・軸・本文は変更していない。

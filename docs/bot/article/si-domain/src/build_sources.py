@@ -15,7 +15,7 @@ entries=[
 ('https://spacexsi.com/','販売ページの希望価格174,888米ドル','一次: 現行販売ページ','2026-10-05観測。価格は希望価格、仲介Spaceship。成約、所有者、改名発表時点の表示履歴は確認できない。'),
 ('https://rdap.verisign.com/com/v1/domain/spacexsi.com','spacexsi.com登録日2025-07-25','一次: .comレジストリRDAP','registration2025-07-25T19:16:42Z、last changed2026-08-12T03:48:29Z。src/spacexsi-public-events.json。現在の持主の取得日・意図や実際の売買を示さない。'),
 ('https://www.iana.org/domains/root/db/com.html','.comと.siは異なるTLD','一次: IANA委任記録','.comはgeneric TLDでVeriSign管理。spacexsi.comは.si件数に含めない。'),
-('https://www.wipo.int/en/web/amc/domain-name-disputes/overview/3.0','売出し・転売だけで悪意を断定できない','一次: WIPO仲裁パネル見解集','section3.1.1。権利、正当な利益、商標を狙ったか等の文脈が要る。特定所有者への法的判断はしない。'),
+('https://www.wipo.int/en/web/amc/domain-name-disputes/overview/index','売出し・転売だけで悪意を断定できない','一次: WIPO仲裁パネル見解集3.1','section3.1.1。権利、正当な利益、商標を狙ったか等の文脈が要る。特定所有者への法的判断はしない。'),
 ('https://www.icann.org/resources/pages/policy-2024-02-21-en','.comのUDRPの争点と手続き','一次: ICANN方針','段落4(a),(b)。商標との混同、権利/正当な利益、悪意の登録と使用等。高値だけで結論を出さない。'),
 ('https://www.register.si/en/ards-rules-of-procedure/','.si独自のドメイン紛争解決制度','一次: レジストリ規則','ARDS。UDRPと同一制度と書かず、spacexsi.comに.siの制度を適用しない。'),
 ('https://www.iana.org/domains/root/db/ai.html','.aiはアンギラのccTLD','一次: IANA委任記録','管理主体Government of Anguillaを確認。英国海外領土という位置づけはIMF資料を併用。'),

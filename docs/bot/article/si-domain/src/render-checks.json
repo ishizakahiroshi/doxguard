@@ -289,7 +289,7 @@
     },
     {
       "figure": "02_infographic",
-      "text": "出典: EO14434 ／ Register.si 月次データ ／ アンギラ2026予算書（冊子55・58頁）\n数値・リンク・算式は本文とSOURCES.mdへ。図は因果関係を断定するものではありません。",
+      "text": "出典: EO14434 ／ Register.si 月次データ ／ アンギラ2026予算書（冊子55・58頁）\n数値・リンク・算式は本文へ。図は因果関係を断定するものではありません。",
       "box": [
         62,
         829,
@@ -614,7 +614,7 @@
       "file": "02_infographic.png",
       "width": 1600,
       "height": 900,
-      "sha256": "fed53c049309ae39bbbde288cea28d6615f63569b009d8121f267de9340de5e0"
+      "sha256": "5ab49788909857d090a48de4c939679c399b9c590c6cd9fe165abf78d0c1b41d"
     },
     {
       "file": "03_illustration.png",
@@ -636,8 +636,8 @@
     900
   ],
   "hero_reserved_color_count": 1,
-  "browser_inspection": "not performed on final HTML; local file URL rejected by browser URL policy",
-  "visual_inspection": "2026-10-05: all four final PNGs inspected with view_image; no Japanese corruption, clipping, missing images or real logos; hero cat-free and reserved rectangle blank.",
+  "browser_inspection": "All four prior-composition PNGs at a159f0a visually inspected in dot cloud browser via GitHub. Local HTML rendering/overflow not tested: file URL denied by browser policy.",
+  "visual_inspection": "All final PNGs inspected with view_image; infographic minor footer correction rechecked on 2026-10-05.",
   "graph_data": {
     "2026-08": 3515,
     "2026-09": 46066,
