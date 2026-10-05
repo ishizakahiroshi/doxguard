@@ -1,7 +1,7 @@
 {
   "article_key": "20261005-disk-storage",
   "platform": "qiita",
-  "status": "published-and-browser-verified-x-pending",
+  "status": "published-and-browser-verified-x-scheduled",
   "publication_authorized": true,
   "url": "https://qiita.com/ishizakahiroshi/items/609786acea2d1502382b",
   "source_commit": "229d38a35b8a88c0e145268713b89668ff2c807a",
@@ -24,5 +24,9 @@
   "hero_final_sha256": "9cb71abe0400e3c09ecc930bdc463c3f58ffd35c3fb8a64e5a247bc22da5f0d1",
   "site_url": "https://ishizakahiroshi.com/articles/2026/2026-10-05_disk-build-storage/",
   "publication_run": "https://github.com/ishizakahiroshi/qiita-content/actions/runs/37263658527",
-  "x_reservation": "unperformed-local-browser-connection-failure"
+  "x_reservation": "scheduled-and-ui-verified",
+  "x_account": "ishizaka_dev",
+  "x_scheduled_at": "2026-10-05T21:00:00+09:00",
+  "x_reservation_verification": "standard-chrome-completion-toast-and-scheduled-list-body-url-matched",
+  "x_delivery": "not-yet-verified"
 }
