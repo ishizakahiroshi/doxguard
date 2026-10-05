@@ -5,8 +5,9 @@
   "publication_authorized": false,
   "url": null,
   "source_commit": null,
-  "reviewed_commit": null,
-  "hero_cat_overlay": "pending-local",
-  "visual_acceptance": "revision-pending",
-  "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/7"
+  "reviewed_commit": "862c2a9294c414ce398f462b992ca3cdc5ef6e86",
+  "hero_cat_overlay": "done-local",
+  "visual_acceptance": "accepted-local",
+  "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/7",
+  "hero_final_sha256": "7F32227C94AC745A9A0079D0353228DFE910F8061ED4E35C360264513EFC1548"
 }
