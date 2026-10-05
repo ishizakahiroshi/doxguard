@@ -3,7 +3,11 @@
 指示branch: dots/article-dots-dev-flow-16。固定commit: 9fa20de9cc466e71c5890f9ceec083f727f26eab。
 成果branch: dots/article-dots-dev-flow-16-production。PR base: develop。制作範囲はこのディレクトリのみ。
 
-## 現在の状態: STOP
+## 現在の状態: 再開
+
+持ち主から受け取った無圧縮ZIPから固定猫素材を取り出し、指定blobとの一致を確認しました。停止した素材取得工程から制作を再開します。
+
+### 解消済みの停止履歴
 
 固定猫素材 assets/mascot_cats.png の保存に使うクラウドブラウザの「Download raw file」操作が承認されませんでした。
 持ち主の操作が要る停止条件として停止しています。再試行・別経路での取得・素材の描き直しはしていません。
@@ -20,7 +24,7 @@
 | dots受付 | checked | dots | 開始前の成果branch衝突なし。同番号検索はIssue #3のみ |
 | 3媒体の原稿 | pending | dots | 未制作 |
 | 画像生成 | pending | dots | 公式image_genは利用可能。生成は未試行 |
-| 文字合成・固定猫合成 | stopped | dots | 固定素材のダウンロード操作が承認されず |
+| 文字合成・固定猫合成 | in_progress | dots | 再開用ZIPの固定素材はblob一致を確認済み |
 | PNG出力 | capability_checked | dots | 既存PillowでPNG出力・再読込を確認。完成5枚は未制作 |
 | 独立制作レビュー | pending | dots別担当 | |
 | Draft PR提出 | pending | dots | 未作成 |
@@ -47,3 +51,12 @@
 - 実測git blob SHA: `8345e00aac0e8d47667661059d8e4565e0b83d5f`。
 - 実測SHA-256: `070437a680ac11fa0beef6ac07eed1aa79ae9499656338d144ca14ba40379a8a`。
 - 指定blob SHAと不一致。制作を再開せず、STOPを維持。
+
+### 無圧縮ZIPによる再開
+
+- 受信ZIP: 1,485,954 bytes。格納物は `mascot_cats.png` 1個、無圧縮。
+- 展開後PNG: 1,485,826 bytes。
+- git blob SHA: `229e3a806e16cd636594704f91a193ac9b5c8fc8`。固定commitの指定値と一致。
+- SHA-256: `46ef71ab89f6203785a6cf9aababb69e9516f33d14c4bad76bd76576f5d0b91d`。
+- 前回の不一致PNGは使用しない。拒否されたブラウザダウンロードも再試行していない。
+- 持ち主の再開指示に従い、停止した素材取得工程から再開。
