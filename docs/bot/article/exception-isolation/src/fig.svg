@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs><marker id="a" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 12 6 0 12Z" fill="#2f718f"/></marker></defs>
+<rect width="1600" height="900" fill="#f1f7fc"/>
+<g font-family="Noto Sans CJK JP,sans-serif" fill="#173a54">
+<text x="70" y="99" font-size="50" font-weight="700">業務の結果と、記録の確定を分ける</text><text x="74" y="151" font-size="25" fill="#55778c">一般化した概念図。実構成や台数を表していません。</text>
+<rect x="65" y="193" width="1470" height="220" rx="24" fill="#dcecf7"/>
+<text x="97" y="247" font-size="30" font-weight="700">業務経路</text>
+<rect x="310" y="245" width="270" height="118" rx="16" fill="white" stroke="#9ec8dc" stroke-width="2"/><text x="445" y="298" text-anchor="middle" font-size="31" font-weight="700">異常を捕捉</text><text x="445" y="337" text-anchor="middle" font-size="23">記録対象を分類</text>
+<path d="M583 305H687" fill="none" stroke="#2f718f" stroke-width="4" marker-end="url(#a)"/>
+<rect x="703" y="245" width="737" height="118" rx="16" fill="white" stroke="#9ec8dc" stroke-width="2"/><text x="1071" y="297" text-anchor="middle" font-size="31" font-weight="700">元の終了・復旧経路を保つ</text><text x="1071" y="337" text-anchor="middle" font-size="24">戻り値 / 再送出 / 応答 / 業務トランザクション / 後片付け</text>
+<path d="M445 363V482" fill="none" stroke="#2084a6" stroke-width="4" stroke-dasharray="8 7" marker-end="url(#a)"/><text x="479" y="447" font-size="23" fill="#267390">対象の記録を試みる</text>
+<rect x="65" y="480" width="1470" height="290" rx="24" fill="#e2f2f5"/>
+<text x="97" y="534" font-size="30" font-weight="700">記録経路</text>
+<rect x="310" y="557" width="270" height="124" rx="16" fill="white" stroke="#93c9d5" stroke-width="2"/><text x="445" y="608" text-anchor="middle" font-size="31" font-weight="700">保留へ保存</text><text x="445" y="650" text-anchor="middle" font-size="25" fill="#1d7a91">まだ台帳登録ではない</text>
+<path d="M583 619H652" stroke="#2f718f" stroke-width="4" marker-end="url(#a)"/>
+<rect x="667" y="530" width="571" height="190" rx="20" fill="#d0eaf0" stroke="#78b4c5" stroke-width="2"/>
+<text x="695" y="567" font-size="24" font-weight="700">別の回収処理・専用トランザクション</text>
+<rect x="695" y="590" width="215" height="98" rx="12" fill="white"/><text x="802" y="649" text-anchor="middle" font-size="29" font-weight="700">台帳へ反映</text>
+<path d="M914 639H963" stroke="#2f718f" stroke-width="4" marker-end="url(#a)"/>
+<rect x="979" y="590" width="230" height="98" rx="12" fill="#176887"/><text x="1094" y="649" text-anchor="middle" font-size="31" font-weight="700" fill="white">反映を確定</text>
+<path d="M1240 619H1281" stroke="#2f718f" stroke-width="4" marker-end="url(#a)"/>
+<rect x="1297" y="557" width="200" height="124" rx="16" fill="white" stroke="#93c9d5" stroke-width="2"/><text x="1397" y="608" text-anchor="middle" font-size="29" font-weight="700">確定後に</text><text x="1397" y="650" text-anchor="middle" font-size="29" font-weight="700">保留を除去</text>
+<text x="310" y="746" font-size="22" fill="#496e80">保留保存や回収も失敗し得る。記録側の失敗で元の業務の結果を置き換えない。</text>
+<text x="77" y="830" font-size="28" font-weight="700" fill="#235c76">保留保存 ≠ 台帳確定</text><text x="482" y="830" font-size="26" fill="#496e80">容量超過・回収停止・認証期限切れ・強制終了などの境界がある</text>
+</g></svg>
