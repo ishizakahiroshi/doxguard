@@ -1,0 +1,53 @@
+{
+  "result": "PASS",
+  "body_chars_excluding_urls_markers_footer_whitespace": 4585,
+  "body_chars_excluding_urls_markers_footer": 4717,
+  "x_post_weight": 195,
+  "pngs": [
+    {
+      "file": "01_hero.png",
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "91ab075f62788d16132671203ac442024c82ee70b51a2989359f9f1e71ef2d12"
+    },
+    {
+      "file": "02_infographic.png",
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "fed53c049309ae39bbbde288cea28d6615f63569b009d8121f267de9340de5e0"
+    },
+    {
+      "file": "04_fig.png",
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "aaac5f19424c9752342c8e0494bd860b6dd1a4c921378870ce0105dad15de4c0"
+    },
+    {
+      "file": "03_illustration.png",
+      "dimensions": [
+        1600,
+        900
+      ],
+      "sha256": "4b91feb2d681d460adde82ca1f031ce046de801251e1b829b4cfd83a5193d533"
+    }
+  ],
+  "cited_unique_urls": 25,
+  "source_coverage": true,
+  "hero_blank_region": [
+    1260,
+    650,
+    1600,
+    900
+  ],
+  "text_render_boxes_fit": true,
+  "private_pattern_scan": "limited structural patterns passed; no private watchlist accessed",
+  "browser_html_overflow": "NOT RUN: file URL denied by browser policy",
+  "repository_doxguard": "NOT RUN: no repository executable/toolchain in this artifact workspace",
+  "independent_review": "pending"
+}

@@ -1,0 +1,649 @@
+{
+  "renderer": "PyMuPDF HTML Story + native geometry; not browser rendering",
+  "all_text_fits": true,
+  "text_boxes": [
+    {
+      "figure": "01_hero",
+      "text": "AIからSIへ。",
+      "box": [
+        440,
+        40,
+        1535,
+        165
+      ],
+      "font_size": 74,
+      "spare_height": 32.72,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "01_hero",
+      "text": "島の収入はどうなる？",
+      "box": [
+        440,
+        165,
+        1535,
+        320
+      ],
+      "font_size": 71,
+      "spare_height": 66.38,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "01_hero",
+      "text": ".aiと.si、呼び名の先にある暮らし",
+      "box": [
+        446,
+        339,
+        1515,
+        399
+      ],
+      "font_size": 32,
+      "spare_height": 18.96,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "01_hero",
+      "text": ".ai",
+      "box": [
+        427,
+        539,
+        578,
+        619
+      ],
+      "font_size": 62,
+      "spare_height": 2.36,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "01_hero",
+      "text": ".si",
+      "box": [
+        977,
+        505,
+        1200,
+        610
+      ],
+      "font_size": 68,
+      "spare_height": 20.04,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "呼び名から、ドメインと島の財政へ",
+      "box": [
+        60,
+        35,
+        1530,
+        105
+      ],
+      "font_size": 47,
+      "spare_height": 10.66,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "用語の変更、登録の急増、財政への依存。分けて見ると、先が少し見えてきます。",
+      "box": [
+        65,
+        108,
+        1530,
+        157
+      ],
+      "font_size": 25,
+      "spare_height": 16.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "01",
+      "box": [
+        65,
+        163,
+        138,
+        212
+      ],
+      "font_size": 26,
+      "spare_height": 15.28,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "米政府の用語",
+      "box": [
+        131,
+        163,
+        492,
+        221
+      ],
+      "font_size": 32,
+      "spare_height": 16.96,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "02",
+      "box": [
+        585,
+        163,
+        658,
+        212
+      ],
+      "font_size": 26,
+      "spare_height": 15.28,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": ".siの新規登録",
+      "box": [
+        651,
+        163,
+        1012,
+        221
+      ],
+      "font_size": 32,
+      "spare_height": 16.96,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "03",
+      "box": [
+        1105,
+        163,
+        1178,
+        212
+      ],
+      "font_size": 26,
+      "spare_height": 15.28,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": ".aiと島の収入",
+      "box": [
+        1171,
+        163,
+        1532,
+        221
+      ],
+      "font_size": 32,
+      "spare_height": 16.96,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "AI → SI",
+      "box": [
+        84,
+        633,
+        481,
+        696
+      ],
+      "font_size": 47,
+      "spare_height": 3.66,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "2026年9月29日の大統領令\n行政部門の用語が対象\n民間への一律の改名義務ではない",
+      "box": [
+        86,
+        703,
+        480,
+        794
+      ],
+      "font_size": 22,
+      "spare_height": 8.48,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "3,515 → 46,066件",
+      "box": [
+        604,
+        633,
+        1001,
+        696
+      ],
+      "font_size": 35,
+      "spare_height": 18.3,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "2026年8月 → 9月、約13.1倍\n増加は命令より前から\nすべてを改名だけの結果にしない",
+      "box": [
+        606,
+        703,
+        1000,
+        794
+      ],
+      "font_size": 22,
+      "spare_height": 8.48,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "経常歳入の42.6%",
+      "box": [
+        1124,
+        633,
+        1521,
+        696
+      ],
+      "font_size": 37,
+      "spare_height": 15.86,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "アンギラの2026年予算案\nドメイン収入 ÷ 経常歳入\n改名後の.ai減収は未確認",
+      "box": [
+        1126,
+        703,
+        1520,
+        794
+      ],
+      "font_size": 22,
+      "spare_height": 8.48,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "02_infographic",
+      "text": "出典: EO14434 ／ Register.si 月次データ ／ アンギラ2026予算書（冊子55・58頁）\n数値・リンク・算式は本文とSOURCES.mdへ。図は因果関係を断定するものではありません。",
+      "box": [
+        62,
+        829,
+        1538,
+        886
+      ],
+      "font_size": 20,
+      "spare_height": 6.2,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "03_illustration",
+      "text": "名前のニュースを見たら、高い値札がありました",
+      "box": [
+        70,
+        43,
+        1530,
+        130
+      ],
+      "font_size": 43,
+      "spare_height": 32.54,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "03_illustration",
+      "text": "spacexsi.com",
+      "box": [
+        836,
+        355,
+        1343,
+        415
+      ],
+      "font_size": 34,
+      "spare_height": 16.52,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "03_illustration",
+      "text": "US$174,888",
+      "box": [
+        821,
+        421,
+        1360,
+        525
+      ],
+      "font_size": 58,
+      "spare_height": 31.24,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "03_illustration",
+      "text": "販売希望額。成約額ではありません。",
+      "box": [
+        841,
+        535,
+        1334,
+        604
+      ],
+      "font_size": 22,
+      "spare_height": 40.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "03_illustration",
+      "text": "2026-10-05確認: https://spacexsi.com/  |  .siではなく.comの販売表示\n登録日は2025-07-25。今回の改名報道より前で、現所有者の取得時期・意図は未確認。",
+      "box": [
+        80,
+        809,
+        1520,
+        880
+      ],
+      "font_size": 22,
+      "spare_height": 15.32,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": ".siの新規登録は、ひと月で約13.1倍に",
+      "box": [
+        65,
+        35,
+        1535,
+        112
+      ],
+      "font_size": 49,
+      "spare_height": 15.22,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "月別の新規登録件数。登録総数や、稼働中のサイト数とは異なります。",
+      "box": [
+        68,
+        116,
+        1530,
+        165
+      ],
+      "font_size": 25,
+      "spare_height": 16.5,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "0",
+      "box": [
+        306.0,
+        644,
+        442.0,
+        699
+      ],
+      "font_size": 22,
+      "spare_height": 26.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "10,000",
+      "box": [
+        516.0,
+        644,
+        652.0,
+        699
+      ],
+      "font_size": 22,
+      "spare_height": 26.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "20,000",
+      "box": [
+        726.0,
+        644,
+        862.0,
+        699
+      ],
+      "font_size": 22,
+      "spare_height": 26.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "30,000",
+      "box": [
+        936.0,
+        644,
+        1072.0,
+        699
+      ],
+      "font_size": 22,
+      "spare_height": 26.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "40,000",
+      "box": [
+        1146.0,
+        644,
+        1282.0,
+        699
+      ],
+      "font_size": 22,
+      "spare_height": 26.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "50,000",
+      "box": [
+        1356.0,
+        644,
+        1492.0,
+        699
+      ],
+      "font_size": 22,
+      "spare_height": 26.16,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "2026年8月",
+      "box": [
+        70,
+        304,
+        327,
+        379
+      ],
+      "font_size": 34,
+      "spare_height": 31.52,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "3,515 件",
+      "box": [
+        456.815,
+        307,
+        733.815,
+        387
+      ],
+      "font_size": 41,
+      "spare_height": 27.98,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "2026年9月",
+      "box": [
+        70,
+        484,
+        327,
+        559
+      ],
+      "font_size": 34,
+      "spare_height": 31.52,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "46,066 件",
+      "box": [
+        1022.386,
+        490,
+        1312.386,
+        565
+      ],
+      "font_size": 41,
+      "spare_height": 22.98,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "件",
+      "box": [
+        1330,
+        698,
+        1490,
+        740
+      ],
+      "font_size": 24,
+      "spare_height": 10.72,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "46,066 ÷ 3,515 = 13.1055…　｜　9月29日の大統領令以前の登録も含みます。",
+      "box": [
+        91,
+        758,
+        1510,
+        807
+      ],
+      "font_size": 27,
+      "spare_height": 14.06,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    },
+    {
+      "figure": "04_fig",
+      "text": "出典: Register.si「Follow the Growth of .si Domains」（2026-10-05確認）\nhttps://www.register.si/en/news/follow-the-growth-of-si-domains/",
+      "box": [
+        67,
+        835,
+        1533,
+        888
+      ],
+      "font_size": 21,
+      "spare_height": 0.0,
+      "scale": 1.0,
+      "in_canvas": true,
+      "fits": true
+    }
+  ],
+  "images": [
+    {
+      "file": "01_hero.png",
+      "width": 1600,
+      "height": 900,
+      "sha256": "91ab075f62788d16132671203ac442024c82ee70b51a2989359f9f1e71ef2d12"
+    },
+    {
+      "file": "02_infographic.png",
+      "width": 1600,
+      "height": 900,
+      "sha256": "fed53c049309ae39bbbde288cea28d6615f63569b009d8121f267de9340de5e0"
+    },
+    {
+      "file": "03_illustration.png",
+      "width": 1600,
+      "height": 900,
+      "sha256": "4b91feb2d681d460adde82ca1f031ce046de801251e1b829b4cfd83a5193d533"
+    },
+    {
+      "file": "04_fig.png",
+      "width": 1600,
+      "height": 900,
+      "sha256": "aaac5f19424c9752342c8e0494bd860b6dd1a4c921378870ce0105dad15de4c0"
+    }
+  ],
+  "hero_reserved_rect": [
+    1260,
+    650,
+    1600,
+    900
+  ],
+  "hero_reserved_color_count": 1,
+  "browser_inspection": "not performed on final HTML; local file URL rejected by browser URL policy",
+  "visual_inspection": "2026-10-05: all four final PNGs inspected with view_image; no Japanese corruption, clipping, missing images or real logos; hero cat-free and reserved rectangle blank.",
+  "graph_data": {
+    "2026-08": 3515,
+    "2026-09": 46066,
+    "ratio": 13.105547652916075,
+    "axis_zero": 0,
+    "axis_max": 50000
+  },
+  "finance_ratio_2026": 42.55169446564128
+}

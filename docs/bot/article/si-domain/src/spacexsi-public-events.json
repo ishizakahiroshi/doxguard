@@ -1,0 +1,24 @@
+{
+  "source_url": "https://rdap.verisign.com/com/v1/domain/spacexsi.com",
+  "checked_utc": "2026-10-05",
+  "domain": "SPACEXSI.COM",
+  "events": [
+    {
+      "eventAction": "registration",
+      "eventDate": "2025-07-25T19:16:42Z"
+    },
+    {
+      "eventAction": "expiration",
+      "eventDate": "2027-07-25T19:16:42Z"
+    },
+    {
+      "eventAction": "last changed",
+      "eventDate": "2026-08-12T03:48:29Z"
+    },
+    {
+      "eventAction": "last update of RDAP database",
+      "eventDate": "2026-10-05T04:51:17Z"
+    }
+  ],
+  "limits": "Registration event is not evidence of the current holder acquisition date or purpose. No registrant identity collected. Current sale asking price is not a transaction."
+}

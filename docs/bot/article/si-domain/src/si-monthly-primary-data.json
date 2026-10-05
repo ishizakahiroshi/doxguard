@@ -1,0 +1,64 @@
+{
+  "source_url": "https://www.register.si/en/news/follow-the-growth-of-si-domains/",
+  "retrieved_utc": "2026-10-05",
+  "page_heading": "Monthly registrations",
+  "chart_id": 8157,
+  "data_path": "window.visualizer.charts[visualizer-8157-524619589].data",
+  "source_line_at_capture": 468,
+  "source_sha256": "7b5cd0934535d6678d7fd4e4c4af5fc04393e49571cf3df0668fedcbbecb0ac4",
+  "series": [
+    [
+      "09-2025",
+      2726
+    ],
+    [
+      "10-2025",
+      2861
+    ],
+    [
+      "11-2025",
+      3959
+    ],
+    [
+      "12-2025",
+      2324
+    ],
+    [
+      "01-2026",
+      2494
+    ],
+    [
+      "02-2026",
+      2757
+    ],
+    [
+      "03-2026",
+      3100
+    ],
+    [
+      "04-2026",
+      2715
+    ],
+    [
+      "05-2026",
+      6342
+    ],
+    [
+      "06-2026",
+      6938
+    ],
+    [
+      "07-2026",
+      3109
+    ],
+    [
+      "08-2026",
+      3515
+    ],
+    [
+      "09-2026",
+      46066
+    ]
+  ],
+  "warning": "Chart container suffix and line number may change; locate chart id 8157 and Monthly registrations. Only data excerpt preserved; no nonces or cookies."
+}

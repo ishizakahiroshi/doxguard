@@ -1,0 +1,39 @@
+{
+  "source_url": "https://www.gov.ai/document/2026-03-18-011937_1898942126.pdf",
+  "retrieved_utc": "2026-10-05",
+  "source_sha256": "59a89eff3151a7b235ae49e93e0a93d933d4207a9dc9d80a1340148fa24af783",
+  "currency": "EC dollars",
+  "numerator": "Domain Name Registration, COA 13515",
+  "denominator": "RECURRENT REVENUE",
+  "numerator_location": {
+    "pdf_page_1_based": 70,
+    "printed_page": 58
+  },
+  "denominator_location": {
+    "pdf_page_1_based": 67,
+    "printed_page": 55
+  },
+  "rows": [
+    {
+      "year": 2024,
+      "column_label": "Actual Revenue",
+      "domain": 104253510,
+      "recurrent_revenue": 469861457,
+      "calculated_share_percent": 22.18813832180323
+    },
+    {
+      "year": 2025,
+      "column_label": "End of Year Projection",
+      "domain": 219220239,
+      "recurrent_revenue": 560360763,
+      "calculated_share_percent": 39.12126856033994
+    },
+    {
+      "year": 2026,
+      "column_label": "Proposed Estimate",
+      "domain": 253557731,
+      "recurrent_revenue": 595881631,
+      "calculated_share_percent": 42.55169446564128
+    }
+  ]
+}
