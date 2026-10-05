@@ -1,0 +1,170 @@
+{
+  "task": "20261005-002",
+  "instruction_commit": "9fa20de9cc466e71c5890f9ceec083f727f26eab",
+  "state": "ready_for_hand_review",
+  "palette": [
+    "#F6F0E6",
+    "#382A43",
+    "#795773",
+    "#C97061",
+    "#819786"
+  ],
+  "generation": {
+    "availability": "tested_successfully",
+    "tool": "native image_gen",
+    "calls": 3,
+    "paid_api_or_new_credentials_used": false,
+    "source_files": [
+      "hero-scene.png",
+      "infographic-art.png",
+      "illustration-source.png"
+    ],
+    "text_or_cats_in_hero_generation": false
+  },
+  "composition": {
+    "hero": "Native generated textless/catless scene + editable Japanese SVG type + exact supplied fixed mascot, rendered by existing Inkscape.",
+    "infographic": "Native generated textless art + editable Japanese SVG type, rendered by existing Inkscape. Revised to 48px primary labels following independent review.",
+    "illustration": "Native wordless image resized to 1600x900 using existing Pillow.",
+    "figures": "Editable vector scene definitions; SVG sources and deterministic Pillow raster output."
+  },
+  "fixed_mascot": {
+    "path": "assets/mascot_cats.png",
+    "zip_received_bytes": 1485954,
+    "png_bytes": 1485826,
+    "git_blob_sha": "229e3a806e16cd636594704f91a193ac9b5c8fc8",
+    "sha256": "46ef71ab89f6203785a6cf9aababb69e9516f33d14c4bad76bd76576f5d0b91d",
+    "matched": true,
+    "earlier_mismatched_attachment_used": false
+  },
+  "sources": {
+    "hero-scene.png": {
+      "size_bytes": 2250603,
+      "sha256": "37ae3ea82e6b5d1a6bedf10628b75111e6fac169c911258a8d4b9c86daeb014b"
+    },
+    "infographic-art.png": {
+      "size_bytes": 1300859,
+      "sha256": "4686d3aea20912624394e97015bcdf513d0ad6b402cb0d92ca1bfc0d7d4e971f"
+    },
+    "illustration-source.png": {
+      "size_bytes": 2194696,
+      "sha256": "e2f59e7037b715d4800b3beab3b25cf76eac4a0f0cace48ae46a761cf4abb277"
+    },
+    "hero.svg": {
+      "size_bytes": 1299,
+      "sha256": "ccc1ec07e71524ff927c905a093259c904d746a506ba4afb5c6ffb412d390aca"
+    },
+    "infographic.svg": {
+      "size_bytes": 2024,
+      "sha256": "23006a7843ac1968dc191be9e9bbd8962659f630f5bebb2a5931a7ae1c065caa"
+    },
+    "03-dots-dev-flow-fig1.svg": {
+      "size_bytes": 9818,
+      "sha256": "aafe0ace275d80859571ad7e5f8ca8a953bf682d9516996858c2c42b2235ef60"
+    },
+    "05-dots-dev-flow-fig2.svg": {
+      "size_bytes": 7709,
+      "sha256": "cab5f6d761c87dd376c27494c9e902fee288f0bafc20acbe155bed39c573a50b"
+    },
+    "compose_assets.py": {
+      "size_bytes": 3728,
+      "sha256": "5f1144e1fbbed992894f3bca92d7c4e8c756fb318991dae37d84671ddfb65583"
+    },
+    "build_process_figures.py": {
+      "size_bytes": 12096,
+      "sha256": "05463b3f67f3c9a3aa74a4cc35622664ff59168d10cb78d1eba6d62696afc35a"
+    },
+    "image-prompts.json": {
+      "size_bytes": 3331,
+      "sha256": "cfe2b07467f1c5f12d52c43e881bef94ed798510cc20526234d597964a2840d3"
+    }
+  },
+  "outputs": [
+    {
+      "file": "01-dots-dev-flow-hero.png",
+      "role": "hero",
+      "alt": "dotsに機能開発を任せる。生成した台帳と工程の風景に、日本語タイトルと固定猫素材を後合成。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 2074301,
+      "sha256": "1d695ae6b9d817b66ad2622e6a61493cc7bde1c4d15ad96f62659dcbe611a994",
+      "git_blob_sha": "c4f2414bcd62124626d971ee4160db4ed138e659",
+      "visually_inspected": true
+    },
+    {
+      "file": "02-dots-dev-flow-infographic.png",
+      "role": "infographic",
+      "alt": "取り決め、1回の承認で連鎖、別のAIのレビュー、修正と読み直しの4手順。重大1・中12が見つかり、読み直しで重大0・新たな中2。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 796849,
+      "sha256": "d58a858c821c0d1ff7005433a680a0b20c466dd58caa6fd12b4ce3725b59f26e",
+      "git_blob_sha": "cd17541306788bf255dd87ff25064edfd08f7599",
+      "visually_inspected": true
+    },
+    {
+      "file": "03-dots-dev-flow-fig1.png",
+      "role": "fig1",
+      "alt": "次回用の開発の型。最初の承認から工程0と工程1〜4をCIで進め、停止条件で人へ戻す。最後に別製品AIが全行をレビューし、人が受入・取り込みを行う。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 330673,
+      "sha256": "ab1743bccd92b806c8441f447a23a037de169ee4d5f9a7671b3ede830d2c4ca9",
+      "git_blob_sha": "e652605d8f801213b6450c20e2158310caef6567",
+      "visually_inspected": true
+    },
+    {
+      "file": "04-dots-dev-flow-illustration.png",
+      "role": "illustration",
+      "alt": "作業役が工程を進め、別の目が全体を読み直す様子を表した、文字のない挿絵。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 1951279,
+      "sha256": "d5f5921b8f742a15fbe7fcefe544036c210bc9dfac8c04c96a232c69f5c5314d",
+      "git_blob_sha": "4e975f257bee8803696dffd444cfc72e1c0c21a2",
+      "visually_inspected": true
+    },
+    {
+      "file": "05-dots-dev-flow-fig2.png",
+      "role": "fig2",
+      "alt": "CIのテスト580件成功後にも重大1・中12・軽約20と、テスト名とassertの食い違い約20。修正後の重大0・新しい中2、3種のテスト弱点。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 374421,
+      "sha256": "d016f119d7338d3c05d864b97aa0338c0d9404e7f5592ea4fc1f7a18845173bb",
+      "git_blob_sha": "d910a59bd92ff49b9330e0eab8a3f2e8f27ff36d",
+      "visually_inspected": true
+    }
+  ],
+  "qa": {
+    "all_final_pixels_opened": true,
+    "independent_production_review": "Separate dot text and image reviewers; corrections reread. This is same-product review.",
+    "hand_acceptance": "pending",
+    "published_display_verification": "not attempted; owner handles publication and display",
+    "mobile": "48px essential infographic headings; dense figure details require enlargement, with equivalent prose and image-enlargement guidance in all3 drafts."
+  },
+  "environment": {
+    "dependency_fetch_attempted": false,
+    "pnpm_attempted": false,
+    "cloud_browser_public_github_page": "tested; fixed source page and labels page visible",
+    "local_file_browser_preview": "file protocol is disallowed by cloud browser; no bypass attempted",
+    "headless_chromium": "initial default profile could not be created; not used for final raster",
+    "png_output": "existing Inkscape and Pillow, actual output inspected"
+  },
+  "public_source_checks": [
+    {
+      "url": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+      "result": "B. Account Terms free machine-account limit agrees with FACTS."
+    },
+    {
+      "url": "https://docs.github.com/en/account-and-profile/reference/permission-levels-for-a-personal-account-repository",
+      "result": "Official page redirects; personal private repo collaborator read-only limit agrees with FACTS."
+    }
+  ],
+  "previous_media_urls": "Preserved exactly from FACTS. web tool could not fetch their current pages; current display not independently verified.",
+  "github_label": {
+    "checked_url": "https://github.com/ishizakahiroshi/doxguard/labels",
+    "active_labels": 9,
+    "dot_exists": false,
+    "new_label_created": false
+  }
+}

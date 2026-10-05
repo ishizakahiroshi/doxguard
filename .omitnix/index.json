@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated": {
-    "commit": "7e99901cba79d65c888807a369b43c96840cb7c8",
+    "commit": "c85269ab7bba1130c6e5ddc300076e0eaa6dd0ae",
     "dirty": true,
     "tool": "omitnix 0.1.3",
     "partial": false,
@@ -138,11 +138,11 @@
     "discovery_note": ""
   },
   "coverage": {
-    "discovered": 91,
-    "analyzed": 24,
+    "discovered": 129,
+    "analyzed": 28,
     "unresolved": 0,
     "unknown": 0,
-    "unclaimed": 67,
+    "unclaimed": 101,
     "skipped_by_config": 0
   },
   "files": [
@@ -279,6 +279,393 @@
         }
       },
       "unresolved": []
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/01-dots-dev-flow-hero.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/02-dots-dev-flow-infographic.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/03-dots-dev-flow-fig1.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/04-dots-dev-flow-illustration.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/05-dots-dev-flow-fig2.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/BRIEF.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/FACTS.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/PROGRESS.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/README.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/REVIEW.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/assets/mascot_cats.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/note.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/publication.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/qiita.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/03-dots-dev-flow-fig1.svg",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.svg'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/05-dots-dev-flow-fig2.svg",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.svg'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/article_lint.py",
+      "adapter": "python",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "value",
+          "value": "Read-only structural verification for the three article deliverables. No downloads."
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/build_process_figures.py",
+      "adapter": "python",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "value",
+          "value": "Deterministic vector-native diagrams for article #20261005-002."
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/ci-receipt.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/compose_assets.py",
+      "adapter": "python",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "none_observed",
+          "value": null
+        },
+        "authentication": {
+          "state": "not_configured"
+        },
+        "authorization": {
+          "state": "not_configured"
+        },
+        "reads": {
+          "state": "none_observed",
+          "value": []
+        },
+        "writes": {
+          "state": "none_observed",
+          "value": []
+        },
+        "screen_to_api": {
+          "state": "out_of_scope"
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/delivery-receipt.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/editorial-checks.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/editorial-notes.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/hero-scene.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/hero.svg",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.svg'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/illustration-source.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/image-prompts.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/image-receipt.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/independent-image-review.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/independent-text-review.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/infographic-art.png",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.png'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/infographic.svg",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.svg'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/note-tags.txt",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.txt'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/preview-gallery.html",
+      "adapter": "html",
+      "status": "analyzed",
+      "fields": {
+        "summary": {
+          "state": "value",
+          "value": "記事図版5枚のプレビュー"
+        },
+        "authentication": {
+          "state": "out_of_scope"
+        },
+        "authorization": {
+          "state": "out_of_scope"
+        },
+        "reads": {
+          "state": "out_of_scope"
+        },
+        "writes": {
+          "state": "out_of_scope"
+        },
+        "screen_to_api": {
+          "state": "none_observed",
+          "value": []
+        }
+      },
+      "unresolved": []
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/process-figures-qa.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/process-figures-receipt.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/src/receipt-stop.json",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.json'"
+    },
+    {
+      "path": "docs/bot/article/dots-dev-flow/zenn.md",
+      "adapter": null,
+      "status": "unclaimed",
+      "fields": {},
+      "unresolved": [],
+      "reason": "no adapter claims '.md'"
     },
     {
       "path": "docs/bot/article/rust-prerelease-rollout/PROGRESS.md",

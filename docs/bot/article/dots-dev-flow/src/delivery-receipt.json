@@ -1,0 +1,27 @@
+{
+  "task": "20261005-002",
+  "state": "submitted_awaiting_hand_review",
+  "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/4",
+  "draft_pr_number": 4,
+  "base": "develop",
+  "branch": "dots/article-dots-dev-flow-16-production",
+  "instruction_commit": "9fa20de9cc466e71c5890f9ceec083f727f26eab",
+  "content_commit": "98b0dc0a7d616776a4cbe116f4826e72450d75ca",
+  "fixed_to_content_scope": "All32 changed files inside docs/bot/article/dots-dev-flow/",
+  "inherited_base_difference": ".omitnix/index.json differs between develop and fixed instruction commit; untouched by production",
+  "remote_image_blobs_verified": 8,
+  "ci_observation": {
+    "checked_commit": "583921f26e6bcc889bbd55b2964c63dc10b4f9db",
+    "workflow_run": 37250134058,
+    "workflow": "Validate",
+    "conclusion": "success",
+    "successful_jobs": 5,
+    "failed_jobs": 0,
+    "receipt": "src/ci-receipt.json"
+  },
+  "merge_attempted": false,
+  "publication_attempted": false,
+  "human_independent_acceptance": "pending",
+  "note_tags": "src/note-tags.txt",
+  "image_details": "src/image-receipt.json"
+}

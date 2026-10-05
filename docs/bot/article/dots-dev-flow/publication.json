@@ -1,0 +1,116 @@
+{
+  "task": "20261005-002",
+  "article_key": "dots-dev-flow-20261005",
+  "authoring": "dots",
+  "sequel_of": "dots-slack-instruction-20261004",
+  "scope": [
+    "zenn",
+    "qiita",
+    "note"
+  ],
+  "site_mirror": false,
+  "x_announcement": false,
+  "publication_owner": "手元",
+  "media": {
+    "zenn": {
+      "state": "draft_ready",
+      "slug": "20261005-dots-dev-flow",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false,
+      "image_destination": "/images/",
+      "stable_key": "dots-dev-flow-20261005:zenn",
+      "receipt": null,
+      "hand_review": "pending"
+    },
+    "qiita": {
+      "state": "draft_ready",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false,
+      "stable_key": "dots-dev-flow-20261005:qiita",
+      "receipt": null,
+      "hand_review": "pending",
+      "id": ""
+    },
+    "note": {
+      "state": "draft_ready",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false,
+      "stable_key": "dots-dev-flow-20261005:note",
+      "receipt": null,
+      "hand_review": "pending",
+      "id": null
+    }
+  },
+  "instruction_commit": "9fa20de9cc466e71c5890f9ceec083f727f26eab",
+  "source_branch": "dots/article-dots-dev-flow-16-production",
+  "source_commit": "98b0dc0a7d616776a4cbe116f4826e72450d75ca",
+  "delivery_assets": [
+    {
+      "file": "01-dots-dev-flow-hero.png",
+      "role": "hero",
+      "alt": "dotsに機能開発を任せる。生成した台帳と工程の風景に、日本語タイトルと固定猫素材を後合成。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 2074301,
+      "sha256": "1d695ae6b9d817b66ad2622e6a61493cc7bde1c4d15ad96f62659dcbe611a994",
+      "git_blob_sha": "c4f2414bcd62124626d971ee4160db4ed138e659",
+      "visually_inspected": true
+    },
+    {
+      "file": "02-dots-dev-flow-infographic.png",
+      "role": "infographic",
+      "alt": "取り決め、1回の承認で連鎖、別のAIのレビュー、修正と読み直しの4手順。重大1・中12が見つかり、読み直しで重大0・新たな中2。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 796849,
+      "sha256": "d58a858c821c0d1ff7005433a680a0b20c466dd58caa6fd12b4ce3725b59f26e",
+      "git_blob_sha": "cd17541306788bf255dd87ff25064edfd08f7599",
+      "visually_inspected": true
+    },
+    {
+      "file": "03-dots-dev-flow-fig1.png",
+      "role": "fig1",
+      "alt": "次回用の開発の型。最初の承認から工程0と工程1〜4をCIで進め、停止条件で人へ戻す。最後に別製品AIが全行をレビューし、人が受入・取り込みを行う。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 330673,
+      "sha256": "ab1743bccd92b806c8441f447a23a037de169ee4d5f9a7671b3ede830d2c4ca9",
+      "git_blob_sha": "e652605d8f801213b6450c20e2158310caef6567",
+      "visually_inspected": true
+    },
+    {
+      "file": "04-dots-dev-flow-illustration.png",
+      "role": "illustration",
+      "alt": "作業役が工程を進め、別の目が全体を読み直す様子を表した、文字のない挿絵。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 1951279,
+      "sha256": "d5f5921b8f742a15fbe7fcefe544036c210bc9dfac8c04c96a232c69f5c5314d",
+      "git_blob_sha": "4e975f257bee8803696dffd444cfc72e1c0c21a2",
+      "visually_inspected": true
+    },
+    {
+      "file": "05-dots-dev-flow-fig2.png",
+      "role": "fig2",
+      "alt": "CIのテスト580件成功後にも重大1・中12・軽約20と、テスト名とassertの食い違い約20。修正後の重大0・新しい中2、3種のテスト弱点。",
+      "width": 1600,
+      "height": 900,
+      "size_bytes": 374421,
+      "sha256": "d016f119d7338d3c05d864b97aa0338c0d9404e7f5592ea4fc1f7a18845173bb",
+      "git_blob_sha": "d910a59bd92ff49b9330e0eab8a3f2e8f27ff36d",
+      "visually_inspected": true
+    }
+  ],
+  "production_review": "passed_after_corrections",
+  "source_commit_semantics": "Commit containing the reviewed article and image bundle; later receipt-only commits may follow.",
+  "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/4",
+  "draft_pr_number": 4,
+  "delivery_state": "awaiting_hand_review",
+  "ci_receipt": "src/ci-receipt.json"
+}

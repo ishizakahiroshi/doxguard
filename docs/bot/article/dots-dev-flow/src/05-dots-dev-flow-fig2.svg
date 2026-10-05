@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+<title id="title">CIが緑でも、読み直す余地は残る</title><desc id="desc">初回の別製品AIレビューでは、重大1件、中12件、軽約20件を確認。別軸でテスト名とassertの食い違いも約20件あり、この数は重大・中・軽と足し合わせない。修正後の読み直しでは重大0件、新しい中2件が見つかり、次の工程の最初で直すことにした。テストの弱さは、期待するエラーの種類を見ず拒否だけを確かめる、同時100件と書きながら1件ずつ直列に処理する、呼ばれない関数の呼び出し回数0を確かめる、の3つ。テスト件数は346から580、718へ増えた。</desc>
+<rect width="1600" height="900" fill="#F6F0E6"/>
+<rect x="66" y="54" width="12" height="67" rx="6" fill="#C97061"/>
+<text x="100" y="101" font-family="Noto Sans CJK JP, sans-serif" font-size="50" font-weight="700" text-anchor="start" fill="#382A43">CIが緑でも、読み直す余地は残る</text>
+<text x="100" y="153" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">初回の別製品AIレビュー → 修正 → 読み直し</text>
+<text x="65" y="203" font-family="Noto Sans CJK JP, sans-serif" font-size="27" font-weight="700" text-anchor="start" fill="#382A43">CI 580件成功・dots内レビューは指摘なし</text>
+<rect x="65" y="224" width="220" height="177" rx="15" fill="#F6F0E6" stroke="#C97061" stroke-width="3"/>
+<rect x="65" y="224" width="220" height="8" rx="4" fill="#C97061"/>
+<text x="175" y="276" font-family="Noto Sans CJK JP, sans-serif" font-size="31" font-weight="700" text-anchor="middle" fill="#C97061">重大</text>
+<text x="175" y="360" font-family="Noto Sans CJK JP, sans-serif" font-size="70" font-weight="700" text-anchor="middle" fill="#382A43">1</text>
+<text x="264" y="384" font-family="Noto Sans CJK JP, sans-serif" font-size="23" font-weight="400" text-anchor="end" fill="#795773">件</text>
+<rect x="306" y="224" width="220" height="177" rx="15" fill="#F6F0E6" stroke="#795773" stroke-width="3"/>
+<rect x="306" y="224" width="220" height="8" rx="4" fill="#795773"/>
+<text x="416" y="276" font-family="Noto Sans CJK JP, sans-serif" font-size="31" font-weight="700" text-anchor="middle" fill="#795773">中</text>
+<text x="416" y="360" font-family="Noto Sans CJK JP, sans-serif" font-size="70" font-weight="700" text-anchor="middle" fill="#382A43">12</text>
+<text x="505" y="384" font-family="Noto Sans CJK JP, sans-serif" font-size="23" font-weight="400" text-anchor="end" fill="#795773">件</text>
+<rect x="547" y="224" width="220" height="177" rx="15" fill="#F6F0E6" stroke="#819786" stroke-width="3"/>
+<rect x="547" y="224" width="220" height="8" rx="4" fill="#819786"/>
+<text x="657" y="276" font-family="Noto Sans CJK JP, sans-serif" font-size="31" font-weight="700" text-anchor="middle" fill="#819786">軽</text>
+<text x="657" y="360" font-family="Noto Sans CJK JP, sans-serif" font-size="70" font-weight="700" text-anchor="middle" fill="#382A43">約20</text>
+<text x="746" y="384" font-family="Noto Sans CJK JP, sans-serif" font-size="23" font-weight="400" text-anchor="end" fill="#795773">件</text>
+<polyline points="815,233 815,393" fill="none" stroke="#819786" stroke-width="2" stroke-linejoin="round"/>
+<text x="866" y="258" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="start" fill="#795773">別軸｜テスト名とassertの食い違い</text>
+<text x="866" y="335" font-family="Noto Sans CJK JP, sans-serif" font-size="63" font-weight="700" text-anchor="start" fill="#382A43">約20件</text>
+<text x="866" y="384" font-family="Noto Sans CJK JP, sans-serif" font-size="27" font-weight="400" text-anchor="start" fill="#795773">重大・中・軽の件数とは足し合わせない</text>
+<rect x="65" y="432" width="1470" height="121" rx="17" fill="#382A43"/>
+<text x="91" y="480" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#F6F0E6">修正後の</text>
+<text x="91" y="525" font-family="Noto Sans CJK JP, sans-serif" font-size="33" font-weight="700" text-anchor="start" fill="#F6F0E6">読み直し</text>
+<polyline points="285,460 285,526" fill="none" stroke="#795773" stroke-width="2" stroke-linejoin="round"/>
+<text x="325" y="505" font-family="Noto Sans CJK JP, sans-serif" font-size="51" font-weight="700" text-anchor="start" fill="#F6F0E6">重大 0</text>
+<text x="600" y="505" font-family="Noto Sans CJK JP, sans-serif" font-size="41" font-weight="700" text-anchor="start" fill="#F6F0E6">新しい中 2件</text>
+<polyline points="905,491 971,491" fill="none" stroke="#F6F0E6" stroke-width="3" stroke-linejoin="round"/>
+<polygon points="971,491 958,485 958,497" fill="#F6F0E6"/>
+<text x="1005" y="479" font-family="Noto Sans CJK JP, sans-serif" font-size="30" font-weight="400" text-anchor="start" fill="#F6F0E6">次の工程の最初で</text>
+<text x="1005" y="525" font-family="Noto Sans CJK JP, sans-serif" font-size="32" font-weight="700" text-anchor="start" fill="#F6F0E6">直すことにした</text>
+<text x="65" y="611" font-family="Noto Sans CJK JP, sans-serif" font-size="36" font-weight="700" text-anchor="start" fill="#382A43">テストの弱さは、名前とassertの間にあった</text>
+<rect x="65" y="636" width="474" height="170" rx="15" fill="#F6F0E6" stroke="#819786" stroke-width="2"/>
+<rect x="87" y="659" width="5" height="33" rx="2" fill="#C97061"/>
+<text x="108" y="687" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#382A43">エラーの種類を見ない</text>
+<text x="89" y="739" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">「拒否された」だけで通る</text>
+<text x="89" y="781" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">検査を消しても通る</text>
+<rect x="563" y="636" width="474" height="170" rx="15" fill="#F6F0E6" stroke="#819786" stroke-width="2"/>
+<rect x="585" y="659" width="5" height="33" rx="2" fill="#C97061"/>
+<text x="606" y="687" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#382A43">「同時100件」が直列</text>
+<text x="587" y="739" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">実際は1件ずつ</text>
+<text x="587" y="781" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">順番に処理されている</text>
+<rect x="1061" y="636" width="474" height="170" rx="15" fill="#F6F0E6" stroke="#819786" stroke-width="2"/>
+<rect x="1083" y="659" width="5" height="33" rx="2" fill="#C97061"/>
+<text x="1104" y="687" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#382A43">呼ばれない関数の回数0</text>
+<text x="1085" y="739" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">もともと呼ばれない関数の</text>
+<text x="1085" y="781" font-family="Noto Sans CJK JP, sans-serif" font-size="28" font-weight="400" text-anchor="start" fill="#795773">0回を確かめている</text>
+<text x="65" y="865" font-family="Noto Sans CJK JP, sans-serif" font-size="29" font-weight="700" text-anchor="start" fill="#795773">テスト件数：346 → 580 → 718</text>
+</svg>
