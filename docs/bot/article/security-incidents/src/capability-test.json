@@ -1,0 +1,10 @@
+{
+  "renderer": "PyMuPDF insert_htmlbox",
+  "size": [
+    1600,
+    900
+  ],
+  "spare_height": 682.0,
+  "scale": 1.0,
+  "passed": true
+}
