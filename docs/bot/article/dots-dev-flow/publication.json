@@ -49,7 +49,7 @@
   },
   "instruction_commit": "9fa20de9cc466e71c5890f9ceec083f727f26eab",
   "source_branch": "dots/article-dots-dev-flow-16-production",
-  "source_commit": null,
+  "source_commit": "98b0dc0a7d616776a4cbe116f4826e72450d75ca",
   "delivery_assets": [
     {
       "file": "01-dots-dev-flow-hero.png",
@@ -108,5 +108,8 @@
     }
   ],
   "production_review": "passed_after_corrections",
-  "source_commit_semantics": "Commit containing the reviewed article and image bundle; later receipt-only commits may follow."
+  "source_commit_semantics": "Commit containing the reviewed article and image bundle; later receipt-only commits may follow.",
+  "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/4",
+  "draft_pr_number": 4,
+  "delivery_state": "awaiting_hand_review"
 }

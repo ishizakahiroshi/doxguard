@@ -3,7 +3,7 @@
 指示branch: dots/article-dots-dev-flow-16。固定commit: 9fa20de9cc466e71c5890f9ceec083f727f26eab。
 成果branch: dots/article-dots-dev-flow-16-production。PR base: develop。制作変更はこのディレクトリのみ。
 
-## 現在の状態: 制作・再レビュー済み、Draft PR提出準備
+## 現在の状態: Draft PR提出済み、手元の独立検収待ち
 
 3媒体の原稿、完成PNG5枚、編集可能な図版、生成元、プロンプトとreceiptを用意しました。
 同じ製品内の別担当による文章・画像レビューの指摘へ対応し、修正後を再読・再目視しました。
@@ -18,7 +18,7 @@
 | 文字合成・固定猫合成 | completed | dots | 編集可能SVG、指定blob一致の固定猫をhero右下に使用 |
 | PNG出力 | completed | dots | 全5枚1600×900、各3MB未満、実画素確認 |
 | 独立制作レビュー | passed_after_corrections | dots別担当 | src/independent-text-review.md / src/independent-image-review.md |
-| Draft PR提出 | preparing | dots | develop向け、mergeなし |
+| Draft PR提出 | submitted | dots | [Draft PR #4](https://github.com/ishizakahiroshi/doxguard/pull/4)、develop向け、mergeなし |
 | 手元独立検収 | pending | 手元 | article-lint、5画像の目視とhash照合 |
 | 3媒体公開 | pending | 手元 | 投稿の試行なし |
 | 3媒体の実表示 | pending | 手元 | |
@@ -47,3 +47,11 @@
 - repositoryの既存ラベル9個を公開画面で確認。dotラベルは存在せず、新規作成しない。
 - developと固定commitの間には、指示準備に含まれる `.omitnix/index.json` の既存差分がある。制作で同ファイルを変更・復元していない。固定commitからの制作差分はこのディレクトリ内のみ。
 - merge・投稿・投稿用repoへのpush・新しい依存・追加有料API・認証情報の追加は行っていない。
+
+## 提出証跡
+
+- Draft PR: https://github.com/ishizakahiroshi/doxguard/pull/4
+- 原稿・図版の内容commit: `98b0dc0a7d616776a4cbe116f4826e72450d75ca`。publication.jsonのsource_commitはこの内容commitを指し、後続のreceipt更新とは分ける。
+- PR作成後のAPI確認ではworkflow run、commit status、check runは各0件。CI成功とは報告しない。
+- 内容commitのremote treeと、最終5PNG・生成元3PNGのgit blob SHAとサイズの一致を確認。
+- 手元検収の指摘が届いたら、同じ成果branchで対応する。公開・mergeは手元の担当。
