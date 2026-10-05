@@ -1,0 +1,19 @@
+{
+  "task_id": "20261005-005",
+  "status": "draft-accepted-local-publication-authorized",
+  "draft_head": "ae94c9438af934ba063b472ce3cd00525070e505",
+  "hero_cat_overlay": "completed-local-fixed-asset",
+  "hero_final_sha256": "9CB71ABE0400E3C09ECC930BDC463C3F58FFD35C3FB8A64E5A247BC22DA5F0D1",
+  "article_lint": "all-nine-checks-pass",
+  "browser_source_labels": 54,
+  "browser_label_overflow": 0,
+  "browser_page_overflow": 0,
+  "final_png_pixel_review": "pass",
+  "publication_authorized": true,
+  "scope": [
+    "one Qiita article",
+    "site introduction",
+    "X announcement reservation"
+  ],
+  "published": false
+}
