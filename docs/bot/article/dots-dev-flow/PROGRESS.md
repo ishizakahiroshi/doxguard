@@ -7,7 +7,12 @@
 
 固定猫素材 assets/mascot_cats.png の保存に使うクラウドブラウザの「Download raw file」操作が承認されませんでした。
 持ち主の操作が要る停止条件として停止しています。再試行・別経路での取得・素材の描き直しはしていません。
-承認依頼IDやelicitation IDはtool結果にありません。再開には、持ち主側でこの停止を解消する指示が必要です。
+承認依頼IDやelicitation IDはtool結果にありません。
+
+持ち主から再開用の猫PNGを受け取りましたが、同一性検証が不一致のためSTOPを維持します。
+受信実体: 1,485,776 bytes、git blob SHA `8345e00aac0e8d47667661059d8e4565e0b83d5f`。
+指定された実体: 1,485,826 bytes、git blob SHA `229e3a806e16cd636594704f91a193ac9b5c8fc8`。
+受信PNGは素材として使用していません。指定blobと一致する実体、または差し替えの明示指示が必要です。
 
 | 工程 | 状態 | 担当 | 証跡 / 次の一手 |
 |---|---|---|---|
@@ -34,3 +39,11 @@
 - エラー原文: `JavaScript execution did not receive approval`
 - 詳細: [src/receipt-stop.json](src/receipt-stop.json)
 - 依存の取得・pnpm実行・merge・投稿・他ディレクトリの変更は行っていない。
+
+### 再開用添付の検証
+
+- 指定の形式 `SHA1("blob " + byte length + NUL + bytes)` で計算。
+- 実測: 1,485,776 bytes。
+- 実測git blob SHA: `8345e00aac0e8d47667661059d8e4565e0b83d5f`。
+- 実測SHA-256: `070437a680ac11fa0beef6ac07eed1aa79ae9499656338d144ca14ba40379a8a`。
+- 指定blob SHAと不一致。制作を再開せず、STOPを維持。
