@@ -7,17 +7,19 @@ Review date: 2026-10-05 UTC. Reviewer did not implement the article or figures.
 - Repository: ishizakahiroshi/doxguard
 - Fixed baseline: bda21dd74172c5cc6e05d438b9a6b26f6079c4a5
 - Initially reviewed candidate: a159f0a370670817dab100203aef001f2ceda77a
+- Content and correction-delta review target: cca96448fa4e7d76290bdb187721c926771e0024
+- Scoped content/PNG decision at cca9644: PASS WITH DOCUMENTED LIMITATIONS; both low findings below resolved. No open blocking content/figure finding.
 - Scope: the complete baseline-to-candidate change, verified through GitHub compare. 44 files, all under docs/bot/article/si-domain/; 34 text files and 10 PNG files.
-- Initial result: no critical, high, or medium factual/content defect found. Two low-severity improvements were sent to the producer and await delta review below.
+- Initial result: no critical, high, or medium factual/content defect found. Two low-severity improvements were sent to the producer and resolved in the correction-delta review below.
 - This is not an unconditional end-to-end acceptance. Browser-rendered HTML overflow, the repository doxguard scan, final PR checks, and the local cat-overlay acceptance are not passed by this review.
 
 ## Findings
 
-### Low: reader-facing infographic points to an unlinked production file
+### Low, resolved at cca9644: reader-facing infographic points to an unlinked production file
 
 The footer of 02_infographic.png says that links and calculations are in the body and SOURCES.md. A note reader has no direct link to that production file. Replace the instruction with 「数値・リンク・算式は本文へ。」 while retaining the adjacent source names and the causation caveat. This does not change the numeric claims.
 
-### Low: update the WIPO citation to the current overview
+### Low, resolved at cca9644: update the WIPO citation to the current overview
 
 The cited WIPO Overview 3.0 page explicitly states that it has been superseded by 3.1. The current overview retains the relevant principle in section 3.1.1: resale for profit alone does not establish bad-faith targeting of a trademark. Update the draft, source ledger, and source generator to the current official URL and version. No legal conclusion about this particular holder should be added.
 
@@ -33,9 +35,9 @@ The GitHub tree for a159f0a was compared with local files using Git blob hashing
 ## Claim, source, and editorial checks
 
 - White House EO14434 and Federal Register document 2026-20321 were independently read. The signature date is 2026-09-29, publication is 2026-10-02, and the scope is executive-branch official communications and non-statutory documents, subject to law. Historical documents need not be rewritten. The existing AI definition initially applies; the science/technology adviser has 60 days to propose legislative language. The article does not turn the order into a worldwide/private-sector mandate or evidence that technical superintelligence exists.
-- Register.si's growth page and its official 200,000-domain statement were independently read. The statement supports pre-existing growth, extra interest from the naming debate, wholesale/retail distinctions, and caution about national profits. The archived chart8157 extract records August 3,515 and September 46,066. The article and figures consistently use monthly new registrations and 46,066 / 3,515 = 13.10554765, rounded to 13.1. September explicitly includes dates before the order. These are not active-site, profit, or resale counts. Fresh retrieval of the embedded raw chart was not completed by this reviewer; see limits.
+- Register.si's growth page and its official 200,000-domain statement were independently read. The statement supports pre-existing growth, extra interest from the naming debate, wholesale/retail distinctions, and caution about national profits. The archived chart8157 extract records August 3,515 and September 46,066. The article and figures consistently use monthly new registrations and 46,066 / 3,515 = 13.10554765, rounded to 13.1. September explicitly includes dates before the order. These are not active-site, profit, or resale counts. The reviewer subsequently parsed chart8157 from the already-saved official HTML and verified every monthly pair against the committed JSON, including these two months. This checks preserved primary evidence; fresh network reacquisition was not completed. See limits.
 - IANA's .si/.ai/.com records independently confirm their distinct TLDs and managers. spacexsi.com is outside .si registration totals.
-- The live sales landing page independently displayed $174,888 on review day. The article labels it a asking price and supplies the observation date; it does not invent a buyer, transaction, holder identity, or purpose. The committed RDAP excerpt states registration on 2025-07-25. The distinction between original registration and the current holder's acquisition date is preserved. Fresh RDAP retrieval was not completed by this reviewer; see limits.
+- The live sales landing page independently displayed $174,888 on review day. The article labels it an asking price and supplies the observation date; it does not invent a buyer, transaction, holder identity, or purpose. The committed RDAP excerpt states registration on 2025-07-25. The distinction between original registration and the current holder's acquisition date is preserved. Fresh RDAP retrieval was not completed by this reviewer; see limits.
 - Reuters via CNA independently confirms a stated intention to rename SpaceXAI to SpaceXSI and no completed account change/timeline at publication. Direct X page retrieval failed for this reviewer. The author's 「たけえ」 reaction is also supplied in the fixed FACTS instructions; no additional personal scene or activity is invented.
 - The government 2026 budget PDF was independently read at PDF pages 67 and 70, with corresponding archived table pixels inspected. The 2024 Actual column uses 104,253,510 / 469,861,457 EC dollars; 2025 End of Year Projection uses 219,220,239 / 560,360,763; 2026 Proposed Estimate uses 253,557,731 / 595,881,631. Independently recalculated shares are 22.2%, 39.1%, 42.6%. Neither forecasts nor recurrent-revenue denominators are relabeled as actuals or expenditure-budget totals.
 - The newer EC$230,499,740.50 cash-receipt report was independently read at Anguilla Focus. It remains explicitly secondary, and no unsupported actual-revenue percentage is computed from it. The older US$93 million/47% series is not used.
@@ -50,7 +52,7 @@ The GitHub tree for a159f0a was compared with local files using Git blob hashing
 All four final PNGs were opened with view_image and inspected at their actual 1600 × 900 dimensions. Japanese text and numbers are readable, with no apparent glyph corruption, clipping, missing artwork, recognizable real-person faces, or corporate logos.
 
 - 01_hero.png: warm teal/sand/coral palette, .ai sign and .si wave, no cat. The required bottom-right rectangle (1260,650)-(1600,900) is unobstructed and mechanically uniform in color. Cat overlay remains a local step.
-- 02_infographic.png: three distinct columns; government scope, 3,515 to 46,066, and 42.6% agree with the body. The forecast/denominator and no-confirmed-decline qualifiers are visible. The source-file pointer is the low finding above.
+- 02_infographic.png: three distinct columns; government scope, 3,515 to 46,066, and 42.6% agree with the body. The forecast/denominator and no-confirmed-decline qualifiers are visible. The source-file pointer was removed in the reviewed correction; the replacement points readers to the article body.
 - 03_illustration.png: anonymous illustrated observer; US$174,888 is explicitly a desired price, not a completed sale. The .com distinction, observation date, prior registration date, and uncertainty about the current holder are visible.
 - 04_fig.png: common zero-based 0-50,000 axis, equal bar heights, correctly proportional bar lengths, counts and month labels match the data, and the pre-order-period caveat is present. Footer is legible in the PNG despite its tight text box.
 
@@ -69,11 +71,23 @@ The draft has one H1, conversational H2 headings, short polite paragraphs, all f
 
 - Browser layout/overflow of the final HTML was not run. The producer reports a rejected local file URL; this review did not bypass it. PyMuPDF fitting and PNG pixel inspection are separate checks and do not count as browser overflow PASS.
 - The repository doxguard executable/Rust toolchain is not available in this artifact workspace. A limited structural secret/private-path scan passed; a private watchlist was neither obtained nor used. Repository CI must be checked for the final submitted head.
-- Fresh raw chart/RDAP read: a read-only urllib request group for the official chart page, Verisign RDAP, and sales page initially yielded no output, then write_stdin failed with “Unified exec process failed: automatic approval review was cancelled.” No reason classified it as missing authorization. No retry or alternate raw retrieval was attempted after that cancellation. The existing commit-bound chart/RDAP extracts were reviewed for consistency, but this is not an independently refreshed source-data capture. The sales price was separately visible in the already authorized web read.
+- Fresh raw chart/RDAP read: exec_command started a read-only urllib request group, yielded with no output, and the subsequent write_stdin failed with “Unified exec process failed: automatic approval review was cancelled.” It did not identify missing authorization or another substantive policy reason. The three exact targets were:
+  - https://www.register.si/en/news/follow-the-growth-of-si-domains/
+  - https://rdap.verisign.com/com/v1/domain/spacexsi.com
+  - https://spacexsi.com/
+  No retry or alternate raw retrieval was attempted after that cancellation. The producer and original research worker report successful original primary-source capture; that work is distinct from this reviewer's incomplete network reacquisition. At the producer's direction, the reviewer instead inspected already-saved evidence without network use. The complete chart8157 data array in saved official HTML matches the committed JSON. The source-hash representation was also independently resolved: the saved HTML has 62,224 raw bytes and SHA-256 4ab15bd4b3bf3c4adfb2e114524b5d49c71e14b87d79b384e7a746d5ed71a9ec. Python read_text().encode() normalizes six CRLF sequences, producing 62,218 bytes and SHA-256 7b5cd0934535d6678d7fd4e4c4af5fc04393e49571cf3df0668fedcbbecb0ac4. These identify the same capture with different newline representations. The producer has clarified the JSON key names for raw bytes and normalized newlines; both hashes and the full array were independently verified locally. No source-provenance discrepancy remains. The RDAP event excerpt remains original-capture evidence, not a newly fetched response. No contradictory fact was found. The sales price was independently visible through the authorized web read.
 - Direct X pages were unavailable to this reviewer; rename context was checked against Reuters/CNA, and the author's reaction against the fixed user-supplied FACTS. The producer's stated browser/oEmbed inspection is not counted as this reviewer's independent X inspection.
 - IMF 2026 was verified from official search-indexed text; direct open failed. The source ledger already discloses this.
 - The local cat overlay, local final acceptance, final Draft PR state and exact-head CI are later handoff checks. Publication remains unauthorized and outside this review.
 
 ## Delta review
 
-Pending producer's follow-up SHA for the two low-severity changes. No unconditional PASS for unrun checks is implied.
+GitHub compare a159f0a370670817dab100203aef001f2ceda77a to cca96448fa4e7d76290bdb187721c926771e0024 returned 12 changed files: one PNG, draft/SOURCES, the infographic text/HTML and generator, the source generator, reconciliation, render/validation JSON, browser inspection evidence, and the initial independent review report. The complete textual delta was read. The fixed-baseline scope is now 46 files (36 text, 10 PNG), still entirely inside the permitted directory. All 46 local blobs matched the revised GitHub tree before this report update.
+
+Both low findings are resolved. The article's only body edit is the WIPO URL; the current 3.1 source was independently verified. The infographic's footer now directs readers to the body, with all numerical labels and causation qualifications preserved. The revised 02_infographic.png was pixel-inspected with view_image. Its SHA-256 is 5ab49788909857d090a48de4c939679c399b9c590c6cd9fe165abf78d0c1b41d; the other three final PNG hashes are unchanged.
+
+The scoped validator and figure renderer were rerun in a fresh temporary copy of cca9644. All assertions passed and all four regenerated PNG hashes matched the revised candidate exactly. Body count remains 4,585 and X weighted count remains 195. Producer-reported browser inspection of committed PNGs was reviewed as evidence; it is not represented as HTML browser-layout validation or this reviewer's own browser execution.
+
+The reviewed article and final PNGs pass this scoped independent content/figure review with the explicitly recorded evidence and execution limits. No unconditional PASS is assigned to unrun browser HTML overflow, repository doxguard, exact-final-head CI, or local final acceptance. A subsequent commit containing only this report and submission metadata can be verified separately without reopening the unchanged article/PNG review.
+
+The final provenance-only metadata correction explicitly distinguishes raw-byte and newline-normalized SHA-256 values in si-monthly-primary-data.json. Both values were independently recomputed from the saved original HTML before submission; the monthly series is unchanged.

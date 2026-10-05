@@ -12,3 +12,6 @@ At commit a159f0a370670817dab100203aef001f2ceda77a, all four completed PNGs were
 A subsequent infographic footer copy edit removed the repository-specific SOURCES.md reference from the public image; it was regenerated and pixel-inspected locally. Source numbers, geometry and other images did not change.
 
 This verifies the PNG display, not HTML browser overflow. The attempted local file URL was rejected by browser URL policy. No bypass was attempted. The HTML labels were laid out with PyMuPDF HTML Story and checked for box fit; browser CSS rendering remains untested.
+
+The corrected infographic was also opened at the following reviewed content commit and pixel-inspected in the cloud browser. It displayed the revised footer correctly.
+https://github.com/ishizakahiroshi/doxguard/blob/cca96448fa4e7d76290bdb187721c926771e0024/docs/bot/article/si-domain/02_infographic.png

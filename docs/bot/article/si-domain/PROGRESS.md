@@ -21,7 +21,7 @@
 | 調査 | dots | checked | 原典25URLをSOURCESへ。財政の年度・実績/見込み・分母を区別 |
 | 本文 | dots | produced | 本文4585字、X告知重み195。数値と引用にURL |
 | 全4図版 | dots | produced | built-in imagegen素材3点＋HTML文字組版。4枚1600x900、画素自己検査済み |
-| 独立レビュー | 別担当 | pending | 成果物SHAと全差分を対象に実施予定 |
+| 独立レビュー | 別担当 | checked-with-limits | 全差分・図版・再描画を確認。軽微2件を修正、内容対象cca96448 |
 | 固定猫・最終検収 | 手元 | pending | 提出物回収後に実施 |
 | 媒体公開 | 未割当 | outside-scope | 今回は制作とDraft PRまで |
 
@@ -37,3 +37,18 @@
 - src/validation.jsonの機械検査PASS。4PNGの画素目視で日本語表示、数値、欠け、余白を確認。
 - ブラウザHTML overflow検査はfile URLポリシー拒否のため未実施。PyMuPDF枠内検査は実施。repoのdoxguard実行環境がなく、私有watchlistにもアクセスしない。限定的な秘密・私有パスの構造検査は実施した。
 - 次: この成果物SHAを対象に別担当が全差分・出典・4PNGを検査し、修正後にDraft PRを提出する。
+
+## 提出チェックポイント（2026-10-05 UTC）
+
+- Draft PR: https://github.com/ishizakahiroshi/doxguard/pull/7
+- 内容・図版の独立review対象SHA: cca96448fa4e7d76290bdb187721c926771e0024。src/independent-review.md。
+- 低severity2件（図中の出典案内、WIPO現行版リンク）は修正後に再レビュー済み。重大・高・中severityの指摘なし。
+- 本文4585字。URL・画像目印・フッター・空白を除外。空白込み4717字。X告知重み195。本文25出典。
+- 01_hero.png / 02_infographic.png / 03_illustration.png / 04_fig.png はすべて1600x900。生成元はbuilt-in imagegen素材3点、数値と日本語はHTML文字合成。figは一次データのコード描画。
+- 完成PNGは画素自己検査と独立目視、独立再描画ハッシュ一致を確認。GitHub HTTPS表示でdotクラウドブラウザのPNG目視も実施。修正後infographicもブラウザ確認済み。HTMLのブラウザoverflowは未実施のまま。
+- 保存済み公式chart8157の全月次配列を別担当が独立照合済み。raw bytes/LF正規化のハッシュ表記差も確認・明記。独立ネット再取得のキャンセルを成功と数えない。
+- 4指示ファイルREADME/FACTS/BRIEF/REVIEWは固定指示SHAのバイト列へ戻し、不要な末尾空行の差分を除去。
+- この後の差分はレビュー報告・提出状態・証跡メタデータのみ。独立担当が最終headを照合する。最終headとCI結果はPRと同じ案件会話で報告する（看板の自己SHA参照はしない）。
+- PR作成によってValidateが実行対象になる。最終headのCIは進行中として別途確認し、未実行をPASSにしない。
+
+未完了: 手元の固定猫合成と最終検収。HTMLブラウザoverflow、独立担当の原データネット再取得は制限付き。ローカルrepo doxguardは未実施、PR CIで構造scanを確認する。媒体・サイト・SNS公開、merge、ドメイン取得・問い合わせは未実施かつ今回の範囲外。

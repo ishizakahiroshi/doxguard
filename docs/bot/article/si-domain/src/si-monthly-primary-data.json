@@ -5,7 +5,6 @@
   "chart_id": 8157,
   "data_path": "window.visualizer.charts[visualizer-8157-524619589].data",
   "source_line_at_capture": 468,
-  "source_sha256": "7b5cd0934535d6678d7fd4e4c4af5fc04393e49571cf3df0668fedcbbecb0ac4",
   "series": [
     [
       "09-2025",
@@ -60,5 +59,8 @@
       46066
     ]
   ],
-  "warning": "Chart container suffix and line number may change; locate chart id 8157 and Monthly registrations. Only data excerpt preserved; no nonces or cookies."
+  "warning": "Chart container suffix and line number may change; locate chart id 8157 and Monthly registrations. Only data excerpt preserved; no nonces or cookies.",
+  "source_sha256_normalized_newlines": "7b5cd0934535d6678d7fd4e4c4af5fc04393e49571cf3df0668fedcbbecb0ac4",
+  "source_sha256_raw_bytes": "4ab15bd4b3bf3c4adfb2e114524b5d49c71e14b87d79b384e7a746d5ed71a9ec",
+  "hash_note": "Original source_sha256 was computed after Python read_text normalized CRLF to LF. Both forms are now explicitly labeled; no separate capture implied."
 }
