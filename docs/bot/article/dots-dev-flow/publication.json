@@ -1,0 +1,43 @@
+{
+  "task": "20261005-002",
+  "article_key": "dots-dev-flow-20261005",
+  "authoring": "dots",
+  "sequel_of": "dots-slack-instruction-20261004",
+  "scope": [
+    "zenn",
+    "qiita",
+    "note"
+  ],
+  "site_mirror": false,
+  "x_announcement": false,
+  "publication_owner": "手元",
+  "media": {
+    "zenn": {
+      "state": "prepared",
+      "slug": null,
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false,
+      "image_destination": "/images/"
+    },
+    "qiita": {
+      "state": "prepared",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false
+    },
+    "note": {
+      "state": "prepared",
+      "url": null,
+      "published": false,
+      "display_verified": false,
+      "publication_attempted_by_dots": false
+    }
+  },
+  "instruction_commit": null,
+  "source_branch": "dots/article-dots-dev-flow-16-production",
+  "source_commit": null,
+  "delivery_assets": []
+}
