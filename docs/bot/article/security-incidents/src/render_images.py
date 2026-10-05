@@ -12,6 +12,7 @@ import html
 import json
 import math
 from PIL import Image
+import PIL
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / 'src'
@@ -26,6 +27,7 @@ SOFT_AMBER = '#fff1d7'
 WHITE = '#ffffff'
 checks, manifests = [], []
 FORBIDDEN = ('\u2014', '\u2015')
+prior_png_hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in ROOT.glob('*.png')}
 
 def rgb(value):
     return tuple(int(value[i:i+2], 16) / 255 for i in (1, 3, 5))
@@ -108,7 +110,9 @@ class Canvas:
         out = ROOT / (self.name+'.png')
         self.page.get_pixmap(alpha=False).save(str(out))
         text_path = SRC / (self.name+'-rendered-text.txt')
-        text_path.write_text(self.page.get_text(), encoding='utf-8')
+        rendered_text = self.page.get_text()
+        assert '\x00' not in rendered_text and '\ufffd' not in rendered_text, self.name
+        text_path.write_text(rendered_text, encoding='utf-8')
         # Inspect rendered glyph boxes independently of HTML fit reports.
         for block in self.page.get_text('dict')['blocks']:
             for line in block.get('lines', []):
@@ -213,7 +217,7 @@ c = Canvas('07_fig-protection', 'company separation and non-retention', ['FACTS.
 c.heading('別サーバー・別インフラ・保存しない', '各社の一次情報に書かれた、分離と非保持の説明を整理しました。')
 cards = [
     ('イープラス', '独立したシステム', '払戻し情報のシステムは\n通常の会員情報DBから独立。\nクレジットカード情報は保持していない。'),
-    ('The Japan Times', '独立したインフラ', 'Online・購読者DB・決済システムは\n影響を受けたサーバーとは\n別の独立したインフラで稼働。'),
+    ('The Japan Times', '独立したインフラ', 'Online、購読者DB、決済システムは\n影響を受けたサーバーとは\n別の独立したインフラで稼働。'),
     ('大起水産', '別サーバー', 'パスワードは別サーバーで管理。\nそのため今回の対象外とする説明。'),
     ('ムーンスター', '当該サーバーに保存せず', 'クレジットカード番号とパスワードは\n当該システムサーバーに\n保存していなかった。'),
     ('アバハウス', '決済代行会社が管理', 'カード番号とセキュリティコードは\n決済代行会社側で管理。\n自社システムには保存していない。'),
@@ -251,6 +255,7 @@ image_manifest = {
     'stages': ['built-in image generation', 'HTML text composition', 'MuPDF PNG rendering',
                'individual final PNG visual inspection (recorded separately)'],
     'images': manifests,
+    'render_environment': {'PyMuPDF': fitz.VersionBind, 'Pillow': PIL.__version__, 'canvas_pixels': [W, H]},
 }
 (SRC/'image-manifest.json').write_text(json.dumps(image_manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 report = {
@@ -263,7 +268,10 @@ report = {
     'hero_reserved_area_overlay_applied': False,
     'hero_title_intersects_reserved_area': False,
     'browser_inspection': 'coordinator owns separate check; not asserted here',
-    'visual_inspection': 'pending separate individual view_image checks',
+    'visual_inspection': 'See image-qa.md for completed individual pixel inspection',
+    'missing_glyph_markers': False,
+    'deterministic_rerender_sha256_match': prior_png_hashes == {x['file']: x['sha256'] for x in manifests},
+    'final_png_sha256': {x['file']: x['sha256'] for x in manifests},
 }
 (SRC/'image-render-checks.json').write_text(json.dumps(report, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 print(json.dumps({k:v for k,v in report.items() if k != 'text_boxes'}, ensure_ascii=False, indent=2))

@@ -1,5 +1,5 @@
 {
-  "body_characters": 9386,
+  "body_characters": 9416,
   "body_count_method": "Title, URLs, image-marker blocks, fixed footer, whitespace excluded. Headings, image explanations and X quote included.",
   "x_post_weight": 218,
   "checks": {
@@ -19,6 +19,7 @@
     "all_1600_900": true,
     "manifest_matches": true,
     "image_no_forbidden_dash": true,
+    "image_no_missing_glyph_marker": true,
     "x_post_url_placeholder": true,
     "x_weight_under_280": true,
     "scope_only": true,
@@ -79,7 +80,7 @@
         1600,
         900
       ],
-      "sha256": "c23fae79eb6ff33996617ce26384ab54efab875b1ee8a66db3cf5c67b6a9d512"
+      "sha256": "9d1e391dabacb8b144d39de7ba6be68bc7a644ecdd5a30d2cef1366f8e25bb98"
     },
     {
       "file": "08_illustration-response.png",

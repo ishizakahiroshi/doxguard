@@ -1,0 +1,84 @@
+{
+  "checked_at_utc": "2026-10-05T18:42:54Z",
+  "content_commit": "8ce746fc2d250e0b18c513450cc58c62412b4423",
+  "browser": "production cloud Chrome",
+  "method": "Opened each public HTTPS PNG, inspected its browser screenshot, and read the loaded image natural dimensions from the DOM",
+  "images": [
+    {
+      "file": "01_hero.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/01_hero.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "25e5ff81b1b3a1e934dfb0174306a507a013df02ea46f58f793cd464696e6f5a"
+    },
+    {
+      "file": "02_infographic.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/02_infographic.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "d51f0def6a94e5adf2c5d50dfd85dfe0665e098fd3fc59c7bde5c7033d69ca0c"
+    },
+    {
+      "file": "03_illustration-news.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/03_illustration-news.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "4aac4585fdb7cb7331a4a147cf536933d096c412039e8e33658a754ef97bd5bf"
+    },
+    {
+      "file": "04_fig-counts.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/04_fig-counts.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "2397e8f452afad8e4f957cf47ba6a13e1213f2e196f4059a56d73353e287ef80"
+    },
+    {
+      "file": "05_fig-separation.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/05_fig-separation.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "202ffded35f81c8c10e5e2bda09f06e8dff990aa8f27726dee0cab22c319c572"
+    },
+    {
+      "file": "06_illustration-storage.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/06_illustration-storage.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "d20b6561dcb279bb0ff035f3a707dc9541ec96e1dd6af4abc71d507c62da4b75"
+    },
+    {
+      "file": "07_fig-protection.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/07_fig-protection.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "c23fae79eb6ff33996617ce26384ab54efab875b1ee8a66db3cf5c67b6a9d512"
+    },
+    {
+      "file": "08_illustration-response.png",
+      "url": "https://raw.githubusercontent.com/ishizakahiroshi/doxguard/8ce746fc2d250e0b18c513450cc58c62412b4423/docs/bot/article/security-incidents/08_illustration-response.png",
+      "natural_width": 1600,
+      "natural_height": 900,
+      "complete": true,
+      "visual_check": "Cloud browser screenshot individually inspected; legible text, no missing art or clipping",
+      "artifact_sha256": "78f10800a5fb953464da5ba955edbfca57576f51f4a1f34d0d10c8dba97f59b1"
+    }
+  ],
+  "not_equivalent_to": "HTML browser render or HTML overflow test",
+  "html_browser_overflow": "blocked: local file protocol rejected by browser URL policy; not bypassed",
+  "screenshots": "Visually inspected during the browser session; screenshot binaries not retained in repository",
+  "result": "8/8 public PNG browser displays checked"
+}

@@ -51,6 +51,7 @@ check('all_1600_900', all(x['size'] == [1600,900] for x in images))
 manifest = json.loads((ROOT/'src/image-manifest.json').read_text())
 check('manifest_matches', all(next(m['sha256'] for m in manifest['images'] if m['file'] == im['file']) == im['sha256'] for im in images))
 check('image_no_forbidden_dash', all(not re.search('[\u2014\u2015]', p.read_text()) for p in (ROOT/'src').glob('*-rendered-text.txt')))
+check('image_no_missing_glyph_marker', all(not re.search('[\x00\ufffd]', p.read_text()) for p in (ROOT/'src').glob('*-rendered-text.txt')))
 check('x_post_url_placeholder', (ROOT/'x-post.md').read_text().rstrip().endswith('<公開後に差し込み>'))
 x_copy=(ROOT/'x-post.md').read_text().replace('<公開後に差し込み>', '').strip()
 x_weight=sum(1 if ord(c)<0x1100 else 2 for c in x_copy)+1+23
