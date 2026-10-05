@@ -6,7 +6,7 @@ entries=[
 ('https://www.whitehouse.gov/presidential-actions/2026/09/inaugurating-the-era-of-super-intelligence/','大統領令14434、署名日2026-09-29、行政部門の用語と定義','一次: 米政府原文','Sec.2-3。法律の許す範囲、法定外文書、歴史的文書の変更不要、当面は現行法のAI定義、補佐官の60日以内の立法文言提案。民間改名や技術的超知能の達成を示さない。'),
 ('https://www.federalregister.gov/documents/2026/10/02/2026-20321/inaugurating-the-era-of-super-intelligence','法的原文の掲載','一次: Federal Register','2026-10-02公示、91 FR 63129-63130、文書2026-20321。White House原文と一致。'),
 ('https://www.register.si/en/news/follow-the-growth-of-si-domains/','.si月別新規登録 2026年8月3,515件、9月46,066件','一次: 運営レジストリ','Monthly registrations、chart8157の埋込data配列を直接抽出。src/si-monthly-primary-data.json。46,066÷3,515=13.1055倍。登録総数や稼働サイト数とは異なる。'),
-('https://www.register.si/obvestila/stevilo-domen-pod-si-preseglo-200-000/','登録は命名前から増加、AI命名の議論も関心を刺激','一次: 運営レジストリ声明','冒頭段落と価格・役割の説明。日付表示なし。数か月の増加、最近の命名議論による追加の関心、卸料金と小売価格の違い、国の巨額利益という推測への注意。'),
+('https://www.register.si/obvestila/stevilo-domen-pod-si-preseglo-200-000/','夏前にも登録への関心、AI命名の議論も追加の刺激','一次: 運営レジストリ声明','冒頭段落と価格・役割の説明。日付表示なし。数か月の関心と最近の命名議論による追加の刺激。月次は5月6342、6月6938、7月3109と上下し、単調増加ではない、卸料金と小売価格の違い、国の巨額利益という推測への注意。'),
 ('https://www.iana.org/domains/root/db/si.html','.siはスロベニアの国別ドメイン、管理はARNES','一次: IANA委任記録','ccTLDと管理主体を確認。登録急増や財政への利益はこの資料からは導かない。'),
 ('https://www.register.si/en/blogs/trademarks-geographical-indications-and-internet-domains/','.siの先着順登録と商標権の区別','一次: レジストリ解説','空いているドメインの登録と、商標など第三者の権利は別。一般的制度説明にのみ使用。'),
 ('https://x.com/elonmusk/status/2106672603536712025','Muskの改名意思表明','一次: 本人の公開投稿','2026-10-04、変更する意向への返答。X公式oEmbedで投稿を確認。改名完了、法的名称変更、時期までは確認できない。'),
@@ -21,9 +21,9 @@ entries=[
 ('https://www.iana.org/domains/root/db/ai.html','.aiはアンギラのccTLD','一次: IANA委任記録','管理主体Government of Anguillaを確認。英国海外領土という位置づけはIMF資料を併用。'),
 ('https://www.gov.ai/document/2026-03-18-011937_1898942126.pdf','アンギラ2024実績/2025年末見込/2026予算案の金額と経常歳入比','一次: アンギラ政府2026予算書','冊子55/58頁、PDF67/70頁。登録収入104253510/219220239/253557731 EC$、経常歳入469861457/560360763/595881631 EC$。同年度・同じ列で22.2/39.1/42.6%を独自計算。src/anguilla-primary-data.jsonと表の画素証跡。2025・2026は確定実績と扱わない。'),
 ('https://anguillafocus.com/ai-domain-surge-brings-ec230m-windfall-to-anguilla-in-2025/','2025年の入金収入EC$230.5mという追加報道','二次: Anguilla Focus、財務省提供データによる取材','2026-03-25、04-01更新。EC$230499740.50。各月は前月売上の受取。政府原表の直接公開URLと同一期間の確定歳入分母は未確認。予算書の年末見込みと分離。'),
-('https://www.imf.org/-/media/files/publications/cr/2024/english/1eccea2024001.pdf','英国海外領土、2022年約5%、2023年EC$87m・歳入2割強、更新収入','一次: IMF2024 ECCU報告','Annex IV Box1。2022年と2023年の政府収入比を確認。予測と実績を混ぜず、2024時点の登録更新モデルを現在価格の断定には使わない。'),
+('https://www.imf.org/-/media/files/publications/cr/2024/english/1eccea2024001.pdf','英国海外領土、2022年約5%、2023年EC$87m・歳入2割強、更新収入','一次: IMF2024 ECCU報告','冊子48頁/PDF54頁、Annex IV Box1。2022年と2023年の政府収入比を確認。予測と実績を混ぜず、2024時点の登録更新モデルを現在価格の断定には使わない。'),
 ('https://www.elibrary.imf.org/view/journals/002/2026/085/article-A001-en.xml','経常歳入約40%への依存、安定化基金等の備え','一次: IMF2026 ECCU報告','2026-04-28、AnnexII para6。検索取得本文で確認。直接openは403。基金、ガバナンス、インフラ・人的資本、多角化は提案。設立済みとは書かない。'),
-('https://www.gov.ai/document/2024-09-09-022435_1388763330.pdf','政府が.ai単独依存を警戒し、空港等へ投資する考え','一次: アンギラ政府2024予算書','冊子23頁の予算演説。変化する外部の需要への慎重姿勢。今回の呼称変更より前の認識。'),
+('https://www.gov.ai/document/2024-09-09-022435_1388763330.pdf','政府が.ai単独依存を警戒し、空港等へ投資する考え','一次: アンギラ政府2024予算書','冊子23頁/PDF34頁、section3.9の予算演説。変化する外部の需要への慎重姿勢。今回の呼称変更より前の認識。'),
 ('https://www.identity.digital/newsroom/ai-completes-a-historic-migration-to-the-identity-digital-platform','.aiの運用基盤移行','一次: 当事業者の公式発表','2025-01-15。Identity Digitalの基盤で運用開始。企業の説明として扱い、政府の所有権移転とは書かない。'),
 ('https://www.identity.digital/newsroom/anguilla-and-identity-digital-boost-ai-revenue-with-auctions-and-dropzone-features','失効ドメインのオークション等による収益化','一次: 当事業者の公式発表','2025-03-27。登録・更新以外の仕組みを説明。厳密な収益配分率・原契約は未確認。'),
 ('https://note.com/ishizakahiroshi/n/nf583d58bb374','サービス名とURLを分ける書き手の関連記事','一次: 書き手の公開記事','本文を読み、ブランドと技術的な住所を分離しURLを安定させる内容を確認。'),
@@ -38,12 +38,15 @@ for i,(u,claim,kind,scope) in enumerate([e for e in entries if e[0] in used],1):
  s+=f'### S{i:02d}: {claim}\n\n- URL: {u}\n- 種別: {kind}\n- 確認日: 2026-10-05\n- 確認できた範囲: {scope}\n\n'
 s+='''## 図版との対応
 
-- 01_hero.png: 概念図。事実の予測値を表示しない。猫なし、右下340x250pxは手元合成用の無地。
+- 01_hero.png: 概念図。事実の予測値を表示しない。猫なし、右下340x250pxは海・波の背景を連続させ、文字・主要物を置かない。単色矩形を重ねない。
 - 02_infographic.png: EO14434、Register.si月次登録、政府2026予算書の42.6%（経常歳入分母、予算案）を同期。図のつながりは減収等の因果を意味しない。
 - 03_illustration.png: 2026-10-05の販売希望額174,888米ドルとRDAP登録日。特定の購入者・所有者を描かない。
 - 04_fig.png: Register.si月次新規登録3,515と46,066、ゼロ起点の共通軸、独自計算13.1倍。原データはsrc/si-monthly-primary-data.json。
 
 ## 調べたが本文の数値には採用しなかった資料
+
+- IMF2026公式検索取得本文: 直接原典は403で、読者が原文の該当箇所を確認できないため、追加レビューで本文から撤回。約40%・安定化基金提案をこの原典で断定する記述は使わず、直接読めたIMF2024と政府予算演説の範囲へ縮小。https://www.elibrary.imf.org/view/journals/002/2026/085/article-A001-en.xml
+- Muskの返信のみでは対象名称が分からないため、本文ではReuters/CNAの報道に明示的に帰属。単独返信URLは本文出典から外す。https://x.com/elonmusk/status/2106672603536712025
 
 - White House fact sheet（一次、2026-09-29）: 命令本文を優先。https://www.whitehouse.gov/fact-sheets/2026/09/fact-sheet-president-donald-j-trump-inaugurates-the-era-of-super-intelligence/
 - GovInfo法的掲載PDF（一次）: Federal Register本文と照合。https://www.govinfo.gov/content/pkg/FR-2026-10-02/pdf/2026-20321.pdf

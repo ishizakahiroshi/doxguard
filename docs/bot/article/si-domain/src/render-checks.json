@@ -244,7 +244,7 @@
     },
     {
       "figure": "02_infographic",
-      "text": "2026年8月 → 9月、約13.1倍\n増加は命令より前から\nすべてを改名だけの結果にしない",
+      "text": "2026年8月 → 9月、約13.1倍\n夏前にも登録の増加\nすべてを改名だけの結果にしない",
       "box": [
         606,
         703,
@@ -608,13 +608,13 @@
       "file": "01_hero.png",
       "width": 1600,
       "height": 900,
-      "sha256": "91ab075f62788d16132671203ac442024c82ee70b51a2989359f9f1e71ef2d12"
+      "sha256": "31531738b507d159f9ceee88387b38467eeedb2865f70cfa3b546af7ef769afd"
     },
     {
       "file": "02_infographic.png",
       "width": 1600,
       "height": 900,
-      "sha256": "5ab49788909857d090a48de4c939679c399b9c590c6cd9fe165abf78d0c1b41d"
+      "sha256": "bffbc53bde426627d4b7dbc2858aeb1a65feb999275aeaa69f602b2a38b4791c"
     },
     {
       "file": "03_illustration.png",
@@ -635,9 +635,10 @@
     1600,
     900
   ],
-  "hero_reserved_color_count": 1,
-  "browser_inspection": "All four prior-composition PNGs at a159f0a visually inspected in dot cloud browser via GitHub. Local HTML rendering/overflow not tested: file URL denied by browser policy.",
-  "visual_inspection": "All final PNGs inspected with view_image; infographic minor footer correction rechecked on 2026-10-05.",
+  "hero_reserved_color_count": 37563,
+  "hero_reservation": "Natural continuous sea/wave background; no text, major foreground objects, cat, or flat-color overlay",
+  "browser_inspection": "not performed on final HTML; local file URL rejected by browser URL policy",
+  "visual_inspection": "Revised hero and infographic inspected locally: ocean continues through reserved corner, no opaque rectangle; numbers and other PNGs unchanged. Independent exact-SHA regression pending.",
   "graph_data": {
     "2026-08": 3515,
     "2026-09": 46066,

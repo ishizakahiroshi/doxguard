@@ -26,7 +26,7 @@ assert all(u in src for u in urls)
 assert all(l==l.rstrip() and ' ' not in l for l in lines if l.startswith('https://'))
 assert draft.count('# ')==len([l for l in lines if l.startswith('#') and not l.startswith('#AI')])
 assert all(q in body for q in ['箱物行政','AIでええやん','転売ヤー','悲しい事態'])
-assert '完了を確認した話ではありません' in body
+assert '改名完了を確認した話ではありません' in body or '完了を確認した話ではありません' in body
 assert '2025年7月25日' in body
 assert '42.6' in body and '39.1' in body and '22.2' in body
 assert '2億3050万' in body
@@ -37,7 +37,11 @@ main=post[:-len('<公開後に差し込み>')]
 weight=sum(1 if ord(c)<128 else 2 for c in main)+23
 assert weight<=280,weight
 checks=json.loads((R/'src/render-checks.json').read_text());assert checks['all_text_fits']
-im=Image.open(R/'01_hero.png');assert len(im.crop((1260,650,1600,900)).getcolors(85000))==1
+im=Image.open(R/'01_hero.png'); reserved=im.crop((1260,650,1600,900)); colors=reserved.getcolors(85000); assert colors is None or len(colors)>100
+for box in checks['text_boxes']:
+ if box['figure']=='01_hero':
+  x,y,x2,y2=box['box'];assert x2<=1260 or y2<=650 or x>=1600 or y>=900
+assert "c.rect((1260,650,1600,900)" not in (R/'src/render_figures.py').read_text()
 assert set(p.name for p in R.iterdir() if p.is_file())<={'README.md','FACTS.md','BRIEF.md','REVIEW.md','PROGRESS.md','publication.json','draft.md','x-post.md','SOURCES.md','01_hero.png','02_infographic.png','03_illustration.png','04_fig.png'}
 # Public editorial inputs and source URLs are allowed; this is a limited structural scan.
 private_hits=[]
@@ -48,6 +52,6 @@ for p in R.rglob('*'):
   for pattern in patterns:
    if re.search(pattern,t):private_hits.append({'file':str(p.relative_to(R)),'pattern':pattern})
 assert not private_hits,private_hits
-report={'result':'PASS','body_chars_excluding_urls_markers_footer_whitespace':len(re.sub(r'\s','',clean)),'body_chars_excluding_urls_markers_footer':len(clean.strip()),'x_post_weight':weight,'pngs':[{'file':f,'dimensions':list(Image.open(R/f).size),'sha256':hashlib.sha256((R/f).read_bytes()).hexdigest()} for f in files],'cited_unique_urls':len(urls),'source_coverage':True,'hero_blank_region':[1260,650,1600,900],'text_render_boxes_fit':True,'private_pattern_scan':'limited structural patterns passed; no private watchlist accessed','browser_html_overflow':'NOT RUN: file URL denied by browser policy','repository_doxguard':'NOT RUN: no repository executable/toolchain in this artifact workspace','independent_review':'pending'}
+report={'result':'PASS','body_chars_excluding_urls_markers_footer_whitespace':len(re.sub(r'\s','',clean)),'body_chars_excluding_urls_markers_footer':len(clean.strip()),'x_post_weight':weight,'pngs':[{'file':f,'dimensions':list(Image.open(R/f).size),'sha256':hashlib.sha256((R/f).read_bytes()).hexdigest()} for f in files],'cited_unique_urls':len(urls),'source_coverage':True,'hero_reserved_region':[1260,650,1600,900],'hero_reserved_background':'continuous sea/waves; no solid rectangle, text or major object (pixel review required)','text_render_boxes_fit':True,'private_pattern_scan':'limited structural patterns passed; no private watchlist accessed','browser_html_overflow':'NOT RUN: file URL denied by browser policy','repository_doxguard':'NOT RUN: no repository executable/toolchain in this artifact workspace','independent_review':'See independent-review.md; this script does not assess review status'}
 (R/'src/validation.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps(report,ensure_ascii=False,indent=2))

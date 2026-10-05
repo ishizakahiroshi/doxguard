@@ -2,7 +2,7 @@
 
 生成元: built-in imagegen。課金API・認証設定は使用していない。生成された文字なし素材をそのまま保持し、完成PNGはHTML文字と図形をPyMuPDFで組版した。数字を生成画像に描かせていない。
 
-## hero
+## hero（初回。右下矩形の指定は追加レビューで廃止）
 
 Use case: illustration-story. Create a polished editorial illustration for a Japanese opinion article hero, 1600 by 900 landscape composition. Warm Caribbean teal sea, sandy beige small island on left, white soft sky, coral accent. A simple small island sign/buoy near left-middle faces a gentle incoming wave on middle-right. Painterly paper-cut editorial style, restrained sophistication, not photorealistic. Absolutely no text, no letters, no numbers, no logos, no flags, no people, no cats. Leave upper 35% mostly plain warm off-white sky for Japanese headline later. Leave bottom-right rectangle 340 by 250 pixels completely blank flat pale sand beige for a user overlay; no objects, details, shadows, waves there. Do not depict destruction or disaster. The wave is mild and abstract. Full-bleed wide 16:9 picture. Output the asset only.
 
@@ -14,3 +14,7 @@ Use case: illustration-story. A single wide strip illustration for the middle of
 
 Use case: illustration-story. Editorial illustration for a Japanese domain-name opinion article. 1600x900 landscape. A faceless anonymous adult, seen from behind/side, freezes in surprise in front of a computer displaying a gigantic BLANK price tag on a generic domain sales page. Head/shoulders on left, large screen toward center-right. Calm humorous moment, not frantic or dramatic. Warm paper-cut watercolor editorial style, Caribbean teal, sandy beige, warm white, small coral accent, muted sophisticated palette. Preserve lots of plain warm-white space in upper one quarter and a blank broad white price-card surface in screen for later HTML text overlay. Absolutely no text, letters, numbers, symbols, identifiable face, corporate logos, real people, cats or watermark. Do not draw website UI labels. The price tag is visibly large but entirely blank.
 
+
+## heroの採用版
+
+初回プロンプトの右下を単色にする指示は採用版には適用しない。追加レビューにより画像編集で海を復元し、HTMLの単色矩形も除去。現在のhero-art-generated.pngは修正版。正確な編集プロンプトと確認方法はuser-review-revisions.mdを参照。

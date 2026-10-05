@@ -1,12 +1,12 @@
 {
   "article_key": "20261005-si-domain",
   "platform": "note",
-  "status": "draft-pr-submitted",
+  "status": "draft-pr-revision-awaiting-review",
   "publication_authorized": false,
   "url": null,
-  "source_commit": "cca96448fa4e7d76290bdb187721c926771e0024",
-  "reviewed_commit": "cca96448fa4e7d76290bdb187721c926771e0024",
+  "source_commit": null,
+  "reviewed_commit": null,
   "hero_cat_overlay": "pending-local",
-  "visual_acceptance": "png-reviewed-local-final-pending",
+  "visual_acceptance": "revision-pending",
   "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/7"
 }

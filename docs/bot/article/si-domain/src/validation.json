@@ -1,7 +1,7 @@
 {
   "result": "PASS",
-  "body_chars_excluding_urls_markers_footer_whitespace": 4585,
-  "body_chars_excluding_urls_markers_footer": 4717,
+  "body_chars_excluding_urls_markers_footer_whitespace": 4625,
+  "body_chars_excluding_urls_markers_footer": 4759,
   "x_post_weight": 195,
   "pngs": [
     {
@@ -10,7 +10,7 @@
         1600,
         900
       ],
-      "sha256": "91ab075f62788d16132671203ac442024c82ee70b51a2989359f9f1e71ef2d12"
+      "sha256": "31531738b507d159f9ceee88387b38467eeedb2865f70cfa3b546af7ef769afd"
     },
     {
       "file": "02_infographic.png",
@@ -18,7 +18,7 @@
         1600,
         900
       ],
-      "sha256": "5ab49788909857d090a48de4c939679c399b9c590c6cd9fe165abf78d0c1b41d"
+      "sha256": "bffbc53bde426627d4b7dbc2858aeb1a65feb999275aeaa69f602b2a38b4791c"
     },
     {
       "file": "04_fig.png",
@@ -37,17 +37,18 @@
       "sha256": "4b91feb2d681d460adde82ca1f031ce046de801251e1b829b4cfd83a5193d533"
     }
   ],
-  "cited_unique_urls": 25,
+  "cited_unique_urls": 23,
   "source_coverage": true,
-  "hero_blank_region": [
+  "hero_reserved_region": [
     1260,
     650,
     1600,
     900
   ],
+  "hero_reserved_background": "continuous sea/waves; no solid rectangle, text or major object (pixel review required)",
   "text_render_boxes_fit": true,
   "private_pattern_scan": "limited structural patterns passed; no private watchlist accessed",
   "browser_html_overflow": "NOT RUN: file URL denied by browser policy",
   "repository_doxguard": "NOT RUN: no repository executable/toolchain in this artifact workspace",
-  "independent_review": "pending"
+  "independent_review": "See independent-review.md; this script does not assess review status"
 }

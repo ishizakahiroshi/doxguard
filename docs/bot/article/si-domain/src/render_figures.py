@@ -53,7 +53,6 @@ c.text((446,339,1515,399),'.aiと.si、呼び名の先にある暮らし',32,MUT
 c.rect((413,531,589,627),'#fffaf1')
 c.text((427,539,578,619),'.ai',62,GREEN,700,'center')
 c.text((977,505,1200,610),'.si',68,'#ffffff',700,'center')
-c.rect((1260,650,1600,900),'#fce8c6')
 c.save()
 
 c=Canvas('02_infographic')
@@ -68,7 +67,7 @@ c.text((84,633,481,696),'AI → SI',47,NAVY,700,'center')
 c.text((86,703,480,794),'2026年9月29日の大統領令\n行政部門の用語が対象\n民間への一律の改名義務ではない',22,MUTED,400,'center')
 c.rect((585,620,1019,808),'#ffffff')
 c.text((604,633,1001,696),'3,515 → 46,066件',35,NAVY,700,'center')
-c.text((606,703,1000,794),'2026年8月 → 9月、約13.1倍\n増加は命令より前から\nすべてを改名だけの結果にしない',22,MUTED,400,'center')
+c.text((606,703,1000,794),'2026年8月 → 9月、約13.1倍\n夏前にも登録の増加\nすべてを改名だけの結果にしない',22,MUTED,400,'center')
 c.rect((1105,620,1540,808),'#ffffff')
 c.text((1124,633,1521,696),'経常歳入の42.6%',37,NAVY,700,'center')
 c.text((1126,703,1520,794),'アンギラの2026年予算案\nドメイン収入 ÷ 経常歳入\n改名後の.ai減収は未確認',22,MUTED,400,'center')
@@ -111,6 +110,6 @@ for name in ['01_hero','02_infographic','03_illustration','04_fig']:
  f=ROOT/(name+'.png'); im=Image.open(f)
  sources.append(dict(file=f.name,width=im.width,height=im.height,sha256=hashlib.sha256(f.read_bytes()).hexdigest()))
 im=Image.open(ROOT/'01_hero.png');colors=im.crop((1260,650,1600,900)).getcolors(340*250)
-report={'renderer':'PyMuPDF HTML Story + native geometry; not browser rendering','all_text_fits':all(x['fits'] and x['in_canvas'] for x in checks),'text_boxes':checks,'images':sources,'hero_reserved_rect':[1260,650,1600,900],'hero_reserved_color_count':len(colors) if colors else '>85000','browser_inspection':'not performed on final HTML; local file URL rejected by browser URL policy','visual_inspection':'pending separate pixel review','graph_data':{'2026-08':3515,'2026-09':46066,'ratio':46066/3515,'axis_zero':0,'axis_max':50000},'finance_ratio_2026':253557731/595881631*100}
+report={'renderer':'PyMuPDF HTML Story + native geometry; not browser rendering','all_text_fits':all(x['fits'] and x['in_canvas'] for x in checks),'text_boxes':checks,'images':sources,'hero_reserved_rect':[1260,650,1600,900],'hero_reserved_color_count':len(colors) if colors else '>85000','hero_reservation':'Natural continuous sea/wave background; no text, major foreground objects, cat, or flat-color overlay','browser_inspection':'not performed on final HTML; local file URL rejected by browser URL policy','visual_inspection':'pending separate pixel review','graph_data':{'2026-08':3515,'2026-09':46066,'ratio':46066/3515,'axis_zero':0,'axis_max':50000},'finance_ratio_2026':253557731/595881631*100}
 (SRC/'render-checks.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
 print(json.dumps({k:v for k,v in report.items() if k!='text_boxes'},ensure_ascii=False,indent=2))
