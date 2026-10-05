@@ -52,6 +52,6 @@
 
 - Draft PR: https://github.com/ishizakahiroshi/doxguard/pull/4
 - 原稿・図版の内容commit: `98b0dc0a7d616776a4cbe116f4826e72450d75ca`。publication.jsonのsource_commitはこの内容commitを指し、後続のreceipt更新とは分ける。
-- PR作成後のAPI確認ではworkflow run、commit status、check runは各0件。CI成功とは報告しない。
+- PR作成直後はチェック0件だったが、その後Validateが起動。commit `583921f26e6bcc889bbd55b2964c63dc10b4f9db` のCI 5ジョブすべて成功を確認。 [実行記録](https://github.com/ishizakahiroshi/doxguard/actions/runs/37250134058)、詳細はsrc/ci-receipt.json。
 - 内容commitのremote treeと、最終5PNG・生成元3PNGのgit blob SHAとサイズの一致を確認。
 - 手元検収の指摘が届いたら、同じ成果branchで対応する。公開・mergeは手元の担当。

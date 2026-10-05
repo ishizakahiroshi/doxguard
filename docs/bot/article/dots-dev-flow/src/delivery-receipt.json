@@ -11,10 +11,13 @@
   "inherited_base_difference": ".omitnix/index.json differs between develop and fixed instruction commit; untouched by production",
   "remote_image_blobs_verified": 8,
   "ci_observation": {
-    "workflow_runs": 0,
-    "statuses": 0,
-    "check_runs": 0,
-    "success_claimed": false
+    "checked_commit": "583921f26e6bcc889bbd55b2964c63dc10b4f9db",
+    "workflow_run": 37250134058,
+    "workflow": "Validate",
+    "conclusion": "success",
+    "successful_jobs": 5,
+    "failed_jobs": 0,
+    "receipt": "src/ci-receipt.json"
   },
   "merge_attempted": false,
   "publication_attempted": false,

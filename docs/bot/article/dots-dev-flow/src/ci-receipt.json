@@ -1,0 +1,44 @@
+{
+  "task": "20261005-002",
+  "checked_commit": "583921f26e6bcc889bbd55b2964c63dc10b4f9db",
+  "workflow": "Validate",
+  "run_id": 37250134058,
+  "run_url": "https://github.com/ishizakahiroshi/doxguard/actions/runs/37250134058",
+  "status": "completed",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "id": 111575916599,
+      "name": "Rust quality",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 111575916627,
+      "name": "Test (windows-latest)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 111575916645,
+      "name": "Test (macos-latest)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 111575916648,
+      "name": "Test (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 111575916790,
+      "name": "Package and dogfood",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "local_dependency_fetch": false,
+  "local_pnpm_execution": false,
+  "receipt_commit_note": "This receipt records the checked commit above. Later receipt-only commits are checked separately before final delivery."
+}

@@ -111,5 +111,6 @@
   "source_commit_semantics": "Commit containing the reviewed article and image bundle; later receipt-only commits may follow.",
   "draft_pr_url": "https://github.com/ishizakahiroshi/doxguard/pull/4",
   "draft_pr_number": 4,
-  "delivery_state": "awaiting_hand_review"
+  "delivery_state": "awaiting_hand_review",
+  "ci_receipt": "src/ci-receipt.json"
 }
