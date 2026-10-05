@@ -11,7 +11,7 @@
 | 本文 | dots | submitted | 表示相当3,921字。4画像の相対リンクと直後説明あり |
 | 全4図版 | dots | submitted-with-limit | 1600×900の4PNG、HTML組版、実ピクセル自己目視。ブラウザ検査は未実施 |
 | 独立レビュー | dots別担当 | pass-with-limits | 6bf525e6c74406336c2d641ca298f2fffb361caaの全差分・36ファイル・完成PNGを確認。修正必須findingなし |
-| 固定猫・最終検収 | 手元 | passed | 固定猫合成・4画像目視・54文字枠DOMあふれなし。公開表示は別途確認中 |
+| 固定猫・最終検収 | 手元 | passed | 固定猫合成・4画像目視・54文字枠DOMあふれなし。公開表示はdotsのブラウザで確認済み |
 | 媒体公開 | 手元 | published-http | 残り工程のユーザー承認後、Qiita単一記事と本サイト紹介を公開。X予約は未実施 |
 
 ## 開始時の実試験
@@ -51,5 +51,5 @@
 - Qiita: https://qiita.com/ishizakahiroshi/items/609786acea2d1502382b 。単一記事workflowの診断、本投稿、同一IDの末尾リンク・AI画像開示・作者紹介更新が成功。
 - 最終公開入力SHA: 229d38a35b8a88c0e145268713b89668ff2c807a。実本文と4画像URLを照合済み。
 - 紹介: https://ishizakahiroshi.com/articles/2026/2026-10-05_disk-build-storage/ 。HTTP200、canonical、4図版、sitemap、一覧APIを確認。サイトCI/deploy成功。
-- 公開ページのブラウザ検収はdotsが読み取り専用で進行中。
+- 公開ページのブラウザ検収はdotsが読み取り専用で完了。Qiita/紹介の各4画像、末尾注記、作者紹介、リンク遷移を実画面で確認し、欠落・横はみ出しなしと報告。
 - X候補は公開URLを差込み217/280でlint合格。手元ブラウザ接続エラーのため予約未実施。予約済みと扱わず、公開済みの保管段階に保持する。
