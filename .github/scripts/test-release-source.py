@@ -1,5 +1,6 @@
 """Offline, synthetic release identity checks. No GitHub or npm writes."""
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -44,4 +45,22 @@ with tempfile.TemporaryDirectory(prefix="release-identity-") as temporary:
     assert workflow.count("ref: ${{ needs.resolve-source.outputs.commit }}") == 4
     assert "needs.resolve-source.result == 'success'" in workflow
     assert "SOURCE_SHA: ${{ steps.source.outputs.commit }}" in workflow
-    print("7 release identity cases and 4 workflow binding checks passed")
+    validate = (ROOT / ".github/workflows/validate.yml").read_text()
+    expression = "github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha"
+    assert expression in validate
+    assert validate.count("ref: ${{ env.EXPECTED_SOURCE_SHA }}") == 3
+    blocks = re.findall(
+        r"      - name: Verify checked-out source identity\n"
+        r"        shell: bash\n        run: \|\n((?:          .*\n)+)", validate)
+    assert len(blocks) == 3
+    for block in blocks:
+        script = "\n".join(line[10:] for line in block.splitlines())
+        # Execute each actual job guard, not a model of its text. The fixture's
+        # checked-out B differs from the purported successful API head A.
+        for expected, passed in [(a, False), (b, True)]:
+            result = subprocess.run(["bash", "-c", script], cwd=root,
+                                    env=dict(env, EXPECTED_SOURCE_SHA=expected),
+                                    capture_output=True, text=True, timeout=20)
+            assert (result.returncode == 0) == passed, result.stderr
+            assert result.stdout == (f"VALIDATED_SOURCE_SHA={b}\n" if passed else "")
+    print("7 release identity cases, 4 release bindings, and 6 actual Validate guard controls passed")

@@ -562,3 +562,101 @@ fn explicit_empty_hooks_setting_is_preserved() {
     assert!(run(cwd, &["install-hooks"]).status.success());
     assert_eq!(git(cwd, &["config", "--get", "core.hooksPath"]), "\n");
 }
+
+#[cfg(unix)]
+#[test]
+fn literal_backslash_does_not_alias_default_exempt_directory() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd);
+    config(cwd, "SyntheticNeedle\n");
+    let path = cwd.join("doxguard.config.json");
+    let mut settings: serde_json::Value =
+        serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    settings["includeDefaultExemptPaths"] = serde_json::json!(true);
+    fs::write(path, serde_json::to_vec(&settings).unwrap()).unwrap();
+    fs::create_dir(cwd.join("tests")).unwrap();
+    fs::write(cwd.join("tests/policy.md"), "safe alias").unwrap();
+    fs::write(cwd.join("tests\\policy.md"), "SyntheticNeedle").unwrap();
+    git(cwd, &["add", "--", "tests/policy.md", "tests\\policy.md"]);
+    for mode in ["--staged", "--diff", "--all-tracked"] {
+        let report = blocked(cwd, &[mode]);
+        assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+        assert_eq!(report["hits"][0]["file"], "tests\\policy.md");
+        assert_eq!(report["scanned"], 1);
+        assert_eq!(report["exempt_or_skipped"], 1);
+        assert_eq!(report["coverage_skips"], 0);
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn literal_backslash_does_not_alias_custom_explicit_exemption() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd);
+    config(cwd, "SyntheticNeedle\n");
+    let path = cwd.join("doxguard.config.json");
+    let mut settings: serde_json::Value =
+        serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    settings["exemptPaths"] = serde_json::json!(["tests/"]);
+    fs::write(path, serde_json::to_vec(&settings).unwrap()).unwrap();
+    fs::create_dir(cwd.join("tests")).unwrap();
+    fs::write(cwd.join("tests/policy.md"), "safe alias").unwrap();
+    fs::write(cwd.join("tests\\policy.md"), "SyntheticNeedle").unwrap();
+    let report = blocked(cwd, &["--path", "tests\\policy.md"]);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+    assert_eq!(report["scanned"], 1);
+    let output = run(
+        cwd,
+        &[
+            "scan",
+            "--path",
+            "tests/policy.md",
+            "--block",
+            "--strict",
+            "--format",
+            "json",
+        ],
+    );
+    assert!(output.status.success());
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["scanned"], 0);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 0);
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_exemption_accepts_native_and_git_separators() {
+    use doxguard::scan::path_is_exempt;
+    assert!(path_is_exempt("tests\\policy.md", "tests/"));
+    assert!(path_is_exempt("tests/policy.md", "tests\\"));
+    assert!(path_is_exempt(
+        ".github\\workflows\\doxguard.yml",
+        ".github/workflows/doxguard"
+    ));
+}
+
+#[cfg(unix)]
+#[test]
+fn literal_backslash_does_not_alias_default_lockfile_basename() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd);
+    config(cwd, "SyntheticNeedle\n");
+    let path = cwd.join("doxguard.config.json");
+    let mut settings: serde_json::Value =
+        serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    settings["includeDefaultExemptPaths"] = serde_json::json!(true);
+    fs::write(path, serde_json::to_vec(&settings).unwrap()).unwrap();
+    fs::write(cwd.join("Cargo.lock"), "safe real lockfile").unwrap();
+    fs::write(cwd.join("nested\\Cargo.lock"), "SyntheticNeedle").unwrap();
+    git(cwd, &["add", "--", "Cargo.lock", "nested\\Cargo.lock"]);
+    for mode in ["--staged", "--diff", "--all-tracked"] {
+        let report = blocked(cwd, &[mode]);
+        assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+        assert_eq!(report["hits"][0]["file"], "nested\\Cargo.lock");
+        assert_eq!(report["scanned"], 1);
+        assert_eq!(report["exempt_or_skipped"], 1);
+    }
+}

@@ -243,9 +243,9 @@ fn is_link(metadata: &fs::Metadata) -> bool {
 /// failures are errors. Links are retained as coverage skips, never followed.
 pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Result<Vec<String>> {
     fn visit(path: &Path, cwd: &Path, config: &Config, files: &mut HashSet<PathBuf>) -> Result<()> {
-        let display = normalize_path(path.to_str().context("scan path was not UTF-8")?);
+        let native = path.to_str().context("scan path was not UTF-8")?;
         let meta = fs::symlink_metadata(path).context("cannot inspect requested scan path")?;
-        if configured_path_exempt(&display, cwd, config) {
+        if configured_path_exempt(native, cwd, config) {
             return Ok(());
         }
         if meta.is_dir() && !is_link(&meta) {
@@ -325,15 +325,24 @@ pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool 
     })
 }
 
-fn normalize_path(path: &str) -> String {
-    path.replace('\\', "/")
+fn native_exemption_path(path: &str) -> String {
+    // Only Windows treats both slashes as separators. On Unix a backslash is
+    // part of a filename, including during exemption and lockfile matching.
+    #[cfg(windows)]
+    {
+        path.replace('\\', "/")
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_owned()
+    }
 }
 
 /// Path exemption uses path-boundary matching, not raw substring contains.
 /// Empty / blank exempt entries never match (and are rejected at config load).
 pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
-    let path = normalize_path(path);
-    let exempt = normalize_path(exempt.trim());
+    let path = native_exemption_path(path);
+    let exempt = native_exemption_path(exempt.trim());
     if exempt.is_empty() || exempt == "." || exempt == "/" {
         return false;
     }
@@ -361,11 +370,10 @@ pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
 }
 
 fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eligibility {
-    let normalized = normalize_path(path);
     if (mode != ScanMode::Paths
         && config
             .all_exempt_paths()
-            .any(|exempt| path_is_exempt(&normalized, exempt)))
+            .any(|exempt| path_is_exempt(path, exempt)))
         || (mode == ScanMode::Paths && configured_path_exempt(path, cwd, config))
     {
         return Eligibility::QuietSkip;
@@ -376,14 +384,14 @@ fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eli
             _ => return Eligibility::CoverageSkip,
         }
     }
-    let lower = normalized.to_ascii_lowercase();
+    let lower = path.to_ascii_lowercase();
     if BINARY_EXTENSIONS
         .iter()
         .any(|extension| lower.ends_with(extension))
     {
         return Eligibility::QuietSkip;
     }
-    let filename = Path::new(&normalized)
+    let filename = Path::new(path)
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or_default();
