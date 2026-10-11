@@ -9,16 +9,30 @@ on:
 permissions:
   contents: read
 
+env:
+  EXPECTED_SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   quality:
     name: Rust quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+      - name: Verify checked-out source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual=$(git rev-parse HEAD)
+          test "$actual" = "$EXPECTED_SOURCE_SHA"
+          printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Release identity regression checks
+        run: python3 .github/scripts/test-release-source.py
       - name: Format
         run: cargo fmt --all -- --check
       - name: Clippy
@@ -41,10 +55,26 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+      - name: Verify checked-out source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual=$(git rev-parse HEAD)
+          test "$actual" = "$EXPECTED_SOURCE_SHA"
+          printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
       - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: ${{ matrix.os }}
+      - name: Old-candidate native positive controls
+        if: ${{ runner.os == 'Linux' }}
+        run: python3 .github/scripts/check-native-controls.py
       - name: Test
         run: cargo test --all-targets --locked
 
@@ -53,11 +83,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_SOURCE_SHA }}
+      - name: Verify checked-out source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual=$(git rev-parse HEAD)
+          test "$actual" = "$EXPECTED_SOURCE_SHA"
+          printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
       - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Build release binary
         run: cargo build --release --locked
       - name: Scan repository (structural patterns only, strict)

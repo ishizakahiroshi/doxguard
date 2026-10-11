@@ -22,8 +22,38 @@ env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
+  resolve-source:
+    name: Resolve release source
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bind tag and event commit
+        id: source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+          NPM_ONLY: ${{ inputs.npm_only }}
+        run: bash .github/scripts/resolve-release-source.sh
+      - name: Require a green Validate run for the resolved source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.commit }}
+        run: |
+          set -euo pipefail
+          conclusion=$(gh run list --workflow Validate --limit 50 --json headSha,conclusion \
+            --jq ".[] | select(.headSha == \"$SOURCE_SHA\") | .conclusion" | head -n 1)
+          test "$conclusion" = success
+
   preflight:
     name: Release preflight
+    needs: resolve-source
     if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ubuntu-latest
     permissions:
@@ -31,11 +61,13 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Verify version single-source agreement
         run: |
           set -euo pipefail
@@ -46,14 +78,6 @@ jobs:
           for manifest in npm/platforms/*/package.json; do
             test "$(node -p "require('./$manifest').version")" = "$version"
           done
-      - name: Require a green Validate run for this commit
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          conclusion=$(gh run list --workflow Validate --limit 50 --json headSha,conclusion \
-            --jq ".[] | select(.headSha == \"$GITHUB_SHA\") | .conclusion" | head -n 1)
-          test "$conclusion" = success
       - name: Test
         run: cargo test --all-targets --locked
       - name: Structural content gate
@@ -61,7 +85,7 @@ jobs:
 
   build:
     name: Build ${{ matrix.slug }}
-    needs: preflight
+    needs: [resolve-source, preflight]
     if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -94,6 +118,8 @@ jobs:
             binary: doxguard
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: dtolnay/rust-toolchain@1.85.0
         with:
           targets: ${{ matrix.target }}
@@ -121,19 +147,23 @@ jobs:
 
   github-release:
     name: GitHub Release
-    needs: build
+    needs: [resolve-source, build]
     if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: actions/download-artifact@v4
         with:
           pattern: native-*
           path: artifacts
           merge-multiple: true
       - name: Create archives and checksums
+        env:
+          SOURCE_SHA: ${{ needs.resolve-source.outputs.commit }}
         run: |
           set -euo pipefail
           mkdir release
@@ -145,7 +175,8 @@ jobs:
               tar -C "$dir" -czf "release/doxguard-${slug}.tar.gz" doxguard
             fi
           done
-          (cd release && sha256sum doxguard-* > SHA256SUMS.txt)
+          printf '%s\n' "$SOURCE_SHA" > release/SOURCE_COMMIT.txt
+          (cd release && sha256sum doxguard-* SOURCE_COMMIT.txt > SHA256SUMS.txt)
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -168,8 +199,8 @@ jobs:
 
   npm-publish:
     name: Publish npm packages
-    needs: [build, github-release]
-    if: ${{ always() && (needs.github-release.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.npm_only)) }}
+    needs: [resolve-source, build, github-release]
+    if: ${{ always() && needs.resolve-source.result == 'success' && (needs.github-release.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.npm_only)) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -189,22 +220,28 @@ jobs:
       - uses: actions/checkout@v4
         if: ${{ steps.npm-token.outputs.available == 'true' }}
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: actions/setup-node@v4
         if: ${{ steps.npm-token.outputs.available == 'true' }}
         with:
-          node-version: "20"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
       - name: Download and verify canonical release
         if: ${{ steps.npm-token.outputs.available == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ needs.resolve-source.outputs.commit }}
         run: |
           set -euo pipefail
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]
           mkdir canonical artifacts
           gh release download "$RELEASE_TAG" --dir canonical
           (cd canonical && sha256sum --check SHA256SUMS.txt)
+          if [[ -f canonical/SOURCE_COMMIT.txt ]]; then
+            test "$(cat canonical/SOURCE_COMMIT.txt)" = "$SOURCE_SHA"
+          else
+            echo 'Legacy canonical release: source marker unavailable; provenance is unverified.' >&2
+          fi
           for slug in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
             mkdir -p "artifacts/$slug"
             tar -C "artifacts/$slug" -xzf "canonical/doxguard-$slug.tar.gz"

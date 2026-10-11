@@ -1,6 +1,7 @@
 use std::{
     collections::HashSet,
     fs,
+    io::Read,
     path::{Path, PathBuf},
     process::Command,
     sync::OnceLock,
@@ -20,6 +21,7 @@ pub enum ScanMode {
     Diff,
     AllTracked,
     Packaged,
+    Paths,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -35,12 +37,13 @@ pub struct ScanHit {
     #[serde(rename = "line_number")]
     pub line_number: usize,
     pub matched: String,
+    pub variable: Option<String>,
     pub source: String,
     pub kind: HitKind,
     pub suggestion: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ScanResult {
     pub mode: ScanMode,
     pub scanned: usize,
@@ -69,6 +72,8 @@ enum Eligibility {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ContentLoad {
     Text(String),
+    /// Preserve ASCII findings in non-UTF-8 data without claiming full coverage.
+    PartialText(String, &'static str),
     CoverageSkip(&'static str),
 }
 
@@ -141,13 +146,15 @@ fn run_git(args: &[&str], cwd: &Path) -> Result<String> {
     run_command(git_program()?, &full, cwd, &[])
 }
 
-fn lines(output: String) -> Vec<String> {
-    output
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
+fn nul_paths(output: String) -> Result<Vec<String>> {
+    if !output.is_empty() && !output.ends_with('\0') {
+        bail!("Git file list was not NUL terminated");
+    }
+    Ok(output
+        .split('\0')
+        .filter(|path| !path.is_empty())
         .map(str::to_owned)
-        .collect()
+        .collect())
 }
 
 fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
@@ -165,6 +172,18 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
     let packages = packages
         .as_array()
         .ok_or_else(|| anyhow!("npm pack did not return a package array"))?;
+    let root_manifest: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(cwd.join("package.json")).context("cannot read package root")?,
+    )?;
+    if packages.len() != 1
+        || packages[0].get("name") != root_manifest.get("name")
+        || packages[0].get("version") != root_manifest.get("version")
+        || root_manifest.get("workspaces").is_some()
+    {
+        bail!(
+            "workspace or multi-package scanning is unsupported; scan each package from its own root"
+        );
+    }
     let mut paths = Vec::new();
     let mut seen = HashSet::new();
     for package in packages {
@@ -187,17 +206,84 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
 
 pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
     match mode {
-        ScanMode::Staged => Ok(lines(run_git(
-            &["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        ScanMode::Staged => nul_paths(run_git(
+            &[
+                "diff",
+                "--cached",
+                "--name-only",
+                "-z",
+                "--diff-filter=ACMRT",
+            ],
             cwd,
-        )?)),
-        ScanMode::Diff => Ok(lines(run_git(
-            &["diff", "--name-only", "--diff-filter=ACMR", "HEAD"],
+        )?),
+        ScanMode::Diff => nul_paths(run_git(
+            &["diff", "--name-only", "-z", "--diff-filter=ACMRT", "HEAD"],
             cwd,
-        )?)),
-        ScanMode::AllTracked => Ok(lines(run_git(&["ls-files"], cwd)?)),
+        )?),
+        ScanMode::AllTracked => nul_paths(run_git(&["ls-files", "-z"], cwd)?),
         ScanMode::Packaged => packaged_files(cwd),
+        ScanMode::Paths => bail!("path mode requires --path or --path-from"),
     }
+}
+
+fn is_link(metadata: &fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        // Junctions are reparse points too; never recursively follow them.
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        metadata.file_type().is_symlink()
+    }
+}
+
+/// Expand literal paths outside git. Explicit missing paths and enumeration
+/// failures are errors. Links are retained as coverage skips, never followed.
+pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Result<Vec<String>> {
+    fn visit(path: &Path, cwd: &Path, config: &Config, files: &mut HashSet<PathBuf>) -> Result<()> {
+        let native = path.to_str().context("scan path was not UTF-8")?;
+        let meta = fs::symlink_metadata(path).context("cannot inspect requested scan path")?;
+        if configured_path_exempt(native, cwd, config) {
+            return Ok(());
+        }
+        if meta.is_dir() && !is_link(&meta) {
+            for entry in fs::read_dir(path).context("cannot enumerate scan directory")? {
+                visit(
+                    &entry.context("cannot read scan directory entry")?.path(),
+                    cwd,
+                    config,
+                    files,
+                )?;
+            }
+        } else {
+            files.insert(path.to_path_buf());
+        }
+        Ok(())
+    }
+    if roots.is_empty() {
+        bail!("path scan requires at least one non-empty path");
+    }
+    let mut files = HashSet::new();
+    for root in roots {
+        if root.as_os_str().is_empty() {
+            bail!("scan paths must not be empty");
+        }
+        // Keep native path semantics: collapsing a symlink/.. changes its target.
+        let path = cwd.join(root);
+        visit(&path, cwd, config, &mut files)?;
+    }
+    let mut files: Vec<_> = files
+        .into_iter()
+        .map(|path| {
+            path.into_os_string()
+                .into_string()
+                .map_err(|_| anyhow!("scan path was not UTF-8"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    files.sort();
+    Ok(files)
 }
 
 fn directive_regex() -> &'static Regex {
@@ -211,6 +297,9 @@ fn directive_regex() -> &'static Regex {
 }
 
 pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool {
+    if config.allow.disallow_inline_allow {
+        return false;
+    }
     directive_regex().captures_iter(line).any(|capture| {
         let Some(target) = capture.get(1) else {
             // Bare `doxguard: allow` — optional hard-off for CI / --strict.
@@ -236,15 +325,24 @@ pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool 
     })
 }
 
-fn normalize_path(path: &str) -> String {
-    path.replace('\\', "/")
+fn native_exemption_path(path: &str) -> String {
+    // Only Windows treats both slashes as separators. On Unix a backslash is
+    // part of a filename, including during exemption and lockfile matching.
+    #[cfg(windows)]
+    {
+        path.replace('\\', "/")
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_owned()
+    }
 }
 
 /// Path exemption uses path-boundary matching, not raw substring contains.
 /// Empty / blank exempt entries never match (and are rejected at config load).
 pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
-    let path = normalize_path(path);
-    let exempt = normalize_path(exempt.trim());
+    let path = native_exemption_path(path);
+    let exempt = native_exemption_path(exempt.trim());
     if exempt.is_empty() || exempt == "." || exempt == "/" {
         return false;
     }
@@ -272,25 +370,35 @@ pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
 }
 
 fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eligibility {
-    let normalized = normalize_path(path);
-    if config
-        .all_exempt_paths()
-        .any(|exempt| path_is_exempt(&normalized, exempt))
+    if (mode != ScanMode::Paths
+        && config
+            .all_exempt_paths()
+            .any(|exempt| path_is_exempt(path, exempt)))
+        || (mode == ScanMode::Paths && configured_path_exempt(path, cwd, config))
     {
         return Eligibility::QuietSkip;
     }
-    let lower = normalized.to_ascii_lowercase();
+    if mode == ScanMode::Paths {
+        match fs::symlink_metadata(cwd.join(path)) {
+            Ok(meta) if !is_link(&meta) && meta.is_file() => {}
+            _ => return Eligibility::CoverageSkip,
+        }
+    }
+    let lower = path.to_ascii_lowercase();
     if BINARY_EXTENSIONS
         .iter()
         .any(|extension| lower.ends_with(extension))
     {
         return Eligibility::QuietSkip;
     }
-    let filename = Path::new(&normalized)
+    let filename = Path::new(path)
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or_default();
-    if SKIP_FILENAMES.contains(&filename) {
+    if mode != ScanMode::Paths
+        && config.include_default_exempt_paths
+        && SKIP_FILENAMES.contains(&filename)
+    {
         return Eligibility::QuietSkip;
     }
     // Staged mode reads index blobs; worktree size/symlink checks would false-skip.
@@ -300,18 +408,29 @@ fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eli
     let joined = cwd.join(path);
     let metadata = match fs::symlink_metadata(&joined) {
         Ok(metadata) => metadata,
-        Err(_) => return Eligibility::QuietSkip,
+        Err(_) => return Eligibility::CoverageSkip,
     };
-    if metadata.file_type().is_symlink() {
+    if is_link(&metadata) {
         return Eligibility::CoverageSkip;
     }
     if !metadata.is_file() {
-        return Eligibility::QuietSkip;
+        return Eligibility::CoverageSkip;
     }
     if metadata.len() > config.max_file_size {
         return Eligibility::CoverageSkip;
     }
     Eligibility::Scan
+}
+
+fn configured_path_exempt(path: &str, cwd: &Path, config: &Config) -> bool {
+    let relative = Path::new(path)
+        .strip_prefix(cwd)
+        .ok()
+        .and_then(Path::to_str);
+    config.exempt_paths.iter().any(|exempt| {
+        path_is_exempt(path, exempt)
+            || relative.is_some_and(|relative| path_is_exempt(relative, exempt))
+    })
 }
 
 const STAGED_BLOB_MAX_BYTES: u64 = 16 * 1024 * 1024;
@@ -324,15 +443,41 @@ fn read_scan_content(
 ) -> Result<ContentLoad> {
     if mode == ScanMode::Staged {
         // Index blob, not worktree — pre-commit must gate what will be committed.
-        let spec = format!(":{path}");
-        let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
-        // Ask for the blob size first so an oversize blob is never loaded.
-        if let Ok(size) = run_git(&["cat-file", "-s", &spec], cwd) {
-            if size.trim().parse::<u64>().is_ok_and(|size| size > limit) {
-                return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
-            }
+        let literal = format!(":(literal){path}");
+        let listing = match run_git(&["ls-files", "--stage", "-z", "--", &literal], cwd) {
+            Ok(listing) => listing,
+            Err(_) => return Ok(ContentLoad::CoverageSkip("unreadable staged entry")),
+        };
+        let mut entries = listing.split('\0').filter(|entry| !entry.is_empty());
+        let entry = entries.next().unwrap_or_default();
+        let Some((header, entry_path)) = entry.split_once('\t') else {
+            return Ok(ContentLoad::CoverageSkip("missing staged entry"));
+        };
+        let fields: Vec<_> = header.split_whitespace().collect();
+        if entries.next().is_some()
+            || entry_path != path
+            || fields.len() != 3
+            || !matches!(fields[0], "100644" | "100755")
+            || fields[2] != "0"
+            || !matches!(fields[1].len(), 40 | 64)
+            || !fields[1].bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Ok(ContentLoad::CoverageSkip(
+                "non-regular or unmerged staged entry",
+            ));
         }
-        match run_git(&["show", &spec], cwd) {
+        // Bind type, size and contents to the same immutable index object.
+        let oid = fields[1];
+        let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
+        let size = run_git(&["cat-file", "-s", oid], cwd)
+            .ok()
+            .and_then(|size| size.trim().parse::<u64>().ok());
+        if size.is_none_or(|size| size > limit) {
+            return Ok(ContentLoad::CoverageSkip(
+                "unreadable or oversize staged blob",
+            ));
+        }
+        match run_git(&["cat-file", "blob", oid], cwd) {
             Ok(content) => {
                 if content.len() as u64 > limit {
                     return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
@@ -344,14 +489,44 @@ fn read_scan_content(
             )),
         }
     } else {
-        match fs::read_to_string(cwd.join(path)) {
-            Ok(content) => Ok(ContentLoad::Text(content)),
-            Err(error) if error.kind() == std::io::ErrorKind::InvalidData => {
-                Ok(ContentLoad::CoverageSkip("non-UTF-8 content"))
-            }
-            Err(error) => Err(error).with_context(|| format!("failed to read {path}")),
+        let file = match fs::File::open(cwd.join(path)) {
+            Ok(file) => file,
+            Err(_) => return Ok(ContentLoad::CoverageSkip("unreadable content")),
+        };
+        let mut bytes = Vec::new();
+        if file
+            .take(max_file_size.saturating_add(1))
+            .read_to_end(&mut bytes)
+            .is_err()
+        {
+            return Ok(ContentLoad::CoverageSkip("unreadable content"));
         }
+        if bytes.len() as u64 > max_file_size {
+            return Ok(ContentLoad::CoverageSkip("oversize content"));
+        }
+        Ok(match String::from_utf8(bytes) {
+            Ok(content) => ContentLoad::Text(content),
+            Err(error) if mode == ScanMode::Paths => ContentLoad::PartialText(
+                String::from_utf8_lossy(error.as_bytes()).into_owned(),
+                "non-UTF-8 content",
+            ),
+            Err(_) => ContentLoad::CoverageSkip("non-UTF-8 content"),
+        })
     }
+}
+
+fn variable_at(line: &str, start: usize) -> Option<String> {
+    static KEY: OnceLock<Regex> = OnceLock::new();
+    let regex = KEY.get_or_init(|| Regex::new(
+        r#"(?:^|[\s{,;])(?:\$?(?:env:|script:|global:)?)?["']?([A-Za-z_][A-Za-z0-9_.-]*)["']?\s*[:=]\s*"#
+    ).expect("static key regex"));
+    let capture = regex.captures_iter(&line[..start]).last()?;
+    let after = &line[capture.get(0)?.end()..start];
+    // A key is useful only when the match is in its value; reject prose/URLs.
+    if after.contains([';', ',', '{', '}']) || after.starts_with("//") {
+        return None;
+    }
+    Some(capture.get(1)?.as_str().to_owned())
 }
 
 fn watchlist_hits(
@@ -374,6 +549,7 @@ fn watchlist_hits(
             line_number,
             // Slice the original line so the report keeps its casing even when
             // the haystack was lowercased (ASCII lowering preserves offsets).
+            variable: variable_at(line, span.start),
             matched: line[span].to_owned(),
             source: item.source.clone(),
             kind: HitKind::Watchlist,
@@ -395,43 +571,47 @@ fn scan_file(
     matcher: &WatchlistMatcher,
     patterns: &[StructuralPattern],
 ) -> Result<FileScanOutcome> {
-    match read_scan_content(mode, path, cwd, config.max_file_size)? {
-        ContentLoad::CoverageSkip(reason) => Ok(FileScanOutcome {
-            hits: Vec::new(),
-            coverage_skip: Some(reason),
-        }),
-        ContentLoad::Text(content) => {
-            let mut hits = Vec::new();
-            for (index, line) in content.lines().enumerate() {
-                let line_number = index + 1;
-                hits.extend(watchlist_hits(line, path, line_number, matcher, config));
-                for pattern in patterns {
-                    let mut seen = HashSet::new();
-                    for found in pattern.regex.find_iter(line) {
-                        let matched = found.as_str();
-                        if !seen.insert(matched)
-                            || pattern.is_allowed(matched, config)
-                            || allowed_by_directive(line, matched, config)
-                        {
-                            continue;
-                        }
-                        hits.push(ScanHit {
-                            file: path.to_owned(),
-                            line_number,
-                            matched: matched.to_owned(),
-                            source: format!("structural: {}", pattern.name),
-                            kind: HitKind::Structural,
-                            suggestion: pattern.suggestion.clone(),
-                        });
-                    }
+    let (content, coverage_skip) = match read_scan_content(mode, path, cwd, config.max_file_size)? {
+        ContentLoad::CoverageSkip(reason) => {
+            return Ok(FileScanOutcome {
+                hits: Vec::new(),
+                coverage_skip: Some(reason),
+            });
+        }
+        ContentLoad::Text(content) => (content, None),
+        ContentLoad::PartialText(content, reason) => (content, Some(reason)),
+    };
+    let mut hits = Vec::new();
+    for (index, line) in content.lines().enumerate() {
+        let line_number = index + 1;
+        hits.extend(watchlist_hits(line, path, line_number, matcher, config));
+        for pattern in patterns {
+            let mut seen = HashSet::new();
+            for found in pattern.regex.find_iter(line) {
+                let matched = found.as_str();
+                if !pattern.valid_span(line, found.range())
+                    || pattern.is_allowed(matched, config)
+                    || allowed_by_directive(line, matched, config)
+                    || !seen.insert(matched)
+                {
+                    continue;
                 }
+                hits.push(ScanHit {
+                    file: path.to_owned(),
+                    line_number,
+                    matched: matched.to_owned(),
+                    variable: variable_at(line, found.start()),
+                    source: format!("structural: {}", pattern.name),
+                    kind: HitKind::Structural,
+                    suggestion: pattern.suggestion.clone(),
+                });
             }
-            Ok(FileScanOutcome {
-                hits,
-                coverage_skip: None,
-            })
         }
     }
+    Ok(FileScanOutcome {
+        hits,
+        coverage_skip,
+    })
 }
 
 pub fn scan_paths(
@@ -456,7 +636,7 @@ pub fn scan_paths(
                 let reason = {
                     let joined = cwd.join(&path);
                     if let Ok(meta) = fs::symlink_metadata(&joined) {
-                        if meta.file_type().is_symlink() {
+                        if is_link(&meta) {
                             "symlink"
                         } else if meta.len() > config.max_file_size {
                             "oversize"
