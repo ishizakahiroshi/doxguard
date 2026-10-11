@@ -2,6 +2,20 @@
 
 All notable changes to doxguard are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Opt-in allowlist checks for domains, all IPv4 addresses, and private repository paths.
+- Exact/CIDR IPv4 allowances shared with the existing RFC1918 check.
+- Literal `--path` and UTF-8 `--path-from` scans outside git, with missing-path errors and coverage accounting for directory links and junctions.
+- Instruction-profile controls to disable every inline allow directive and the built-in repository/lockfile exemptions, while preserving existing defaults.
+- Opt-in `requireWatchlists` to reject unresolved or missing watchlist sources.
+
+### Changed
+
+- Text and JSON scan reports redact matched values by default and report line numbers and recognizable variable/key names; `--show-matches` explicitly reveals values.
+
 ## [0.1.0] - 2026-08-03
 
 ### Added

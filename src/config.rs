@@ -80,6 +80,11 @@ pub struct StructuralConfig {
     #[serde(rename = "privateIp")]
     pub private_ip: bool,
     pub email: bool,
+    /// Opt-in allowlist checks for instruction files and other sensitive surfaces.
+    pub domain: bool,
+    pub ipv4: bool,
+    #[serde(rename = "privateRepoPath")]
+    pub private_repo_path: bool,
     pub custom: Vec<CustomPatternConfig>,
 }
 
@@ -90,6 +95,9 @@ impl Default for StructuralConfig {
             posix_home: true,
             private_ip: true,
             email: true,
+            domain: false,
+            ipv4: false,
+            private_repo_path: false,
             custom: Vec::new(),
         }
     }
@@ -102,9 +110,17 @@ pub struct AllowConfig {
     pub emails: Vec<String>,
     #[serde(rename = "emailDomains")]
     pub email_domains: Vec<String>,
+    pub domains: Vec<String>,
+    /// Exact IPv4 addresses or CIDR networks, shared by both IPv4 checks.
+    pub ipv4: Vec<String>,
+    #[serde(rename = "privateRepos")]
+    pub private_repos: Vec<String>,
     /// When true, bare `doxguard: allow` (no token) is ignored. Scoped allows still work.
     #[serde(rename = "disallowBareAllow")]
     pub disallow_bare_allow: bool,
+    /// Ignore every inline allow directive, including scoped tokens.
+    #[serde(rename = "disallowInlineAllow")]
+    pub disallow_inline_allow: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -137,11 +153,17 @@ fn default_max_file_size() -> u64 {
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
     pub watchlists: Vec<WatchlistSource>,
+    /// Fail when a configured watchlist cannot resolve its environment or path.
+    #[serde(rename = "requireWatchlists")]
+    pub require_watchlists: bool,
     pub structural: StructuralConfig,
     pub allow: AllowConfig,
     pub noise: NoiseConfig,
     #[serde(rename = "exemptPaths")]
     pub exempt_paths: Vec<String>,
+    /// Apply built-in repository exemptions and implicit lockfile skips.
+    #[serde(rename = "includeDefaultExemptPaths")]
+    pub include_default_exempt_paths: bool,
     #[serde(rename = "maxFileSize")]
     pub max_file_size: u64,
     /// When true with `--block`, coverage skips (oversize / non-UTF-8 / symlink / unreadable)
@@ -154,6 +176,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             watchlists: Vec::new(),
+            require_watchlists: false,
             structural: StructuralConfig::default(),
             allow: AllowConfig {
                 names: Vec::new(),
@@ -163,9 +186,14 @@ impl Default for Config {
                     "users.noreply.github.com".to_owned(),
                 ],
                 disallow_bare_allow: false,
+                disallow_inline_allow: false,
+                domains: Vec::new(),
+                ipv4: Vec::new(),
+                private_repos: Vec::new(),
             },
             noise: NoiseConfig::default(),
             exempt_paths: Vec::new(),
+            include_default_exempt_paths: true,
             max_file_size: default_max_file_size(),
             fail_on_skip: false,
         }
@@ -183,6 +211,7 @@ impl Config {
         DEFAULT_EXEMPT_PATHS
             .iter()
             .copied()
+            .filter(|_| self.include_default_exempt_paths)
             .chain(self.exempt_paths.iter().map(String::as_str))
     }
 
@@ -218,6 +247,25 @@ impl Config {
                 if *index == 0 {
                     bail!("numeric CSV columns are 1-based and must be at least 1");
                 }
+            }
+        }
+        for domain in &self.allow.domains {
+            if !is_multi_label_domain(domain) {
+                bail!("allow.domains entries must be multi-label domains");
+            }
+        }
+        for network in &self.allow.ipv4 {
+            if crate::patterns::ipv4_network(network).is_none() {
+                bail!("allow.ipv4 entries must be IPv4 addresses or CIDR networks");
+            }
+        }
+        for repo in &self.allow.private_repos {
+            if repo.is_empty()
+                || !repo
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"_.-".contains(&b))
+            {
+                bail!("allow.privateRepos entries must be repository names, without paths");
             }
         }
         for custom in &self.structural.custom {

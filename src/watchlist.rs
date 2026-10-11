@@ -218,11 +218,17 @@ pub fn load(
         let path = match expand_path(source.path(), cwd, env) {
             Ok(path) => path,
             Err(warning) => {
+                if config.require_watchlists {
+                    bail!("required watchlist source is unavailable");
+                }
                 warnings.push(warning);
                 continue;
             }
         };
         if !path.exists() {
+            if config.require_watchlists {
+                bail!("required watchlist source is unavailable");
+            }
             warnings.push(format!(
                 "WARN: watchlist not found; skipped {}",
                 source.path()
@@ -239,8 +245,9 @@ pub fn load(
                 config.max_file_size
             );
         }
-        // Missing env / missing path stay soft-skip (CI structural-only). Once a path
-        // exists, read/parse failures must fail closed so protection cannot shrink silently.
+        // Missing env / path soft-skip by default for structural-only environments.
+        // Operational profiles can require every configured source. Once a path
+        // exists, read/parse failures always fail closed.
         let values = read_values(source, &path)
             .with_context(|| format!("failed to read watchlist {}", source.path()))?;
         let paren_variants = matches!(

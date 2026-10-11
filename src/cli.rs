@@ -57,6 +57,15 @@ struct ScanArgs {
     /// Scan the file list produced by npm pack.
     #[arg(long, action = ArgAction::SetTrue)]
     packaged: bool,
+    /// Scan a literal file or directory (repeatable), without requiring git.
+    #[arg(long = "path", action = ArgAction::Append)]
+    paths: Vec<PathBuf>,
+    /// Read literal paths from a UTF-8 file, one per line; combine with --path.
+    #[arg(long)]
+    path_from: Option<PathBuf>,
+    /// Include matched values in text/JSON. Omit this for logs and AI sessions.
+    #[arg(long)]
+    show_matches: bool,
     /// Exit 1 when matches are found.
     #[arg(long)]
     block: bool,
@@ -81,6 +90,8 @@ fn mode(args: &ScanArgs) -> ScanMode {
         ScanMode::Diff
     } else if args.all_tracked {
         ScanMode::AllTracked
+    } else if !args.paths.is_empty() || args.path_from.is_some() {
+        ScanMode::Paths
     } else {
         ScanMode::Packaged
     }
@@ -88,6 +99,12 @@ fn mode(args: &ScanArgs) -> ScanMode {
 
 fn text_report(result: &ScanResult) -> String {
     if result.hits.is_empty() {
+        if result.coverage_skips > 0 {
+            return format!(
+                "INCOMPLETE: doxguard has {} coverage skip(s) (scanned {} files)\n",
+                result.coverage_skips, result.scanned
+            );
+        }
         return format!(
             "OK: doxguard passed (scanned {} files; {} needles + {} structural patterns)\n",
             result.scanned, result.watchlist_needles, result.structural_patterns
@@ -99,11 +116,47 @@ fn text_report(result: &ScanResult) -> String {
     );
     for hit in &result.hits {
         output.push_str(&format!(
-            "{}:{}\n  matched: {:?}\n  source:  {}\n  suggest: {}\n\n",
-            hit.file, hit.line_number, hit.matched, hit.source, hit.suggestion
+            "{}:{}\n  variable: {}\n  matched: {:?}\n  source:  {}\n  suggest: {}\n\n",
+            hit.file,
+            hit.line_number,
+            hit.variable.as_deref().unwrap_or("(unavailable)"),
+            hit.matched,
+            hit.source,
+            hit.suggestion
         ));
     }
     output
+}
+
+fn report_result(result: &ScanResult, show_matches: bool) -> ScanResult {
+    let mut report = result.clone();
+    if show_matches {
+        return report;
+    }
+    let mut values: Vec<_> = result.hits.iter().map(|hit| hit.matched.as_str()).collect();
+    values.sort_by_key(|value| std::cmp::Reverse(value.len()));
+    values.dedup();
+    let redact = |text: &str| {
+        values
+            .iter()
+            .filter(|value| !value.is_empty())
+            .fold(text.to_owned(), |text, value| {
+                text.replace(value, "[redacted]")
+            })
+    };
+    for hit in &mut report.hits {
+        hit.matched = "[redacted]".to_owned();
+        hit.file = redact(&hit.file);
+        hit.variable = hit.variable.as_deref().map(redact);
+        hit.source = redact(&hit.source);
+        hit.suggestion = redact(&hit.suggestion);
+    }
+    report.warnings = report
+        .warnings
+        .iter()
+        .map(|warning| redact(warning))
+        .collect();
+    report
 }
 
 fn print_actions(actions: &[ScaffoldAction]) {
@@ -123,10 +176,16 @@ fn print_actions(actions: &[ScaffoldAction]) {
 }
 
 fn run_scan(args: &ScanArgs) -> Result<u8> {
-    let mode_count = [args.staged, args.diff, args.all_tracked, args.packaged]
-        .into_iter()
-        .filter(|selected| *selected)
-        .count();
+    let mode_count = [
+        args.staged,
+        args.diff,
+        args.all_tracked,
+        args.packaged,
+        !args.paths.is_empty() || args.path_from.is_some(),
+    ]
+    .into_iter()
+    .filter(|selected| *selected)
+    .count();
     if mode_count != 1 {
         anyhow::bail!("scan requires exactly one mode");
     }
@@ -139,7 +198,21 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
     let patterns = patterns::build(&loaded.config)?;
     let mut warnings = loaded.warnings;
     warnings.extend(watchlists.warnings);
-    let paths = scan::files_for_mode(mode(args), &cwd)?;
+    let paths = if mode(args) == ScanMode::Paths {
+        let mut roots = args.paths.clone();
+        if let Some(path_from) = &args.path_from {
+            let text = std::fs::read_to_string(path_from)?;
+            roots.extend(
+                text.trim_start_matches('\u{feff}')
+                    .lines()
+                    .filter(|line| !line.trim().is_empty())
+                    .map(PathBuf::from),
+            );
+        }
+        scan::files_from_paths(&roots, &cwd, &loaded.config)?
+    } else {
+        scan::files_for_mode(mode(args), &cwd)?
+    };
     let result = scan::scan_paths(
         mode(args),
         paths,
@@ -149,13 +222,14 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
         &patterns,
         warnings,
     )?;
-    for warning in &result.warnings {
+    let report = report_result(&result, args.show_matches);
+    for warning in &report.warnings {
         eprintln!("{warning}");
     }
     match args.format {
-        OutputFormat::Json => println!("{}", serde_json::to_string_pretty(&result)?),
+        OutputFormat::Json => println!("{}", serde_json::to_string_pretty(&report)?),
         OutputFormat::Text => {
-            let report = text_report(&result);
+            let report = text_report(&report);
             if result.hits.is_empty() {
                 print!("{report}");
                 io::stdout().flush()?;

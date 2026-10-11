@@ -92,6 +92,10 @@ doxguard scan --all-tracked --dry-run
 doxguard scan --packaged --block
 doxguard scan --all-tracked --format json
 doxguard scan --all-tracked --block --strict
+
+doxguard scan --path ./instructions --path ./global-rules.md --block --strict
+
+doxguard scan --path-from ./paths.txt --block --format json
 ```
 
 Exactly one mode is required:
@@ -100,10 +104,35 @@ Exactly one mode is required:
 - `--diff`: working-tree changes compared with `HEAD`
 - `--all-tracked`: all files returned by `git ls-files`
 - `--packaged`: files returned by `npm pack --dry-run --json`
+- `--path` / `--path-from`: literal files or recursively scanned directories, including
+  files outside git. Repeat `--path` or combine it with a UTF-8 path list (one literal
+  path per line). Empty lists and missing paths return exit 2. Directory links and
+  Windows junctions are never followed; they count as coverage skips. Path mode uses
+  configured `exemptPaths` and binary-extension exclusions, but does not inherit the
+  built-in repository exemptions for tests, config, lockfiles, and local docs.
+  Relative configured exemptions are interpreted from the working directory.
+
+Text and JSON reports redact matched values by default. They retain the file, line
+number, detection type, and variable/key name when recognizable; prose has no key.
+Use `--show-matches` only when you explicitly want the original values. JSON keeps
+the `matched` field as `"[redacted]"` and adds a nullable `variable` field.
 
 `--strict` (or config `allow.disallowBareAllow` + `failOnSkip`) turns on a harder gate: bare
 `doxguard: allow` is ignored, and unscanned coverage skips (oversize / non-UTF-8 / symlink) fail
 when combined with `--block`. Prefer `--strict` in CI.
+
+For instruction files that must use only the configured allowlist, also set
+`allow.disallowInlineAllow: true` to ignore all inline allow directives, and
+`includeDefaultExemptPaths: false` to inspect repository tests, config, local docs,
+hooks, and lockfiles. Explicit `exemptPaths` and binary exclusions still apply.
+Both options preserve the existing behavior unless explicitly configured.
+Set `requireWatchlists: true` when configured watchlist sources must all be
+available; unresolved environment variables and missing source files then exit
+with a configuration error instead of reducing watchlist coverage.
+
+Non-UTF-8 files remain coverage skips; path scans also check recoverable text
+for matches, without claiming that the complete file was inspected. A scan with
+coverage skips and no matches reports `INCOMPLETE` rather than `OK`.
 
 Exit codes are stable: `0` means pass/report-only, `1` means a `--block` scan found matches (or
 coverage skips under strict/`failOnSkip`), and `2` means usage or configuration error.
@@ -145,7 +174,8 @@ coverage skips under strict/`failOnSkip`), and `2` means usage or configuration 
     "names": ["Public Product"],
     "emails": ["public@example.com"],
     "emailDomains": ["example.com", "users.noreply.github.com"],
-    "disallowBareAllow": false
+    "disallowBareAllow": false,
+    "disallowInlineAllow": false
   },
   "noise": {
     "minNeedleLength": 2,
@@ -153,6 +183,8 @@ coverage skips under strict/`failOnSkip`), and `2` means usage or configuration 
     "asciiCaseInsensitive": false
   },
   "exemptPaths": ["generated/"],
+  "includeDefaultExemptPaths": true,
+  "requireWatchlists": false,
   "maxFileSize": 1048576,
   "failOnSkip": false
 }
@@ -168,6 +200,39 @@ Built-in structural checks detect:
 - POSIX user home paths
 - RFC1918 private IPv4 addresses
 - email addresses not covered by the public allowlist
+
+For instruction files, enable allowlist checks in a **local config**:
+
+```json
+{
+  "structural": {
+    "domain": true,
+    "ipv4": true,
+    "privateRepoPath": true
+  },
+  "allow": {
+    "domains": ["example.com"],
+    "ipv4": ["192.0.2.0/24", "203.0.113.9"],
+    "privateRepos": ["synthetic-public-project"],
+    "disallowInlineAllow": true
+  },
+  "includeDefaultExemptPaths": false,
+  "requireWatchlists": true,
+  "failOnSkip": true
+}
+```
+
+These three checks default to off. Domains cover `.jp`, `.com`, `.net`, `.org`,
+`.io`, `.dev`, `.ai`, `.co`, `.me`, `.app`, `.cloud`, `.tech`, and synthetic `.test`;
+`.sh`, `.py`, and `.pl` are excluded because they commonly identify script files.
+`allow.domains` permits exact domains and their subdomains, ignoring ASCII case.
+`allow.privateRepos` permits exact repository names in `github/private/<name>` paths.
+IPv4 checks validate octets and detect bare addresses without requiring host context;
+four-component version numbers can therefore also require an explicit exception.
+`allow.ipv4` accepts exact addresses and CIDR networks and applies to the existing
+RFC1918 check too. Enabling `structural.ipv4` replaces the RFC1918-only pattern with
+the broader check, so each IP is reported once. Explicitly allow only intentionally
+public values, and keep private allowlists outside version control.
 
 ## Inline exceptions
 
