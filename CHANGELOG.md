@@ -51,3 +51,12 @@ All notable changes to doxguard are documented here.
 - Watchlist hits report the original line casing under ASCII case-insensitive matching.
 
 [0.1.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.1.0
+
+### Release-candidate hardening
+
+- Bind release jobs to a validated tag commit and record canonical source identity.
+- Preserve Git/OS path identity and regular staged type-change coverage.
+- Accept BOM-prefixed lines watchlists and redact mixed-case report metadata.
+- Reject unsupported npm workspace mappings and linked scaffold destinations.
+- Preserve existing default hooks; update CI Node.js to 24 LTS.
+- Document the current confidential-reporting limitation in SECURITY.md.

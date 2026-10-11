@@ -152,12 +152,16 @@ fn expand_variants(value: &str, paren_variants: bool) -> Vec<String> {
 
 fn read_values(source: &WatchlistSource, path: &Path) -> Result<Vec<String>> {
     match source {
-        WatchlistSource::Lines { .. } => Ok(fs::read_to_string(path)?
-            .lines()
-            .map(str::trim)
-            .filter(|line| !line.is_empty() && !line.starts_with('#'))
-            .map(str::to_owned)
-            .collect()),
+        WatchlistSource::Lines { .. } => {
+            let text = fs::read_to_string(path)?;
+            let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
+            Ok(text
+                .lines()
+                .map(str::trim)
+                .filter(|line| !line.is_empty() && !line.starts_with('#'))
+                .map(str::to_owned)
+                .collect())
+        }
         WatchlistSource::Csv { column, .. } => {
             let mut reader = csv::Reader::from_path(path)?;
             let headers = reader.headers()?.clone();

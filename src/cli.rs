@@ -136,13 +136,45 @@ fn report_result(result: &ScanResult, show_matches: bool) -> ScanResult {
     let mut values: Vec<_> = result.hits.iter().map(|hit| hit.matched.as_str()).collect();
     values.sort_by_key(|value| std::cmp::Reverse(value.len()));
     values.dedup();
+    // A byte-preserving ASCII fold matches watchlist semantics without changing
+    // UTF-8 offsets. Redact all overlapping spans in the original text once;
+    // replacement markers are never fed back into the matcher.
     let redact = |text: &str| {
-        values
-            .iter()
-            .filter(|value| !value.is_empty())
-            .fold(text.to_owned(), |text, value| {
-                text.replace(value, "[redacted]")
-            })
+        let folded = text.to_ascii_lowercase();
+        let mut spans = Vec::new();
+        for value in &values {
+            if value.is_empty() {
+                continue;
+            }
+            let needle = value.to_ascii_lowercase();
+            let mut start = 0;
+            while start < folded.len() {
+                let Some(offset) = folded[start..].find(&needle) else {
+                    break;
+                };
+                let begin = start + offset;
+                spans.push((begin, begin + needle.len()));
+                start = begin + folded[begin..].chars().next().unwrap().len_utf8();
+            }
+        }
+        spans.sort_unstable();
+        let mut merged: Vec<(usize, usize)> = Vec::new();
+        for (start, end) in spans {
+            if let Some(last) = merged.last_mut().filter(|last| start <= last.1) {
+                last.1 = last.1.max(end);
+            } else {
+                merged.push((start, end));
+            }
+        }
+        let mut redacted = String::new();
+        let mut cursor = 0;
+        for (start, end) in merged {
+            redacted.push_str(&text[cursor..start]);
+            redacted.push_str("[redacted]");
+            cursor = end;
+        }
+        redacted.push_str(&text[cursor..]);
+        redacted
     };
     for hit in &mut report.hits {
         hit.matched = "[redacted]".to_owned();
@@ -284,5 +316,34 @@ pub fn run() -> ExitCode {
             eprintln!("ERROR: {error:#}");
             ExitCode::from(2)
         }
+    }
+}
+
+#[cfg(test)]
+mod redaction_tests {
+    use super::report_result;
+    use crate::scan::{HitKind, ScanHit, ScanMode, ScanResult};
+
+    #[test]
+    fn overlapping_ascii_variants_are_redacted_in_every_metadata_field() {
+        let metadata = "prefix ABABA 東京 SeCoNd suffix";
+        let hits = ["aba", "bab", "second"].into_iter().map(|matched| ScanHit {
+            file: metadata.to_owned(), line_number: 1, matched: matched.to_owned(),
+            variable: Some(metadata.to_owned()), source: metadata.to_owned(),
+            kind: HitKind::Watchlist, suggestion: metadata.to_owned(),
+        }).collect();
+        let input = ScanResult { mode: ScanMode::Paths, scanned: 1, total_files: 1,
+            exempt_or_skipped: 0, coverage_skips: 0, watchlist_needles: 3,
+            structural_patterns: 0, hits, warnings: vec![metadata.to_owned()] };
+        let output = report_result(&input, false);
+        let expected = "prefix [redacted] 東京 [redacted] suffix";
+        for hit in output.hits {
+            assert_eq!(hit.file, expected); assert_eq!(hit.variable.as_deref(), Some(expected));
+            assert_eq!(hit.source, expected); assert_eq!(hit.suggestion, expected);
+            assert_eq!(hit.matched, "[redacted]");
+        }
+        assert_eq!(output.warnings, vec![expected]);
+        let shown = report_result(&input, true);
+        assert_eq!(shown.hits, input.hits); assert_eq!(shown.warnings, input.warnings);
     }
 }

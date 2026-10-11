@@ -1,4 +1,9 @@
-use std::{fs, path::Path, process::Command};
+use std::{
+    fs,
+    io::{self, Write},
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use anyhow::{Context, Result, bail};
 use serde_json::Value;
@@ -97,14 +102,73 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
       - name: Scan tracked files (structural patterns only, strict)
         run: npx --yes doxguard@0.1.0 scan --all-tracked --block --strict
 "#;
 
+fn reject_link_components(path: &Path) -> Result<()> {
+    let mut current = PathBuf::new();
+    for component in path.components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            bail!("write destination contains an unresolved parent component");
+        }
+        current.push(component.as_os_str());
+        match fs::symlink_metadata(&current) {
+            Ok(metadata) => {
+                #[cfg(windows)]
+                let linked = {
+                    use std::os::windows::fs::MetadataExt;
+                    metadata.file_attributes() & 0x400 != 0
+                };
+                #[cfg(not(windows))]
+                let linked = metadata.file_type().is_symlink();
+                if linked {
+                    bail!("refusing a linked write destination or ancestor");
+                }
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error).context("cannot inspect write destination"),
+        }
+    }
+    Ok(())
+}
+
+fn git_path(cwd: &Path, args: &[&str]) -> Result<PathBuf> {
+    let output = Command::new(git_program()?)
+        .args(args)
+        .current_dir(cwd)
+        .output()
+        .context("failed to locate Git storage")?;
+    if !output.status.success() {
+        bail!("could not locate Git storage");
+    }
+    let value = std::str::from_utf8(&output.stdout)
+        .context("Git storage path was not UTF-8")?
+        .trim_end_matches(['\r', '\n']);
+    if value.is_empty() || value.contains(['\r', '\n', '\0']) {
+        bail!("unsupported Git storage path");
+    }
+    Ok(cwd.join(value))
+}
+
+fn check_hook_destinations(cwd: &Path) -> Result<PathBuf> {
+    let git_dir = git_path(cwd, &["rev-parse", "--absolute-git-dir"])?;
+    for path in [
+        git_dir.join("doxguard/hooks/pre-commit"),
+        git_path(cwd, &["rev-parse", "--git-path", "config"])?,
+        git_path(cwd, &["rev-parse", "--git-path", "config.lock"])?,
+        cwd.join(".githooks/pre-commit"),
+    ] {
+        reject_link_components(&path)?;
+    }
+    Ok(git_dir)
+}
+
 fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<ScaffoldAction> {
     let target = cwd.join(path);
-    if target.exists() {
+    reject_link_components(&target)?;
+    if target.try_exists()? {
         return Ok(ScaffoldAction {
             path: path.to_owned(),
             status: ActionStatus::Skipped,
@@ -114,12 +178,55 @@ fn create_without_overwrite(cwd: &Path, path: &str, content: &str) -> Result<Sca
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)?;
     }
-    fs::write(&target, content)?;
+    // Exclusive creation never follows a leaf link introduced after inspection.
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&target)?;
+    file.write_all(content.as_bytes())?;
+    #[cfg(unix)]
+    if path == ".githooks/pre-commit" {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(fs::Permissions::from_mode(0o755))?;
+    }
     Ok(ScaffoldAction {
         path: path.to_owned(),
         status: ActionStatus::Created,
         detail: None,
     })
+}
+
+fn cache_native_hook(destination: &Path) -> Result<()> {
+    reject_link_components(destination)?;
+    let parent = destination.parent().context("hook has no parent")?;
+    fs::create_dir_all(parent)?;
+    for attempt in 0..100 {
+        let temporary = parent.join(format!(".doxguard-{}-{attempt}.tmp", std::process::id()));
+        let mut output = match fs::OpenOptions::new().write(true).create_new(true).open(&temporary) {
+            Ok(file) => file,
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error).context("cannot create hook cache"),
+        };
+        let result = (|| -> Result<()> {
+            let mut source = fs::File::open(std::env::current_exe()?)?;
+            io::copy(&mut source, &mut output)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                output.set_permissions(fs::Permissions::from_mode(0o755))?;
+            }
+            output.sync_all()?;
+            drop(output);
+            reject_link_components(destination)?;
+            fs::rename(&temporary, destination)?;
+            Ok(())
+        })();
+        if result.is_err() {
+            let _ = fs::remove_file(&temporary);
+        }
+        return result;
+    }
+    bail!("cannot reserve hook cache temporary file");
 }
 
 fn has_husky(cwd: &Path) -> bool {
@@ -139,6 +246,8 @@ fn has_husky(cwd: &Path) -> bool {
 }
 
 pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
+    let root = cwd.canonicalize().context("cannot resolve repository root")?;
+    let cwd = root.as_path();
     if has_husky(cwd) {
         return Ok(vec![ScaffoldAction {
             path: ".husky/pre-commit".to_owned(),
@@ -150,57 +259,33 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
         }]);
     }
     let git = git_program()?;
-    let git_dir_output = Command::new(git)
-        .args(["rev-parse", "--git-dir"])
-        .current_dir(cwd)
-        .output()
-        .context("failed to locate git directory")?;
-    if !git_dir_output.status.success() {
-        bail!("could not locate git directory");
-    }
-    let git_dir = Path::new(
-        std::str::from_utf8(&git_dir_output.stdout)
-            .context("git directory was not UTF-8")?
-            .trim(),
-    );
-    let git_dir = if git_dir.is_absolute() {
-        git_dir.to_path_buf()
-    } else {
-        cwd.join(git_dir)
-    };
+    let git_dir = check_hook_destinations(cwd)?;
     let hook_dir = git_dir.join("doxguard").join("hooks");
-    fs::create_dir_all(&hook_dir)?;
     let cached_hook = hook_dir.join("pre-commit");
-    fs::copy(std::env::current_exe()?, &cached_hook)
-        .context("failed to cache the native doxguard binary")?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&cached_hook, fs::Permissions::from_mode(0o755))?;
-    }
+    // Preflight every output before creating directories or copying any bytes.
+    let config_path = git_path(cwd, &["rev-parse", "--git-path", "config"])?;
+    reject_link_components(&config_path)?;
+    cache_native_hook(&cached_hook)?;
     let native_abs = cached_hook
         .canonicalize()
         .unwrap_or_else(|_| cached_hook.clone());
     let native_abs = native_abs.to_string_lossy();
     let hook_script = portable_hook_script(&native_abs)?;
     let hook = create_without_overwrite(cwd, ".githooks/pre-commit", &hook_script)?;
-    #[cfg(unix)]
-    if hook.status == ActionStatus::Created {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(cwd.join(&hook.path), fs::Permissions::from_mode(0o755))?;
-    }
 
     let existing_hooks = Command::new(git)
-        .args(["config", "--get", "core.hooksPath"])
+        .args(["config", "--null", "--get", "core.hooksPath"])
         .current_dir(cwd)
         .output()
         .context("failed to read core.hooksPath")?;
     let existing = if existing_hooks.status.success() {
-        String::from_utf8_lossy(&existing_hooks.stdout)
-            .trim()
-            .to_owned()
+        let value = std::str::from_utf8(&existing_hooks.stdout)
+            .context("existing hooks path was not UTF-8")?;
+        Some(value.strip_suffix('\0').context("invalid hooks configuration framing")?.to_owned())
+    } else if existing_hooks.status.code() == Some(1) {
+        None
     } else {
-        String::new()
+        bail!("could not read existing hooks configuration");
     };
     let mut actions = vec![
         hook,
@@ -210,9 +295,9 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
             detail: Some("direct native hook".to_owned()),
         },
     ];
-    if !existing.is_empty() {
+    if let Some(existing) = existing.as_deref() {
         let existing_path = {
-            let path = Path::new(&existing);
+            let path = Path::new(existing);
             if path.is_absolute() {
                 path.to_path_buf()
             } else {
@@ -231,8 +316,27 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
         }
     }
 
+    if existing.is_none() {
+        let default_hooks = git_path(cwd, &["rev-parse", "--git-path", "hooks"])?;
+        if default_hooks.try_exists()?
+            && fs::read_dir(default_hooks)?.any(|entry| {
+                entry.map_or(true, |entry| !entry.file_name().to_string_lossy().ends_with(".sample"))
+            })
+        {
+            actions.push(ScaffoldAction {
+                path: "git config core.hooksPath".to_owned(),
+                status: ActionStatus::Skipped,
+                detail: Some("default hooks left unchanged; integrate doxguard into the existing pre-commit hook manually".to_owned()),
+            });
+            return Ok(actions);
+        }
+    }
+    reject_link_components(&config_path)?;
+    reject_link_components(&git_path(cwd, &["rev-parse", "--git-path", "config.lock"])?)?;
+
     let output = Command::new(git)
         .arg("config")
+        .arg("--local")
         .arg("core.hooksPath")
         .arg(&hook_dir)
         .current_dir(cwd)
@@ -255,6 +359,14 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
 }
 
 pub fn initialize(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
+    let root = cwd.canonicalize().context("cannot resolve repository root")?;
+    let cwd = root.as_path();
+    for path in ["doxguard.config.json", ".github/workflows/doxguard.yml", ".githooks/pre-commit"] {
+        reject_link_components(&cwd.join(path))?;
+    }
+    if !has_husky(cwd) {
+        check_hook_destinations(cwd)?;
+    }
     let mut actions = vec![
         create_without_overwrite(cwd, "doxguard.config.json", CONFIG_TEMPLATE)?,
         create_without_overwrite(cwd, ".github/workflows/doxguard.yml", CI_TEMPLATE)?,

@@ -291,3 +291,29 @@ All fixtures must be synthetic. Never commit a real watchlist or a literal priva
 ## License
 
 MIT © Hiroshi Ishizaka (ishizakahiroshi)
+
+## Release-candidate safety notes
+
+- Git selectors preserve complete NUL-delimited names, including spaces and quotes.
+  Explicit paths keep native operating-system resolution; a literal Unix backslash
+  is not changed into a directory separator. Explicit paths can intentionally read
+  outside the repository; recursive traversal still skips linked entries.
+- Staged scans include file-type changes and scan regular index objects rather than
+  worktree aliases. Links and gitlinks are coverage skips; use
+  `--block --strict` to fail closed.
+- UTF-8 BOM is accepted at the beginning of a lines watchlist.
+  `requireWatchlists` requires readable configured sources, not nonempty contents.
+- Default reports redact ASCII-case variants in hit metadata. `--show-matches`
+  explicitly opts into original match metadata.
+- `--packaged` supports one standalone package at its own root. Workspace and
+  multi-package selections fail as unsupported instead of scanning root aliases.
+  npm lifecycle scripts remain disabled during the manifest query.
+- Initialization rejects linked output paths and linked ancestors. Existing
+  custom/Husky/default Git hooks are preserved; when a default hook is present,
+  integrate the prepared doxguard hook manually instead of replacing hooksPath.
+- CI and generated workflows use Node.js 24 LTS. Rust MSRV remains 1.85.
+  Release jobs consume one resolved tag commit and require Validate for that SHA.
+  New canonical releases include SOURCE_COMMIT.txt in the checksum manifest.
+  npm-only recovery of legacy archives remains supported, with unverified source
+  provenance explicitly warned when that marker is unavailable.
+- See [SECURITY.md](SECURITY.md) before reporting a possible vulnerability.

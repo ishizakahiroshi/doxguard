@@ -146,13 +146,15 @@ fn run_git(args: &[&str], cwd: &Path) -> Result<String> {
     run_command(git_program()?, &full, cwd, &[])
 }
 
-fn lines(output: String) -> Vec<String> {
-    output
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
+fn nul_paths(output: String) -> Result<Vec<String>> {
+    if !output.is_empty() && !output.ends_with('\0') {
+        bail!("Git file list was not NUL terminated");
+    }
+    Ok(output
+        .split('\0')
+        .filter(|path| !path.is_empty())
         .map(str::to_owned)
-        .collect()
+        .collect())
 }
 
 fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
@@ -170,6 +172,16 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
     let packages = packages
         .as_array()
         .ok_or_else(|| anyhow!("npm pack did not return a package array"))?;
+    let root_manifest: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(cwd.join("package.json")).context("cannot read package root")?,
+    )?;
+    if packages.len() != 1
+        || packages[0].get("name") != root_manifest.get("name")
+        || packages[0].get("version") != root_manifest.get("version")
+        || root_manifest.get("workspaces").is_some()
+    {
+        bail!("workspace or multi-package scanning is unsupported; scan each package from its own root");
+    }
     let mut paths = Vec::new();
     let mut seen = HashSet::new();
     for package in packages {
@@ -192,15 +204,15 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
 
 pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
     match mode {
-        ScanMode::Staged => Ok(lines(run_git(
-            &["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        ScanMode::Staged => nul_paths(run_git(
+            &["diff", "--cached", "--name-only", "-z", "--diff-filter=ACMRT"],
             cwd,
-        )?)),
-        ScanMode::Diff => Ok(lines(run_git(
-            &["diff", "--name-only", "--diff-filter=ACMR", "HEAD"],
+        )?),
+        ScanMode::Diff => nul_paths(run_git(
+            &["diff", "--name-only", "-z", "--diff-filter=ACMRT", "HEAD"],
             cwd,
-        )?)),
-        ScanMode::AllTracked => Ok(lines(run_git(&["ls-files"], cwd)?)),
+        )?),
+        ScanMode::AllTracked => nul_paths(run_git(&["ls-files", "-z"], cwd)?),
         ScanMode::Packaged => packaged_files(cwd),
         ScanMode::Paths => bail!("path mode requires --path or --path-from"),
     }
@@ -238,7 +250,7 @@ pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Resul
                 )?;
             }
         } else {
-            files.insert(display);
+            files.insert(path.to_str().context("scan path was not UTF-8")?.to_owned());
         }
         Ok(())
     }
@@ -250,16 +262,8 @@ pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Resul
         if root.as_os_str().is_empty() {
             bail!("scan paths must not be empty");
         }
-        let mut path = PathBuf::new();
-        for component in cwd.join(root).components() {
-            match component {
-                std::path::Component::CurDir => {}
-                std::path::Component::ParentDir => {
-                    path.pop();
-                }
-                component => path.push(component.as_os_str()),
-            }
-        }
+        // Keep native path semantics: collapsing a symlink/.. changes its target.
+        let path = cwd.join(root);
         visit(&path, cwd, config, &mut files)?;
     }
     let mut files: Vec<_> = files.into_iter().collect();
@@ -416,15 +420,37 @@ fn read_scan_content(
 ) -> Result<ContentLoad> {
     if mode == ScanMode::Staged {
         // Index blob, not worktree — pre-commit must gate what will be committed.
-        let spec = format!(":{path}");
-        let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
-        // Ask for the blob size first so an oversize blob is never loaded.
-        if let Ok(size) = run_git(&["cat-file", "-s", &spec], cwd) {
-            if size.trim().parse::<u64>().is_ok_and(|size| size > limit) {
-                return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
-            }
+        let literal = format!(":(literal){path}");
+        let listing = match run_git(&["ls-files", "--stage", "-z", "--", &literal], cwd) {
+            Ok(listing) => listing,
+            Err(_) => return Ok(ContentLoad::CoverageSkip("unreadable staged entry")),
+        };
+        let mut entries = listing.split('\0').filter(|entry| !entry.is_empty());
+        let entry = entries.next().unwrap_or_default();
+        let Some((header, entry_path)) = entry.split_once('\t') else {
+            return Ok(ContentLoad::CoverageSkip("missing staged entry"));
+        };
+        let fields: Vec<_> = header.split_whitespace().collect();
+        if entries.next().is_some()
+            || entry_path != path
+            || fields.len() != 3
+            || !matches!(fields[0], "100644" | "100755")
+            || fields[2] != "0"
+            || !matches!(fields[1].len(), 40 | 64)
+            || !fields[1].bytes().all(|byte| byte.is_ascii_hexdigit())
+        {
+            return Ok(ContentLoad::CoverageSkip("non-regular or unmerged staged entry"));
         }
-        match run_git(&["show", &spec], cwd) {
+        // Bind type, size and contents to the same immutable index object.
+        let oid = fields[1];
+        let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
+        let size = run_git(&["cat-file", "-s", oid], cwd)
+            .ok()
+            .and_then(|size| size.trim().parse::<u64>().ok());
+        if size.is_none_or(|size| size > limit) {
+            return Ok(ContentLoad::CoverageSkip("unreadable or oversize staged blob"));
+        }
+        match run_git(&["cat-file", "blob", oid], cwd) {
             Ok(content) => {
                 if content.len() as u64 > limit {
                     return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
