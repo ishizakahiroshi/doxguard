@@ -10,7 +10,8 @@ fn command(program: &str, cwd: &Path) -> Command {
     let mut command = Command::new(program);
     command.current_dir(cwd);
     for (key, _) in std::env::vars_os() {
-        if key.to_string_lossy().starts_with("GIT_") || key == "DOXGUARD_CONFIG" {
+        let name = key.to_string_lossy().to_ascii_uppercase();
+        if name.starts_with("GIT_") || name == "DOXGUARD_CONFIG" {
             command.env_remove(key);
         }
     }

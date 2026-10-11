@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / ".github/scripts/resolve-release-source.sh"
 with tempfile.TemporaryDirectory(prefix="release-identity-") as temporary:
     root = Path(temporary)
-    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    env = {key: value for key, value in os.environ.items() if not key.upper().startswith("GIT_")}
     env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
                GIT_AUTHOR_NAME="Synthetic Fixture", GIT_COMMITTER_NAME="Synthetic Fixture",
                GIT_AUTHOR_EMAIL="fixture@example.com", GIT_COMMITTER_EMAIL="fixture@example.com")

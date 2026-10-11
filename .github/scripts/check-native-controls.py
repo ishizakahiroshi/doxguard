@@ -18,7 +18,7 @@ with tempfile.TemporaryDirectory(prefix="doxguard-positive-") as temporary:
     with tarfile.open(archive) as source:
         source.extractall(baseline, filter="data")
     env = {key: value for key, value in os.environ.items()
-           if not key.startswith("GIT_") and key != "DOXGUARD_CONFIG"}
+           if not key.upper().startswith("GIT_") and key.upper() != "DOXGUARD_CONFIG"}
     env["CARGO_TARGET_DIR"] = str(stage / "target")
     subprocess.run(["cargo", "build", "--locked", "--manifest-path",
                     str(baseline / "Cargo.toml"), "--bin", "doxguard"],

@@ -242,7 +242,7 @@ fn is_link(metadata: &fs::Metadata) -> bool {
 /// Expand literal paths outside git. Explicit missing paths and enumeration
 /// failures are errors. Links are retained as coverage skips, never followed.
 pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Result<Vec<String>> {
-    fn visit(path: &Path, cwd: &Path, config: &Config, files: &mut HashSet<String>) -> Result<()> {
+    fn visit(path: &Path, cwd: &Path, config: &Config, files: &mut HashSet<PathBuf>) -> Result<()> {
         let display = normalize_path(path.to_str().context("scan path was not UTF-8")?);
         let meta = fs::symlink_metadata(path).context("cannot inspect requested scan path")?;
         if configured_path_exempt(&display, cwd, config) {
@@ -258,7 +258,7 @@ pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Resul
                 )?;
             }
         } else {
-            files.insert(path.to_str().context("scan path was not UTF-8")?.to_owned());
+            files.insert(path.to_path_buf());
         }
         Ok(())
     }
@@ -274,7 +274,14 @@ pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Resul
         let path = cwd.join(root);
         visit(&path, cwd, config, &mut files)?;
     }
-    let mut files: Vec<_> = files.into_iter().collect();
+    let mut files: Vec<_> = files
+        .into_iter()
+        .map(|path| {
+            path.into_os_string()
+                .into_string()
+                .map_err(|_| anyhow!("scan path was not UTF-8"))
+        })
+        .collect::<Result<Vec<_>>>()?;
     files.sort();
     Ok(files)
 }
