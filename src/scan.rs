@@ -180,7 +180,9 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
         || packages[0].get("version") != root_manifest.get("version")
         || root_manifest.get("workspaces").is_some()
     {
-        bail!("workspace or multi-package scanning is unsupported; scan each package from its own root");
+        bail!(
+            "workspace or multi-package scanning is unsupported; scan each package from its own root"
+        );
     }
     let mut paths = Vec::new();
     let mut seen = HashSet::new();
@@ -205,7 +207,13 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
 pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
     match mode {
         ScanMode::Staged => nul_paths(run_git(
-            &["diff", "--cached", "--name-only", "-z", "--diff-filter=ACMRT"],
+            &[
+                "diff",
+                "--cached",
+                "--name-only",
+                "-z",
+                "--diff-filter=ACMRT",
+            ],
             cwd,
         )?),
         ScanMode::Diff => nul_paths(run_git(
@@ -439,7 +447,9 @@ fn read_scan_content(
             || !matches!(fields[1].len(), 40 | 64)
             || !fields[1].bytes().all(|byte| byte.is_ascii_hexdigit())
         {
-            return Ok(ContentLoad::CoverageSkip("non-regular or unmerged staged entry"));
+            return Ok(ContentLoad::CoverageSkip(
+                "non-regular or unmerged staged entry",
+            ));
         }
         // Bind type, size and contents to the same immutable index object.
         let oid = fields[1];
@@ -448,7 +458,9 @@ fn read_scan_content(
             .ok()
             .and_then(|size| size.trim().parse::<u64>().ok());
         if size.is_none_or(|size| size > limit) {
-            return Ok(ContentLoad::CoverageSkip("unreadable or oversize staged blob"));
+            return Ok(ContentLoad::CoverageSkip(
+                "unreadable or oversize staged blob",
+            ));
         }
         match run_git(&["cat-file", "blob", oid], cwd) {
             Ok(content) => {

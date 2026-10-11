@@ -114,6 +114,11 @@ fn reject_link_components(path: &Path) -> Result<()> {
             bail!("write destination contains an unresolved parent component");
         }
         current.push(component.as_os_str());
+        // A Windows drive/UNC prefix is not a complete filesystem path until
+        // RootDir follows it (for example, the verbatim prefix \\?\C:).
+        if matches!(component, std::path::Component::Prefix(_)) {
+            continue;
+        }
         match fs::symlink_metadata(&current) {
             Ok(metadata) => {
                 #[cfg(windows)]
@@ -202,7 +207,11 @@ fn cache_native_hook(destination: &Path) -> Result<()> {
     fs::create_dir_all(parent)?;
     for attempt in 0..100 {
         let temporary = parent.join(format!(".doxguard-{}-{attempt}.tmp", std::process::id()));
-        let mut output = match fs::OpenOptions::new().write(true).create_new(true).open(&temporary) {
+        let mut output = match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temporary)
+        {
             Ok(file) => file,
             Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
             Err(error) => return Err(error).context("cannot create hook cache"),
@@ -246,7 +255,9 @@ fn has_husky(cwd: &Path) -> bool {
 }
 
 pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
-    let root = cwd.canonicalize().context("cannot resolve repository root")?;
+    let root = cwd
+        .canonicalize()
+        .context("cannot resolve repository root")?;
     let cwd = root.as_path();
     if has_husky(cwd) {
         return Ok(vec![ScaffoldAction {
@@ -281,7 +292,12 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
     let existing = if existing_hooks.status.success() {
         let value = std::str::from_utf8(&existing_hooks.stdout)
             .context("existing hooks path was not UTF-8")?;
-        Some(value.strip_suffix('\0').context("invalid hooks configuration framing")?.to_owned())
+        Some(
+            value
+                .strip_suffix('\0')
+                .context("invalid hooks configuration framing")?
+                .to_owned(),
+        )
     } else if existing_hooks.status.code() == Some(1) {
         None
     } else {
@@ -320,7 +336,9 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
         let default_hooks = git_path(cwd, &["rev-parse", "--git-path", "hooks"])?;
         if default_hooks.try_exists()?
             && fs::read_dir(default_hooks)?.any(|entry| {
-                entry.map_or(true, |entry| !entry.file_name().to_string_lossy().ends_with(".sample"))
+                entry.map_or(true, |entry| {
+                    !entry.file_name().to_string_lossy().ends_with(".sample")
+                })
             })
         {
             actions.push(ScaffoldAction {
@@ -359,9 +377,15 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
 }
 
 pub fn initialize(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
-    let root = cwd.canonicalize().context("cannot resolve repository root")?;
+    let root = cwd
+        .canonicalize()
+        .context("cannot resolve repository root")?;
     let cwd = root.as_path();
-    for path in ["doxguard.config.json", ".github/workflows/doxguard.yml", ".githooks/pre-commit"] {
+    for path in [
+        "doxguard.config.json",
+        ".github/workflows/doxguard.yml",
+        ".githooks/pre-commit",
+    ] {
         reject_link_components(&cwd.join(path))?;
     }
     if !has_husky(cwd) {

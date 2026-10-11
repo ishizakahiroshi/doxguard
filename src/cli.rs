@@ -327,23 +327,41 @@ mod redaction_tests {
     #[test]
     fn overlapping_ascii_variants_are_redacted_in_every_metadata_field() {
         let metadata = "prefix ABABA 東京 SeCoNd suffix";
-        let hits = ["aba", "bab", "second"].into_iter().map(|matched| ScanHit {
-            file: metadata.to_owned(), line_number: 1, matched: matched.to_owned(),
-            variable: Some(metadata.to_owned()), source: metadata.to_owned(),
-            kind: HitKind::Watchlist, suggestion: metadata.to_owned(),
-        }).collect();
-        let input = ScanResult { mode: ScanMode::Paths, scanned: 1, total_files: 1,
-            exempt_or_skipped: 0, coverage_skips: 0, watchlist_needles: 3,
-            structural_patterns: 0, hits, warnings: vec![metadata.to_owned()] };
+        let hits = ["aba", "bab", "second"]
+            .into_iter()
+            .map(|matched| ScanHit {
+                file: metadata.to_owned(),
+                line_number: 1,
+                matched: matched.to_owned(),
+                variable: Some(metadata.to_owned()),
+                source: metadata.to_owned(),
+                kind: HitKind::Watchlist,
+                suggestion: metadata.to_owned(),
+            })
+            .collect();
+        let input = ScanResult {
+            mode: ScanMode::Paths,
+            scanned: 1,
+            total_files: 1,
+            exempt_or_skipped: 0,
+            coverage_skips: 0,
+            watchlist_needles: 3,
+            structural_patterns: 0,
+            hits,
+            warnings: vec![metadata.to_owned()],
+        };
         let output = report_result(&input, false);
         let expected = "prefix [redacted] 東京 [redacted] suffix";
         for hit in output.hits {
-            assert_eq!(hit.file, expected); assert_eq!(hit.variable.as_deref(), Some(expected));
-            assert_eq!(hit.source, expected); assert_eq!(hit.suggestion, expected);
+            assert_eq!(hit.file, expected);
+            assert_eq!(hit.variable.as_deref(), Some(expected));
+            assert_eq!(hit.source, expected);
+            assert_eq!(hit.suggestion, expected);
             assert_eq!(hit.matched, "[redacted]");
         }
         assert_eq!(output.warnings, vec![expected]);
         let shown = report_result(&input, true);
-        assert_eq!(shown.hits, input.hits); assert_eq!(shown.warnings, input.warnings);
+        assert_eq!(shown.hits, input.hits);
+        assert_eq!(shown.warnings, input.warnings);
     }
 }
