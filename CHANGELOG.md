@@ -15,6 +15,8 @@ All notable changes to doxguard are documented here.
 ### Changed
 
 - Text and JSON scan reports redact matched values by default and report line numbers and recognizable variable/key names; `--show-matches` explicitly reveals values.
+- Staged, worktree, list, and path scans stream text files line by line and read them to the end whatever their size, so large generated text no longer becomes a coverage skip that stops a strict gate. `maxFileSize` is now optional: when set, larger scan targets are still coverage skips, and the former 16 MiB staged ceiling no longer caps it. Watchlist sources and history blobs keep the 1 MiB default.
+- The staged added-line baseline streams the diff instead of failing when it exceeds 64 MiB.
 
 ## [0.1.0] - 2026-08-03
 

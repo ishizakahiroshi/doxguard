@@ -251,9 +251,9 @@ impl Default for NoiseConfig {
     }
 }
 
-fn default_max_file_size() -> u64 {
-    1024 * 1024
-}
+/// Size limit for inputs that are still loaded whole (watchlist sources and
+/// history blobs) when `maxFileSize` is unset.
+pub const DEFAULT_MAX_FILE_SIZE: u64 = 1024 * 1024;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -271,8 +271,10 @@ pub struct Config {
     /// Disabled by default so consumer repositories retain full scan coverage.
     #[serde(rename = "includeDefaultExemptPaths")]
     pub include_default_exempt_paths: bool,
+    /// Unset: scan targets are streamed and read to the end whatever their size.
+    /// Set: larger scan targets become coverage skips.
     #[serde(rename = "maxFileSize")]
-    pub max_file_size: u64,
+    pub max_file_size: Option<u64>,
     /// When true with `--block`, coverage skips (oversize / non-UTF-8 / symlink / unreadable)
     /// cause exit 1 so silent holes cannot pass a gate.
     #[serde(rename = "failOnSkip")]
@@ -301,7 +303,7 @@ impl Default for Config {
             noise: NoiseConfig::default(),
             exempt_paths: Vec::new(),
             include_default_exempt_paths: false,
-            max_file_size: default_max_file_size(),
+            max_file_size: None,
             fail_on_skip: true,
         }
     }
@@ -322,11 +324,16 @@ impl Config {
             .chain(self.exempt_paths.iter().map(String::as_str))
     }
 
+    /// `maxFileSize` for inputs that are still loaded whole rather than streamed.
+    pub fn bounded_file_size(&self) -> u64 {
+        self.max_file_size.unwrap_or(DEFAULT_MAX_FILE_SIZE)
+    }
+
     pub fn validate(&self) -> Result<()> {
         if self.noise.min_needle_length == 0 {
             bail!("noise.minNeedleLength must be at least 1");
         }
-        if self.max_file_size == 0 {
+        if self.max_file_size == Some(0) {
             bail!("maxFileSize must be at least 1");
         }
         for exempt in &self.exempt_paths {

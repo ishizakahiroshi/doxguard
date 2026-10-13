@@ -415,7 +415,7 @@ fn oversize_staged_blob_is_coverage_skipped() {
     git(&["add", "big.txt"]);
 
     let config = Config {
-        max_file_size: 16,
+        max_file_size: Some(16),
         ..Default::default()
     };
     let matcher = watchlist::WatchlistMatcher::new(Vec::new()).unwrap();
@@ -490,7 +490,7 @@ fn oversize_file_emits_coverage_skip_warning() {
     let big = "x".repeat(64);
     fs::write(temp.path().join("big.txt"), format!("192.168.50.9\n{big}")).unwrap();
     let config = Config {
-        max_file_size: 16,
+        max_file_size: Some(16),
         ..Default::default()
     };
     let matcher = watchlist::WatchlistMatcher::new(Vec::new()).unwrap();
@@ -563,7 +563,7 @@ fn watchlist_has_a_hard_size_ceiling_independent_of_config() {
     let file = fs::File::create(&path).unwrap();
     file.set_len((64 * 1024 * 1024) + 1).unwrap();
     let mut config = Config {
-        max_file_size: 128 * 1024 * 1024,
+        max_file_size: Some(128 * 1024 * 1024),
         ..Default::default()
     };
     config.watchlists.push(WatchlistSource::Lines {

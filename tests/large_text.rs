@@ -1,0 +1,258 @@
+//! Large text files are read to the end instead of being coverage-skipped.
+//! Every repository, file and value here is synthetic.
+use std::{
+    fs,
+    path::Path,
+    process::{Command, Output},
+};
+use tempfile::tempdir;
+
+const MIB: usize = 1024 * 1024;
+const SYNTHETIC_IP: &str = "192.168.50.9";
+
+fn command(program: &str, cwd: &Path) -> Command {
+    let mut command = Command::new(program);
+    command.current_dir(cwd);
+    for (key, _) in std::env::vars_os() {
+        let name = key.to_string_lossy().to_ascii_uppercase();
+        if name.starts_with("GIT_") || name.starts_with("DOXGUARD_") {
+            command.env_remove(key);
+        }
+    }
+    command
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", cwd.join("absent-global.gitconfig"))
+        .env("GIT_CONFIG_SYSTEM", cwd.join("absent-system.gitconfig"));
+    command
+}
+
+fn git(cwd: &Path, args: &[&str]) -> String {
+    let output = command("git", cwd).args(args).output().unwrap();
+    assert!(
+        output.status.success(),
+        "git: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8(output.stdout).unwrap()
+}
+
+fn repo(cwd: &Path, config: &str) {
+    git(cwd, &["init", "-q"]);
+    git(cwd, &["config", "user.name", "Synthetic Fixture"]);
+    git(cwd, &["config", "user.email", "fixture@example.com"]);
+    git(cwd, &["config", "core.autocrlf", "false"]);
+    fs::write(cwd.join("doxguard.config.json"), config).unwrap();
+    git(
+        cwd,
+        &["commit", "--allow-empty", "-qm", "synthetic baseline"],
+    );
+}
+
+/// Lines of filler text totalling at least `bytes`, so the last line lands
+/// beyond the size that used to be skipped.
+fn filler(bytes: usize) -> String {
+    let line = "synthetic filler text for large file coverage 0123456789abcdef\n";
+    line.repeat(bytes / line.len() + 1)
+}
+
+fn scan(cwd: &Path, args: &[&str]) -> (Option<i32>, serde_json::Value) {
+    let output: Output = command(env!("CARGO_BIN_EXE_doxguard"), cwd)
+        .args(["scan"])
+        .args(args)
+        .args(["--block", "--strict", "--format", "json"])
+        .output()
+        .unwrap();
+    let report = serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
+        panic!(
+            "stdout={} stderr={}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        )
+    });
+    (output.status.code(), report)
+}
+
+fn counts(report: &serde_json::Value) -> (u64, u64, usize) {
+    (
+        report["scanned"].as_u64().unwrap(),
+        report["coverage_skips"].as_u64().unwrap(),
+        report["hits"].as_array().unwrap().len(),
+    )
+}
+
+#[test]
+fn staged_text_above_the_old_default_limit_is_read_to_the_last_line() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    let body = format!("{}host = {SYNTHETIC_IP}\n", filler(MIB + 4096));
+    fs::write(cwd.join("inventory.json"), &body).unwrap();
+    // One long line with the value at its very end.
+    let long_line = format!("{} {SYNTHETIC_IP}", "x".repeat(2 * MIB));
+    fs::write(cwd.join("minified.js"), long_line).unwrap();
+    git(cwd, &["add", "--", "inventory.json", "minified.js"]);
+
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (2, 0, 2), "{report}");
+    let last_line = body.lines().count();
+    assert!(
+        report["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|hit| hit["file"] == "inventory.json" && hit["line_number"] == last_line)
+    );
+}
+
+#[test]
+fn staged_text_above_the_old_sixteen_mib_ceiling_is_read_to_the_end() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    fs::write(
+        cwd.join("cases.json"),
+        format!("{}address: {SYNTHETIC_IP}\n", filler(16 * MIB + 4096)),
+    )
+    .unwrap();
+    git(cwd, &["add", "--", "cases.json"]);
+
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (1, 0, 1), "{report}");
+}
+
+#[test]
+fn clean_staged_text_above_the_old_ceiling_passes_the_strict_gate() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    fs::write(cwd.join("index.json"), filler(MIB + 4096)).unwrap();
+    fs::write(cwd.join("cases.json"), filler(16 * MIB + 4096)).unwrap();
+    git(cwd, &["add", "--", "index.json", "cases.json"]);
+
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(0), "{report}");
+    assert_eq!(counts(&report), (2, 0, 0), "{report}");
+}
+
+#[test]
+fn worktree_and_path_modes_read_large_text_to_the_end() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    fs::write(
+        cwd.join("big.txt"),
+        format!("{}server={SYNTHETIC_IP}\r\n", filler(MIB + 4096)),
+    )
+    .unwrap();
+    git(cwd, &["add", "--", "big.txt"]);
+    git(cwd, &["commit", "-qm", "synthetic large file"]);
+
+    for args in [
+        &["--all-tracked"][..],
+        &["--path", "big.txt"][..],
+        &["--files-from-list", "list.txt"][..],
+    ] {
+        fs::write(cwd.join("list.txt"), "big.txt\n").unwrap();
+        let (code, report) = scan(cwd, args);
+        assert_eq!(code, Some(1), "{args:?}: {report}");
+        let (scanned, skips, hits) = counts(&report);
+        assert_eq!((skips, hits), (0, 1), "{args:?}: {report}");
+        assert!(scanned >= 1, "{args:?}: {report}");
+    }
+}
+
+#[test]
+fn explicit_max_file_size_still_skips_and_has_no_staged_ceiling() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, &format!(r#"{{"maxFileSize": {}}}"#, MIB));
+    fs::write(
+        cwd.join("big.txt"),
+        format!("{}{SYNTHETIC_IP}\n", filler(MIB + 4096)),
+    )
+    .unwrap();
+    git(cwd, &["add", "--", "big.txt"]);
+    let (code, report) = scan(cwd, &["--staged"]);
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (0, 1, 0), "{report}");
+
+    // A configured limit above 16 MiB is honoured instead of being capped.
+    fs::write(
+        cwd.join("doxguard.config.json"),
+        format!(r#"{{"maxFileSize": {}}}"#, 20 * MIB),
+    )
+    .unwrap();
+    fs::write(
+        cwd.join("big.txt"),
+        format!("{}{SYNTHETIC_IP}\n", filler(16 * MIB + 4096)),
+    )
+    .unwrap();
+    git(cwd, &["add", "--", "big.txt"]);
+    let (code, report) = scan(cwd, &["--staged"]);
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (1, 0, 1), "{report}");
+}
+
+#[test]
+fn large_non_utf8_staged_text_remains_a_coverage_skip() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    let mut bytes = format!("{SYNTHETIC_IP}\n{}", filler(MIB + 4096)).into_bytes();
+    bytes.extend_from_slice(&[0xff, 0xfe, b'\n']);
+    fs::write(cwd.join("mixed.txt"), bytes).unwrap();
+    git(cwd, &["add", "--", "mixed.txt"]);
+
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (0, 1, 0), "{report}");
+}
+
+#[test]
+fn added_line_baseline_reads_large_staged_changes() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, r#"{"noise": {"stagedAddedLinesOnly": true}}"#);
+    // Rewriting 33 MiB makes the staged diff larger than the old 64 MiB cap.
+    let body = format!("old={SYNTHETIC_IP}\n{}", filler(33 * MIB));
+    fs::write(cwd.join("cases.json"), &body).unwrap();
+    git(cwd, &["add", "--", "cases.json"]);
+    git(cwd, &["commit", "-qm", "synthetic large file"]);
+    let mut rewritten = String::with_capacity(body.len());
+    for line in body.lines() {
+        rewritten.push_str(&line.replace("filler", "FILLER"));
+        rewritten.push('\n');
+    }
+    fs::write(
+        cwd.join("cases.json"),
+        format!("{rewritten}new={SYNTHETIC_IP}\n"),
+    )
+    .unwrap();
+    git(cwd, &["add", "--", "cases.json"]);
+
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    // The unchanged first line stays suppressed; the appended line is reported.
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (1, 0, 1), "{report}");
+    assert_eq!(report["baseline_suppressed_hits"], 1, "{report}");
+
+    // Only the newest line is new once the rewrite is committed.
+    git(cwd, &["commit", "-qm", "synthetic rewrite"]);
+    fs::write(
+        cwd.join("cases.json"),
+        format!("{rewritten}new={SYNTHETIC_IP}\nnewer={SYNTHETIC_IP}\n"),
+    )
+    .unwrap();
+    git(cwd, &["add", "--", "cases.json"]);
+    let (code, report) = scan(cwd, &["--staged"]);
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (1, 0, 1), "{report}");
+    assert_eq!(report["baseline_suppressed_hits"], 2, "{report}");
+}

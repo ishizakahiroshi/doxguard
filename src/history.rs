@@ -11,6 +11,8 @@ const TREE_LIMIT: usize = 10_000;
 const HIT_LIMIT: usize = 100_000;
 const HISTORY_SECONDS: u64 = 120;
 const TOTAL_IO_LIMIT: u64 = 256 * 1024 * 1024;
+/// History blobs are still read whole, so `maxFileSize` cannot raise this.
+const HISTORY_BLOB_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 fn git_bytes(
     cwd: &Path,
@@ -328,23 +330,15 @@ pub fn scan_history(
                 }
             }
         };
-        if blobs
-            .get(&oid)
-            .is_none_or(|size| *size > config.max_file_size.min(STAGED_BLOB_MAX_BYTES))
-        {
+        let blob_limit = config.bounded_file_size().min(HISTORY_BLOB_MAX_BYTES);
+        if blobs.get(&oid).is_none_or(|size| *size > blob_limit) {
             coverage_skips += 1;
             warnings.push(format!(
                 "WARN: skipped {path} (blob {oid}; oversize or unavailable history blob)"
             ));
             continue;
         }
-        let content = git_bytes(
-            cwd,
-            &["cat-file", "blob", &oid],
-            None,
-            config.max_file_size.min(STAGED_BLOB_MAX_BYTES),
-            started,
-        )?;
+        let content = git_bytes(cwd, &["cat-file", "blob", &oid], None, blob_limit, started)?;
         blob_bytes += content.len() as u64;
         if blob_bytes > TOTAL_IO_LIMIT {
             bail!("history blob reads exceed 256 MiB");

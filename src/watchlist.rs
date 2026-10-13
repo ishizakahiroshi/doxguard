@@ -414,7 +414,7 @@ pub fn load(
                 "failed to stat watchlist source #{source_number}; check the file's permissions"
             )
         })?;
-        let limit = config.max_file_size.min(WATCHLIST_MAX_BYTES);
+        let limit = config.bounded_file_size().min(WATCHLIST_MAX_BYTES);
         if meta.len() > limit && !matches!(source, WatchlistSource::Directory { .. }) {
             bail!(
                 "watchlist source #{source_number} is {} bytes (effective limit is {limit}); refuse to load unbounded lists. Trim the file or raise `maxFileSize` in the config",

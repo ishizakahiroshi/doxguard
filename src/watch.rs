@@ -197,7 +197,7 @@ pub fn add(
                     shown_location(&target_real)
                 );
             }
-            let limit = config.max_file_size.min(WATCHLIST_MAX_BYTES);
+            let limit = config.bounded_file_size().min(WATCHLIST_MAX_BYTES);
             if meta.len() > limit {
                 bail!(
                     "watchlist source #{number} already exceeds the size limit ({limit} bytes). Remove terms from the file by hand or raise `maxFileSize` in the config, then run again"
@@ -259,7 +259,7 @@ pub fn add(
         payload.push_str(eol);
     }
 
-    let limit = config.max_file_size.min(WATCHLIST_MAX_BYTES);
+    let limit = config.bounded_file_size().min(WATCHLIST_MAX_BYTES);
     if existing_text.len() as u64 + payload.len() as u64 > limit {
         bail!(
             "appending would exceed the watchlist size limit ({limit} bytes); nothing was written. Remove terms from the file by hand or raise `maxFileSize` in the config, then run again"

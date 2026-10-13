@@ -185,10 +185,14 @@ coverage skips under strict/`failOnSkip`), and `2` means usage or configuration 
   "exemptPaths": ["generated/"],
   "includeDefaultExemptPaths": true,
   "requireWatchlists": false,
-  "maxFileSize": 1048576,
   "failOnSkip": false
 }
 ```
+
+Text files are streamed line by line and read to the end whatever their size, so a large
+generated file is inspected instead of becoming a coverage skip. Set `maxFileSize` (bytes) only
+when you want a cap: larger scan targets then count as coverage skips. Watchlist sources and
+`--history` blobs are still loaded whole and keep a 1 MiB default limit.
 
 Watchlist paths should use `${ENV_VAR}` expansion. Literal paths work but produce a warning so a
 private path is not accidentally committed. `DOXGUARD_CONFIG` can point to an entirely local config
@@ -264,7 +268,8 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 - Repository config contains environment-variable references, not private absolute paths.
 - CI normally runs structural patterns only because private watchlists are unavailable there.
 - Scan commands are read-only: they report and return an exit code, but never edit or delete files.
-- Binary, lock, oversized, and explicitly exempt files are skipped.
+- Binary, lock, and explicitly exempt files are skipped. Text files are read in full unless
+  `maxFileSize` is set.
 
 ## 日本語
 

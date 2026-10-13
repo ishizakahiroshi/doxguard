@@ -1,7 +1,8 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    io::{Read, Write},
+    io::{BufRead, BufReader, Read, Write},
+    ops::Range,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::OnceLock,
@@ -108,12 +109,20 @@ enum Eligibility {
     CoverageSkip(&'static str),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum ContentLoad {
-    Text(String),
+/// How a scan target's lines were delivered to the matcher.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LineRead {
+    Complete,
     /// Preserve ASCII findings in non-UTF-8 data without claiming full coverage.
-    PartialText(String, &'static str),
-    CoverageSkip(&'static str),
+    Partial(&'static str),
+    /// Not fully scanned; findings from the partial read are discarded.
+    Skipped(&'static str),
+}
+
+enum LinesEnd {
+    Complete { bytes: u64, replaced: bool },
+    NonUtf8,
+    OverLimit,
 }
 
 const BINARY_EXTENSIONS: &[&str] = &[
@@ -655,7 +664,10 @@ fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eli
     if !metadata.is_file() {
         return Eligibility::CoverageSkip("non-regular target");
     }
-    if metadata.len() > config.max_file_size {
+    if config
+        .max_file_size
+        .is_some_and(|limit| metadata.len() > limit)
+    {
         return Eligibility::CoverageSkip("oversize");
     }
     Eligibility::Scan(kind)
@@ -671,8 +683,6 @@ fn configured_path_exempt(path: &str, cwd: &Path, config: &Config) -> bool {
             || relative.is_some_and(|relative| path_is_exempt(relative, exempt))
     })
 }
-
-const STAGED_BLOB_MAX_BYTES: u64 = 16 * 1024 * 1024;
 
 /// Size-probe every staged blob with a single `git cat-file --batch-check` instead
 /// of one process per file, halving the child processes a pre-commit hook spawns
@@ -735,84 +745,154 @@ fn staged_blob_sizes(paths: &[String], cwd: &Path) -> Option<HashMap<String, u64
     Some(sizes)
 }
 
-fn read_scan_content(
+/// Feed `reader` to `on_line` one line at a time, split exactly like
+/// `str::lines`, so memory is bounded by the longest line instead of the file.
+fn for_each_line(
+    mut reader: impl BufRead,
+    lossy: bool,
+    limit: Option<u64>,
+    on_line: &mut dyn FnMut(usize, &str),
+) -> std::io::Result<LinesEnd> {
+    let mut buffer = Vec::new();
+    let mut bytes = 0u64;
+    let mut replaced = false;
+    let mut line_number = 0usize;
+    loop {
+        buffer.clear();
+        let read = reader.read_until(b'\n', &mut buffer)?;
+        if read == 0 {
+            return Ok(LinesEnd::Complete { bytes, replaced });
+        }
+        bytes += read as u64;
+        if limit.is_some_and(|limit| bytes > limit) {
+            return Ok(LinesEnd::OverLimit);
+        }
+        line_number += 1;
+        let mut line = buffer.as_slice();
+        if let Some(rest) = line.strip_suffix(b"\n") {
+            line = rest.strip_suffix(b"\r").unwrap_or(rest);
+        }
+        match std::str::from_utf8(line) {
+            Ok(text) => on_line(line_number, text),
+            Err(_) if lossy => {
+                replaced = true;
+                on_line(line_number, &String::from_utf8_lossy(line));
+            }
+            Err(_) => return Ok(LinesEnd::NonUtf8),
+        }
+    }
+}
+
+/// `Read::take` bound that stops a line without newlines from growing past
+/// an explicit `maxFileSize`; unlimited when none is configured.
+fn read_cap(limit: Option<u64>) -> u64 {
+    limit.map_or(u64::MAX, |limit| limit.saturating_add(1))
+}
+
+fn read_scan_lines(
     mode: ScanMode,
     path: &str,
     cwd: &Path,
-    max_file_size: u64,
+    max_file_size: Option<u64>,
     _staged_sizes: Option<&HashMap<String, u64>>,
-) -> Result<ContentLoad> {
+    on_line: &mut dyn FnMut(usize, &str),
+) -> LineRead {
     if mode == ScanMode::Staged {
         // Index blob, not worktree — pre-commit must gate what will be committed.
-        let literal = format!(":(literal){path}");
-        let listing = match run_git(&["ls-files", "--stage", "-z", "--", &literal], cwd) {
-            Ok(listing) => listing,
-            Err(_) => return Ok(ContentLoad::CoverageSkip("unreadable staged entry")),
-        };
-        let mut entries = listing.split('\0').filter(|entry| !entry.is_empty());
-        let entry = entries.next().unwrap_or_default();
-        let Some((header, entry_path)) = entry.split_once('\t') else {
-            return Ok(ContentLoad::CoverageSkip("missing staged entry"));
-        };
-        let fields: Vec<_> = header.split_whitespace().collect();
-        if entries.next().is_some()
-            || entry_path != path
-            || fields.len() != 3
-            || !matches!(fields[0], "100644" | "100755")
-            || fields[2] != "0"
-            || !matches!(fields[1].len(), 40 | 64)
-            || !fields[1].bytes().all(|byte| byte.is_ascii_hexdigit())
-        {
-            return Ok(ContentLoad::CoverageSkip(
-                "non-regular or unmerged staged entry",
-            ));
-        }
-        // Bind type, size and contents to the same immutable index object.
-        let oid = fields[1];
-        let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
-        let size = run_git(&["cat-file", "-s", oid], cwd)
-            .ok()
-            .and_then(|size| size.trim().parse::<u64>().ok());
-        if size.is_none_or(|size| size > limit) {
-            return Ok(ContentLoad::CoverageSkip(
-                "unreadable or oversize staged blob",
-            ));
-        }
-        match run_git(&["cat-file", "blob", oid], cwd) {
-            Ok(content) => {
-                if content.len() as u64 > limit {
-                    return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
-                }
-                Ok(ContentLoad::Text(content))
-            }
-            Err(_) => Ok(ContentLoad::CoverageSkip(
-                "unreadable or non-UTF-8 staged blob",
-            )),
-        }
+        return read_staged_lines(path, cwd, max_file_size, on_line);
+    }
+    let file = match fs::File::open(cwd.join(path)) {
+        Ok(file) => file,
+        Err(_) => return LineRead::Skipped("unreadable content"),
+    };
+    let reader = BufReader::new(file.take(read_cap(max_file_size)));
+    match for_each_line(reader, mode == ScanMode::Paths, max_file_size, on_line) {
+        Ok(LinesEnd::Complete {
+            replaced: false, ..
+        }) => LineRead::Complete,
+        Ok(LinesEnd::Complete { replaced: true, .. }) => LineRead::Partial("non-UTF-8 content"),
+        Ok(LinesEnd::OverLimit) => LineRead::Skipped("oversize content"),
+        Ok(LinesEnd::NonUtf8) => LineRead::Skipped("non-UTF-8 content"),
+        Err(_) => LineRead::Skipped("unreadable content"),
+    }
+}
+
+fn read_staged_lines(
+    path: &str,
+    cwd: &Path,
+    max_file_size: Option<u64>,
+    on_line: &mut dyn FnMut(usize, &str),
+) -> LineRead {
+    const UNREADABLE: &str = "unreadable or non-UTF-8 staged blob";
+    let literal = format!(":(literal){path}");
+    let listing = match run_git(&["ls-files", "--stage", "-z", "--", &literal], cwd) {
+        Ok(listing) => listing,
+        Err(_) => return LineRead::Skipped("unreadable staged entry"),
+    };
+    let mut entries = listing.split('\0').filter(|entry| !entry.is_empty());
+    let entry = entries.next().unwrap_or_default();
+    let Some((header, entry_path)) = entry.split_once('\t') else {
+        return LineRead::Skipped("missing staged entry");
+    };
+    let fields: Vec<_> = header.split_whitespace().collect();
+    if entries.next().is_some()
+        || entry_path != path
+        || fields.len() != 3
+        || !matches!(fields[0], "100644" | "100755")
+        || fields[2] != "0"
+        || !matches!(fields[1].len(), 40 | 64)
+        || !fields[1].bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return LineRead::Skipped("non-regular or unmerged staged entry");
+    }
+    // Bind type, size and contents to the same immutable index object.
+    let oid = fields[1];
+    let Some(size) = run_git(&["cat-file", "-s", oid], cwd)
+        .ok()
+        .and_then(|size| size.trim().parse::<u64>().ok())
+    else {
+        return LineRead::Skipped("unreadable staged blob");
+    };
+    if max_file_size.is_some_and(|limit| size > limit) {
+        return LineRead::Skipped("oversize staged blob");
+    }
+    let Ok(git) = git_program() else {
+        return LineRead::Skipped(UNREADABLE);
+    };
+    let spawned = Command::new(git)
+        .args([
+            "--no-replace-objects",
+            "-c",
+            "core.quotepath=false",
+            "cat-file",
+            "blob",
+            oid,
+        ])
+        .current_dir(cwd)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn();
+    let Ok(mut child) = spawned else {
+        return LineRead::Skipped(UNREADABLE);
+    };
+    let complete = child.stdout.take().is_some_and(|stdout| {
+        // Reading one byte past the probed size detects any mismatch.
+        let reader = BufReader::new(stdout.take(size.saturating_add(1)));
+        matches!(
+            for_each_line(reader, false, None, on_line),
+            Ok(LinesEnd::Complete { bytes, .. }) if bytes == size
+        )
+    });
+    if !complete {
+        // Stop a blob that is no longer being read instead of draining it.
+        let _ = child.kill();
+    }
+    let exited = child.wait().is_ok_and(|status| status.success());
+    if complete && exited {
+        LineRead::Complete
     } else {
-        let file = match fs::File::open(cwd.join(path)) {
-            Ok(file) => file,
-            Err(_) => return Ok(ContentLoad::CoverageSkip("unreadable content")),
-        };
-        let mut bytes = Vec::new();
-        if file
-            .take(max_file_size.saturating_add(1))
-            .read_to_end(&mut bytes)
-            .is_err()
-        {
-            return Ok(ContentLoad::CoverageSkip("unreadable content"));
-        }
-        if bytes.len() as u64 > max_file_size {
-            return Ok(ContentLoad::CoverageSkip("oversize content"));
-        }
-        Ok(match String::from_utf8(bytes) {
-            Ok(content) => ContentLoad::Text(content),
-            Err(error) if mode == ScanMode::Paths => ContentLoad::PartialText(
-                String::from_utf8_lossy(error.as_bytes()).into_owned(),
-                "non-UTF-8 content",
-            ),
-            Err(_) => ContentLoad::CoverageSkip("non-UTF-8 content"),
-        })
+        LineRead::Skipped(UNREADABLE)
     }
 }
 
@@ -879,30 +959,13 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
     let config = context.config;
     let matcher = context.matcher;
     let patterns = context.patterns;
-    let (content, coverage_skip) = match read_scan_content(
-        context.mode,
-        path,
-        context.cwd,
-        config.max_file_size,
-        context.staged_sizes,
-    )? {
-        ContentLoad::CoverageSkip(reason) => {
-            return Ok(FileScanOutcome {
-                hits: Vec::new(),
-                coverage_skip: Some(reason),
-            });
-        }
-        ContentLoad::Text(content) => (content, None),
-        ContentLoad::PartialText(content, reason) => (content, Some(reason)),
-    };
     let mut hits = Vec::new();
-    for (index, line) in content.lines().enumerate() {
-        let line_number = index + 1;
+    let mut on_line = |line_number: usize, line: &str| {
         if kind.wants_watchlist() {
             hits.extend(watchlist_hits(line, path, line_number, matcher, config));
         }
         if !kind.wants_structural() {
-            continue;
+            return;
         }
         for pattern in patterns {
             let mut seen = HashSet::new();
@@ -927,10 +990,28 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
                 });
             }
         }
-    }
-    Ok(FileScanOutcome {
-        hits,
-        coverage_skip,
+    };
+    let read = read_scan_lines(
+        context.mode,
+        path,
+        context.cwd,
+        config.max_file_size,
+        context.staged_sizes,
+        &mut on_line,
+    );
+    Ok(match read {
+        LineRead::Complete => FileScanOutcome {
+            hits,
+            coverage_skip: None,
+        },
+        LineRead::Partial(reason) => FileScanOutcome {
+            hits,
+            coverage_skip: Some(reason),
+        },
+        LineRead::Skipped(reason) => FileScanOutcome {
+            hits: Vec::new(),
+            coverage_skip: Some(reason),
+        },
     })
 }
 
@@ -1011,7 +1092,7 @@ pub fn scan_paths(
         hits.retain(|hit| {
             let keep = added
                 .get(&hit.file)
-                .is_some_and(|lines| lines.contains(&hit.line_number));
+                .is_some_and(|lines| lines.contains(hit.line_number));
             if !keep {
                 baseline_suppressed_hits += 1;
             }
@@ -1034,7 +1115,31 @@ pub fn scan_paths(
     })
 }
 
-fn staged_added_lines(path: &str, cwd: &Path) -> Result<HashSet<usize>> {
+/// New-side line ranges of a staged diff, merged and sorted, so a rewrite of a
+/// huge file costs one range instead of one entry per line.
+struct AddedLines(Vec<Range<usize>>);
+
+impl AddedLines {
+    fn new(mut ranges: Vec<Range<usize>>) -> Self {
+        ranges.retain(|range| !range.is_empty());
+        ranges.sort_by_key(|range| range.start);
+        let mut merged: Vec<Range<usize>> = Vec::with_capacity(ranges.len());
+        for range in ranges {
+            match merged.last_mut() {
+                Some(last) if range.start <= last.end => last.end = last.end.max(range.end),
+                _ => merged.push(range),
+            }
+        }
+        Self(merged)
+    }
+
+    fn contains(&self, line: usize) -> bool {
+        let index = self.0.partition_point(|range| range.end <= line);
+        self.0.get(index).is_some_and(|range| range.contains(&line))
+    }
+}
+
+fn staged_added_lines(path: &str, cwd: &Path) -> Result<AddedLines> {
     // With no HEAD, Git treats the cached diff as a diff against the empty tree.
     let mut command = Command::new(git_program()?);
     let literal = format!(":(literal){path}");
@@ -1066,53 +1171,81 @@ fn staged_added_lines(path: &str, cwd: &Path) -> Result<HashSet<usize>> {
     let mut child = command
         .spawn()
         .map_err(|_| anyhow!("cannot determine staged baseline; Git diff failed"))?;
-    use std::io::Read;
-    const DIFF_LIMIT: u64 = 64 * 1024 * 1024;
-    let mut bytes = Vec::new();
-    let read = child
-        .stdout
-        .take()
-        .ok_or_else(|| anyhow!("missing baseline diff output"))?
-        .take(DIFF_LIMIT + 1)
-        .read_to_end(&mut bytes);
-    if read.is_err() || bytes.len() as u64 > DIFF_LIMIT {
+    let Some(stdout) = child.stdout.take() else {
         let _ = child.kill();
         let _ = child.wait();
-        bail!("cannot determine staged baseline; diff unreadable or exceeds 64 MiB");
+        bail!("missing baseline diff output");
+    };
+    // Only hunk headers matter, so stream the diff line by line: its size
+    // follows the staged file and must not cap what the gate can check.
+    let hunk = Regex::new(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@").expect("static hunk regex");
+    let mut reader = BufReader::new(stdout);
+    let mut buffer = Vec::new();
+    let mut ranges = Vec::new();
+    let parsed = loop {
+        buffer.clear();
+        match reader.read_until(b'\n', &mut buffer) {
+            Ok(0) => break Ok(()),
+            Ok(_) => {}
+            Err(_) => break Err(anyhow!("cannot determine staged baseline; diff unreadable")),
+        }
+        let Ok(line) = std::str::from_utf8(&buffer) else {
+            break Err(anyhow!("staged baseline diff must be UTF-8"));
+        };
+        if !line.starts_with("@@") {
+            continue;
+        }
+        match hunk_range(&hunk, line) {
+            Ok(range) => ranges.push(range),
+            Err(error) => break Err(error),
+        }
+    };
+    if parsed.is_err() {
+        let _ = child.kill();
     }
-    if !child
-        .wait()
+    let status = child.wait();
+    parsed?;
+    if !status
         .map_err(|_| anyhow!("cannot wait for baseline diff"))?
         .success()
     {
         bail!("cannot determine staged baseline; Git diff failed");
     }
-    let diff =
-        String::from_utf8(bytes).map_err(|_| anyhow!("staged baseline diff must be UTF-8"))?;
-    let hunk = Regex::new(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@").expect("static hunk regex");
-    let mut added = HashSet::new();
-    for line in diff.lines().filter(|line| line.starts_with("@@")) {
-        let captures = hunk
-            .captures(line)
-            .ok_or_else(|| anyhow!("cannot parse staged baseline hunk"))?;
-        let start: usize = captures[1]
-            .parse()
-            .map_err(|_| anyhow!("invalid staged baseline position"))?;
-        let count: usize = captures
-            .get(2)
-            .map_or(Ok(1), |value| value.as_str().parse())
-            .map_err(|_| anyhow!("invalid staged baseline count"))?;
-        let end = start
-            .checked_add(count)
-            .ok_or_else(|| anyhow!("staged baseline range overflow"))?;
-        added.extend(start..end);
-    }
-    Ok(added)
+    Ok(AddedLines::new(ranges))
+}
+
+fn hunk_range(hunk: &Regex, line: &str) -> Result<Range<usize>> {
+    let captures = hunk
+        .captures(line)
+        .ok_or_else(|| anyhow!("cannot parse staged baseline hunk"))?;
+    let start: usize = captures[1]
+        .parse()
+        .map_err(|_| anyhow!("invalid staged baseline position"))?;
+    let count: usize = captures
+        .get(2)
+        .map_or(Ok(1), |value| value.as_str().parse())
+        .map_err(|_| anyhow!("invalid staged baseline count"))?;
+    let end = start
+        .checked_add(count)
+        .ok_or_else(|| anyhow!("staged baseline range overflow"))?;
+    Ok(start..end)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::nul_paths;
+    use super::{AddedLines, nul_paths};
+
+    #[test]
+    fn added_lines_merge_unsorted_overlapping_and_empty_ranges() {
+        let added = AddedLines::new(vec![5..7, 1..3, 2..4, 10..10]);
+        assert_eq!(added.0, [1..4, 5..7]);
+        for line in [1, 2, 3, 5, 6] {
+            assert!(added.contains(line), "{line}");
+        }
+        for line in [0, 4, 7, 10] {
+            assert!(!added.contains(line), "{line}");
+        }
+    }
 
     #[test]
     fn nul_paths_preserves_whitespace_and_newlines() {
