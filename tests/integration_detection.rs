@@ -1,0 +1,539 @@
+//! Synthetic-only coverage for the integration contract, independent of author lists.
+use doxguard::{config::Config, scan, watchlist};
+use std::{
+    collections::HashMap,
+    fs,
+    path::Path,
+    process::{Command, Output},
+};
+use tempfile::tempdir;
+
+fn config(text: &str) -> Config {
+    let config: Config = serde_json::from_str(text).unwrap();
+    config.validate().unwrap();
+    config
+}
+
+fn git(root: &Path, args: &[&str]) {
+    assert!(
+        Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .output()
+            .unwrap()
+            .status
+            .success()
+    );
+}
+
+#[test]
+fn file_list_preserves_leading_space_in_literal_filename() {
+    let fixture = tempdir().unwrap();
+    let cwd = fixture.path();
+    git(cwd, &["init", "-q"]);
+    fs::write(cwd.join("doxguard.config.json"), "{}").unwrap();
+    fs::write(cwd.join("policy.md"), "safe alias\n").unwrap();
+    fs::write(cwd.join(" policy.md"), "host=192.168.50.9\n").unwrap();
+    fs::write(cwd.join("paths.txt"), " policy.md\n").unwrap();
+    let result = run(
+        cwd,
+        &[
+            "scan",
+            "--files-from-list",
+            "paths.txt",
+            "--block",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(result.status.code(), Some(1));
+    let value: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+    assert_eq!(value["hits"].as_array().unwrap().len(), 1);
+    assert_eq!(value["hits"][0]["file"], " policy.md");
+    assert_eq!(value["coverage_skips"], 0);
+}
+
+fn run(root: &Path, args: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_doxguard"))
+        .args(args)
+        .current_dir(root)
+        .env_remove("DOXGUARD_CONFIG")
+        .env_remove("DOXGUARD_SHOW_PATHS")
+        .env_remove("SYNTHETIC_INTEGRATION_ROOT")
+        .output()
+        .unwrap()
+}
+
+#[test]
+fn required_sources_optional_skips_and_explicit_structural_ci() {
+    let temp = tempdir().unwrap();
+    git(temp.path(), &["init", "-q"]);
+    for value in [
+        r#"{"watchlists":[{"type":"lines","path":"${SYNTHETIC_INTEGRATION_ROOT}/words.txt"}]}"#,
+        r#"{"watchlists":[{"type":"csv","path":"${SYNTHETIC_INTEGRATION_ROOT}/table.csv","column":1}]}"#,
+        r#"{"watchlists":[{"type":"directory","path":"${SYNTHETIC_INTEGRATION_ROOT}"}]}"#,
+    ] {
+        fs::write(temp.path().join("doxguard.config.json"), value).unwrap();
+        let output = run(temp.path(), &["scan", "--all-tracked", "--block"]);
+        assert_eq!(output.status.code(), Some(2));
+    }
+    fs::write(temp.path().join("doxguard.config.json"), r#"{"watchlists":[{"type":"lines","path":"${SYNTHETIC_INTEGRATION_ROOT}/words.txt","optional":true}]}"#).unwrap();
+    let output = run(temp.path(), &["scan", "--all-tracked", "--block"]);
+    assert!(output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("not set"));
+    let ci = temp.path().join("ci.json");
+    fs::write(&ci, r#"{"watchlists":[]}"#).unwrap();
+    assert!(
+        run(
+            temp.path(),
+            &["scan", "--all-tracked", "--block", "--config", "ci.json"]
+        )
+        .status
+        .success()
+    );
+    assert!(Config::default().fail_on_skip);
+}
+
+#[test]
+fn joined_csv_preserves_full_names_even_when_short_given_names_are_noise() {
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("table.csv"),
+        "\u{feff}surname,given_name\nSynthetic,かな\nEmpty,\n,Missing\n",
+    )
+    .unwrap();
+    let cfg = config(
+        r#"{"watchlists":[{"type":"csv","path":"table.csv","column":"given_name"},{"type":"csv","path":"table.csv","columns":["surname","given_name"],"label":"fixture given_name"},{"type":"csv","path":"table.csv","columns":[1,2]}]}"#,
+    );
+    let loaded = watchlist::load(&cfg, temp.path(), &HashMap::new()).unwrap();
+    assert!(loaded.matcher.matches("かな").next().is_none());
+    assert_eq!(loaded.matcher.matches("Syntheticかな").count(), 1);
+    assert!(loaded.matcher.matches("Empty").next().is_none());
+    let cfg = config(
+        r#"{"watchlists":[{"type":"csv","path":"table.csv","columns":[1,2]}],"noise":{"asciiCaseInsensitive":true},"allow":{"names":["SYNTHETICかな"]}}"#,
+    );
+    assert!(
+        watchlist::load(&cfg, temp.path(), &HashMap::new())
+            .unwrap()
+            .matcher
+            .is_empty()
+    );
+}
+
+#[test]
+fn csv_selection_rejects_invalid_contracts_and_masks_reader_errors() {
+    for source in [
+        r#"{"column":1,"columns":[]}"#,
+        r#"{"column":1,"columns":[2]}"#,
+        r#"{"columns":[]}"#,
+        r#"{}"#,
+        r#"{"columns":[0]}"#,
+        r#"{"columns":[""]}"#,
+    ] {
+        let mut source: serde_json::Value = serde_json::from_str(source).unwrap();
+        source["type"] = "csv".into();
+        source["path"] = "table.csv".into();
+        let cfg: Config =
+            serde_json::from_value(serde_json::json!({"watchlists":[source]})).unwrap();
+        assert!(cfg.validate().is_err());
+    }
+    let temp = tempdir().unwrap();
+    fs::write(
+        temp.path().join("table.csv"),
+        "first,second\nSyntheticSecret\n",
+    )
+    .unwrap();
+    for selection in [r#""missing""#, "3"] {
+        let cfg = config(&format!(
+            r#"{{"watchlists":[{{"type":"csv","path":"table.csv","columns":[{selection}]}}]}}"#
+        ));
+        let error = watchlist::load(&cfg, temp.path(), &HashMap::new()).unwrap_err();
+        assert!(!format!("{error:#}").contains("SyntheticSecret"));
+    }
+}
+
+#[test]
+fn parentheses_expand_all_csv_sources_and_short_bare_names_stay_quiet() {
+    let temp = tempdir().unwrap();
+    for (index, value) in [
+        "SyntheticOne(Fixture)",
+        "SyntheticTwo（Fixture）",
+        "SyntheticThree(Fixture)",
+        "SyntheticFour（Fixture）",
+    ]
+    .iter()
+    .enumerate()
+    {
+        fs::write(
+            temp.path().join(format!("table{index}.csv")),
+            format!("name\n{value}\n"),
+        )
+        .unwrap();
+    }
+    let sources: Vec<_> = (0..4).map(|index| serde_json::json!({"type":"csv","path":format!("table{index}.csv"),"column":"name","parenVariants":true})).collect();
+    let cfg = config(&serde_json::json!({"watchlists":sources}).to_string());
+    let loaded = watchlist::load(&cfg, temp.path(), &HashMap::new()).unwrap();
+    for value in [
+        "SyntheticOne",
+        "SyntheticTwo",
+        "SyntheticThree",
+        "SyntheticFour",
+    ] {
+        assert_eq!(loaded.matcher.matches(value).count(), 1);
+    }
+}
+
+#[test]
+fn directory_watchlists_are_bounded_by_depth_length_and_entries() {
+    let temp = tempdir().unwrap();
+    let root = temp.path().join("personal");
+    fs::create_dir(&root).unwrap();
+    fs::write(
+        root.join("synthetic-long-file"),
+        "private-content-is-not-a-needle",
+    )
+    .unwrap();
+    fs::write(root.join("short"), "").unwrap();
+    fs::create_dir(root.join("child")).unwrap();
+    fs::write(root.join("child/synthetic-child-file"), "").unwrap();
+    fs::create_dir(root.join("child/grandchild")).unwrap();
+    fs::write(root.join("child/grandchild/synthetic-too-deep"), "").unwrap();
+    let cfg = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal"}],"allow":{"names":["synthetic-child-file"]}}"#,
+    );
+    let loaded = watchlist::load(&cfg, temp.path(), &HashMap::new()).unwrap();
+    assert_eq!(loaded.matcher.len(), 1);
+    assert!(
+        loaded
+            .matcher
+            .matches("synthetic-long-file")
+            .next()
+            .is_some()
+    );
+    assert!(
+        loaded
+            .matcher
+            .matches("private-content-is-not-a-needle")
+            .next()
+            .is_none()
+    );
+    let cfg = config(r#"{"watchlists":[{"type":"directory","path":"personal","maxEntries":1}]}"#);
+    assert!(watchlist::load(&cfg, temp.path(), &HashMap::new()).is_err());
+    for invalid in [
+        r#"{"maxDepth":0}"#,
+        r#"{"maxDepth":65}"#,
+        r#"{"maxEntries":0}"#,
+        r#"{"minNameLength":0}"#,
+    ] {
+        let mut source: serde_json::Value = serde_json::from_str(invalid).unwrap();
+        source["type"] = "directory".into();
+        source["path"] = "personal".into();
+        let cfg: Config =
+            serde_json::from_value(serde_json::json!({"watchlists":[source]})).unwrap();
+        assert!(cfg.validate().is_err());
+    }
+}
+
+#[cfg(any(unix, windows))]
+fn link_directory(target: &Path, link: &Path) {
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(target, link).unwrap();
+    #[cfg(windows)]
+    assert!(
+        Command::new("cmd.exe")
+            .args(["/c", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .output()
+            .unwrap()
+            .status
+            .success(),
+        "failed to create synthetic directory junction"
+    );
+}
+
+#[cfg(any(unix, windows))]
+#[test]
+fn directory_link_names_are_opt_in_and_never_traverse_targets() {
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    let root = temp.path().join("personal");
+    fs::create_dir(&root).unwrap();
+    fs::write(outside.path().join("synthetic-target-child-name"), "").unwrap();
+    let link = root.join("synthetic-directory-link-name");
+    link_directory(outside.path(), &link);
+
+    let default = config(r#"{"watchlists":[{"type":"directory","path":"personal"}]}"#);
+    assert!(watchlist::load(&default, temp.path(), &HashMap::new()).is_err());
+    let explicit_false = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":false}]}"#,
+    );
+    assert!(watchlist::load(&explicit_false, temp.path(), &HashMap::new()).is_err());
+    let enabled = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":true}]}"#,
+    );
+    let loaded = watchlist::load(&enabled, temp.path(), &HashMap::new()).unwrap();
+    assert_eq!(loaded.matcher.len(), 1);
+    assert_eq!(
+        loaded
+            .matcher
+            .matches("synthetic-directory-link-name")
+            .count(),
+        1
+    );
+    assert!(
+        loaded
+            .matcher
+            .matches("synthetic-target-child-name")
+            .next()
+            .is_none()
+    );
+
+    // A linked root remains invalid even when entry link names are enabled.
+    let linked_root = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal/synthetic-directory-link-name","includeLinkNames":true}]}"#,
+    );
+    assert!(watchlist::load(&linked_root, temp.path(), &HashMap::new()).is_err());
+
+    // Link entries still count against the same hard entry limit.
+    fs::write(root.join("synthetic-ordinary-file-name"), "").unwrap();
+    let bounded = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":true,"maxEntries":1}]}"#,
+    );
+    assert!(watchlist::load(&bounded, temp.path(), &HashMap::new()).is_err());
+    #[cfg(windows)]
+    fs::remove_dir(link).unwrap();
+    #[cfg(unix)]
+    fs::remove_file(link).unwrap();
+}
+
+#[cfg(any(unix, windows))]
+#[test]
+fn file_link_names_do_not_load_target_names_contents_or_require_live_targets() {
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    let root = temp.path().join("personal");
+    fs::create_dir(&root).unwrap();
+    let target = outside.path().join("synthetic-target-file-name");
+    fs::write(&target, "synthetic-target-content-name").unwrap();
+    let link = root.join("synthetic-file-link-name");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(&target, &link).unwrap();
+    #[cfg(windows)]
+    if let Err(error) = std::os::windows::fs::symlink_file(&target, &link) {
+        if error.kind() == std::io::ErrorKind::PermissionDenied {
+            eprintln!(
+                "file symlink privilege unavailable; directory junction test remains required"
+            );
+            return;
+        }
+        panic!("failed to create synthetic file symlink: {error}");
+    }
+    let default = config(r#"{"watchlists":[{"type":"directory","path":"personal"}]}"#);
+    assert!(watchlist::load(&default, temp.path(), &HashMap::new()).is_err());
+    let enabled = config(
+        r#"{"watchlists":[{"type":"directory","path":"personal","includeLinkNames":true}]}"#,
+    );
+    for _ in 0..2 {
+        let loaded = watchlist::load(&enabled, temp.path(), &HashMap::new()).unwrap();
+        assert_eq!(loaded.matcher.len(), 1);
+        assert_eq!(
+            loaded.matcher.matches("synthetic-file-link-name").count(),
+            1
+        );
+        for hidden in [
+            "synthetic-target-file-name",
+            "synthetic-target-content-name",
+        ] {
+            assert!(loaded.matcher.matches(hidden).next().is_none());
+        }
+        // A dangling link proves the opt-in never needs to stat its target.
+        if target.exists() {
+            fs::remove_file(&target).unwrap();
+        }
+    }
+    fs::remove_file(link).unwrap();
+}
+
+#[test]
+fn files_list_scans_gitignored_submissions_and_preserves_cwd_and_names() {
+    let temp = tempdir().unwrap();
+    git(temp.path(), &["init", "-q"]);
+    fs::create_dir(temp.path().join("sub")).unwrap();
+    fs::write(temp.path().join(".gitignore"), "sub/\n").unwrap();
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"watchlists":[{"type":"lines","path":"words.txt"}]}"#,
+    )
+    .unwrap();
+    fs::write(temp.path().join("words.txt"), "SyntheticIdentity\n").unwrap();
+    fs::write(
+        temp.path().join("sub/日本語 submission.txt"),
+        "SyntheticIdentity\n",
+    )
+    .unwrap();
+    fs::write(
+        temp.path().join("sub/list.txt"),
+        "\u{feff}日本語 submission.txt\r\n\r\n日本語 submission.txt\r\n",
+    )
+    .unwrap();
+    let output = run(
+        &temp.path().join("sub"),
+        &[
+            "scan",
+            "--files-from-list",
+            "list.txt",
+            "--block",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["total_files"], 1);
+    assert_eq!(report["hits"][0]["file"], "sub/日本語 submission.txt");
+    assert_eq!(report["hits"][0]["matched"], "[redacted]");
+    assert_eq!(
+        fs::read_to_string(temp.path().join("sub/日本語 submission.txt")).unwrap(),
+        "SyntheticIdentity\n"
+    );
+    assert_eq!(
+        run(
+            temp.path(),
+            &["scan", "--files-from-list", "sub/list.txt", "--staged"]
+        )
+        .status
+        .code(),
+        Some(2)
+    );
+}
+
+#[test]
+fn files_list_accepts_equivalent_repository_root_spellings() {
+    let temp = tempdir().unwrap();
+    fs::create_dir(temp.path().join("sub")).unwrap();
+    fs::write(temp.path().join("sub/fixture.txt"), "synthetic content\n").unwrap();
+    fs::write(temp.path().join("sub/list.txt"), "fixture.txt\n").unwrap();
+    // Windows canonical paths use a verbatim prefix; Git and cwd may instead use
+    // ordinary or short-name spellings of the same directory.
+    let root = temp.path().canonicalize().unwrap();
+    assert_eq!(
+        scan::files_from_list(Path::new("list.txt"), &temp.path().join("sub"), &root).unwrap(),
+        ["sub/fixture.txt"]
+    );
+}
+
+#[test]
+fn list_errors_and_coverage_skips_fail_closed() {
+    let temp = tempdir().unwrap();
+    git(temp.path(), &["init", "-q"]);
+    fs::write(
+        temp.path().join("doxguard.config.json"),
+        r#"{"maxFileSize":16}"#,
+    )
+    .unwrap();
+    fs::write(temp.path().join("big.txt"), "x".repeat(64)).unwrap();
+    fs::write(temp.path().join("bad.txt"), [0x80]).unwrap();
+    for (entry, code) in [
+        ("big.txt", 1),
+        ("bad.txt", 1),
+        ("missing.txt", 2),
+        ("../outside.txt", 2),
+        ("C:/fixture.txt", 2),
+        ("/fixture.txt", 2),
+        (".", 2),
+    ] {
+        fs::write(temp.path().join("list.txt"), entry).unwrap();
+        let output = run(
+            temp.path(),
+            &["scan", "--files-from-list", "list.txt", "--block"],
+        );
+        assert_eq!(
+            output.status.code(),
+            Some(code),
+            "entry={entry}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    fs::write(temp.path().join("list.txt"), [0x80]).unwrap();
+    assert_eq!(
+        run(temp.path(), &["scan", "--files-from-list", "list.txt"])
+            .status
+            .code(),
+        Some(2)
+    );
+    assert!(scan::files_from_list(Path::new("absent.txt"), temp.path(), temp.path()).is_err());
+}
+
+#[cfg(windows)]
+#[test]
+fn junctions_are_not_followed_for_watchlists_or_list_targets() {
+    let temp = tempdir().unwrap();
+    let outside = tempdir().unwrap();
+    fs::write(outside.path().join("synthetic-long-name"), "fixture").unwrap();
+    let link = temp.path().join("linked");
+    let output = Command::new("cmd.exe")
+        .args(["/c", "mklink", "/J"])
+        .arg(&link)
+        .arg(outside.path())
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let cfg = config(r#"{"watchlists":[{"type":"directory","path":"."}]}"#);
+    assert!(watchlist::load(&cfg, temp.path(), &HashMap::new()).is_err());
+    fs::write(temp.path().join("list.txt"), "linked/synthetic-long-name").unwrap();
+    assert!(scan::files_from_list(Path::new("list.txt"), temp.path(), temp.path()).is_err());
+    // Remove the link only; TempDir then removes its own contents safely.
+    fs::remove_dir(link).unwrap();
+}
+
+#[cfg(windows)]
+#[test]
+fn repository_internal_junctions_remain_coverage_skips_and_parent_traversal_is_rejected() {
+    let temp = tempdir().unwrap();
+    git(temp.path(), &["init", "-q"]);
+    fs::create_dir_all(temp.path().join("actual/deeper")).unwrap();
+    fs::write(temp.path().join("actual/deeper/fixture.txt"), "fixture").unwrap();
+    fs::write(temp.path().join("actual/fixture.txt"), "actual fixture").unwrap();
+    fs::write(temp.path().join("fixture.txt"), "different fixture").unwrap();
+    let link = temp.path().join("linked");
+    assert!(
+        Command::new("cmd.exe")
+            .args(["/c", "mklink", "/J"])
+            .arg(&link)
+            .arg(temp.path().join("actual").join("deeper"))
+            .output()
+            .unwrap()
+            .status
+            .success()
+    );
+    fs::write(temp.path().join("list.txt"), "linked/fixture.txt").unwrap();
+    let output = run(
+        temp.path(),
+        &[
+            "scan",
+            "--files-from-list",
+            "list.txt",
+            "--block",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(output.status.code(), Some(1));
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["coverage_skips"], 1);
+    assert_eq!(report["scanned"], 0);
+    fs::write(temp.path().join("list.txt"), "linked/../fixture.txt").unwrap();
+    let output = run(
+        temp.path(),
+        &["scan", "--files-from-list", "list.txt", "--block"],
+    );
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("parent components"));
+    fs::remove_dir(link).unwrap();
+}

@@ -633,7 +633,7 @@ fn windows_exemption_accepts_native_and_git_separators() {
     assert!(path_is_exempt("tests/policy.md", "tests\\"));
     assert!(path_is_exempt(
         ".github\\workflows\\doxguard.yml",
-        ".github/workflows/doxguard"
+        ".github/workflows/doxguard.yml"
     ));
 }
 

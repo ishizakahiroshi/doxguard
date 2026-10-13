@@ -26,18 +26,23 @@ fn loads_lines_and_csv_watchlists_with_allow_and_noise_rules() {
     config.allow.names.push("Allowed Product".to_owned());
     config.watchlists = vec![
         WatchlistSource::Lines {
+            optional: false,
             path: "${FIXTURE_ROOT}/names.txt".to_owned(),
             label: Some("fixture lines".to_owned()),
         },
         WatchlistSource::Csv {
+            optional: false,
             path: "${FIXTURE_ROOT}/people.csv".to_owned(),
-            column: ColumnSpec::Name("name".to_owned()),
+            column: Some(ColumnSpec::Name("name".to_owned())),
+            columns: None,
             label: Some("fixture names".to_owned()),
             paren_variants: true,
         },
         WatchlistSource::Csv {
+            optional: false,
             path: "${FIXTURE_ROOT}/people.csv".to_owned(),
-            column: ColumnSpec::Name("given_name".to_owned()),
+            column: Some(ColumnSpec::Name("given_name".to_owned())),
+            columns: None,
             label: Some("fixture given_name".to_owned()),
             paren_variants: false,
         },
@@ -80,6 +85,7 @@ fn detects_all_structural_kinds_and_honors_three_allow_mechanisms() {
     config.allow.emails.push("public@sample.test".to_owned());
     config.allow.email_domains.push("public.test".to_owned());
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -149,6 +155,16 @@ fn inline_directive_supports_scoped_bare_and_legacy_forms() {
         "Anne-Marie",
         &config
     ));
+    assert!(allowed_by_directive(
+        "Northwind Harbor // doxguard: allow Northwind,",
+        "Northwind Harbor",
+        &config
+    ));
+    assert!(allowed_by_directive(
+        "Northwind Harbor // doxguard: allow Northwind。",
+        "Northwind Harbor",
+        &config
+    ));
     // the HTML comment closer must not leak into the token
     assert!(allowed_by_directive(
         "Contoso-Labs <!-- doxguard: allow Contoso-Labs -->",
@@ -199,14 +215,53 @@ fn inline_directive_supports_scoped_bare_and_legacy_forms() {
 #[test]
 fn path_exempt_uses_boundaries_not_raw_substring() {
     use doxguard::scan::path_is_exempt;
+    assert_eq!(
+        Config::default().all_exempt_paths().count(),
+        0,
+        "consumer repositories must not inherit quiet-skip paths"
+    );
     assert!(path_is_exempt("tests/fixture.txt", "tests/"));
+    assert!(!path_is_exempt("tests/fixture.txt", "tests"));
+    assert!(path_is_exempt("tests", "tests"));
     assert!(!path_is_exempt("mytests/fixture.txt", "tests/"));
-    assert!(path_is_exempt(
+    assert!(!path_is_exempt(
         ".github/workflows/doxguard.yml",
         ".github/workflows/doxguard"
     ));
+    assert!(path_is_exempt(
+        ".github/workflows/doxguard.yml",
+        ".github/workflows/"
+    ));
+    assert!(!path_is_exempt("src/tests/fixture.txt", "tests/"));
     assert!(!path_is_exempt("src/main.rs", ""));
     assert!(!path_is_exempt("any/path", ""));
+}
+
+#[test]
+fn metadata_errors_and_missing_listed_files_are_coverage_skips() {
+    let config = Config::default();
+    let matcher = watchlist::WatchlistMatcher::new(Vec::new()).unwrap();
+    let patterns = patterns::build(&config).unwrap();
+    let temp = tempdir().unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["missing.txt".to_owned(), "invalid\0path.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+
+    assert_eq!(result.coverage_skips, 2);
+    assert_eq!(result.scanned, 0);
+    assert!(
+        result
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("missing or unreadable metadata"))
+    );
 }
 
 #[test]
@@ -269,6 +324,7 @@ fn ascii_case_insensitive_watchlist_matches_lower_haystack() {
         ..Default::default()
     };
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -278,6 +334,43 @@ fn ascii_case_insensitive_watchlist_matches_lower_haystack() {
     )]);
     let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
     assert!(matcher.matches("contoso works").next().is_some());
+}
+
+#[test]
+fn only_optional_missing_env_is_soft_and_resolved_missing_watchlist_fails_closed() {
+    let temp = tempdir().unwrap();
+    let mut config = Config::default();
+    config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
+        path: "${FIXTURE_ROOT}/missing.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+
+    assert!(watchlist::load(&config, temp.path(), &HashMap::new()).is_err());
+    if let WatchlistSource::Lines { optional, .. } = &mut config.watchlists[0] {
+        *optional = true;
+    }
+    let missing_env = watchlist::load(&config, temp.path(), &HashMap::new()).unwrap();
+    assert!(missing_env.matcher.is_empty());
+    assert!(
+        missing_env
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("FIXTURE_ROOT not set"))
+    );
+
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let error = watchlist::load(&config, temp.path(), &env).unwrap_err();
+    assert!(!error.to_string().contains("missing.txt"));
+    assert!(
+        error
+            .to_string()
+            .contains("resolved successfully but was not found"),
+        "unexpected error: {error:#}"
+    );
 }
 
 #[test]
@@ -338,6 +431,9 @@ fn oversize_staged_blob_is_coverage_skipped() {
     )
     .unwrap();
     assert_eq!(result.coverage_skips, 1);
+    assert_eq!(result.scanned, 0);
+    assert_eq!(result.exempt_or_skipped, 1);
+    assert_eq!(result.total_files, 1);
     assert!(
         result
             .warnings
@@ -360,6 +456,7 @@ fn case_insensitive_hits_report_original_line_casing() {
         ..Default::default()
     };
     config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
         path: "${FIXTURE_ROOT}/names.txt".to_owned(),
         label: Some("fixture".to_owned()),
     });
@@ -409,6 +506,9 @@ fn oversize_file_emits_coverage_skip_warning() {
     )
     .unwrap();
     assert_eq!(result.coverage_skips, 1);
+    assert_eq!(result.scanned, 0);
+    assert_eq!(result.exempt_or_skipped, 1);
+    assert_eq!(result.total_files, 1);
     assert!(
         result
             .warnings
@@ -416,4 +516,253 @@ fn oversize_file_emits_coverage_skip_warning() {
             .any(|w| w.contains("skipped big.txt") && w.contains("oversize"))
     );
     assert!(result.hits.is_empty());
+}
+
+#[test]
+fn bom_is_removed_from_lines_values_and_csv_headers() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("lines.txt"), "\u{feff}SyntheticBomLine\n").unwrap();
+    fs::write(
+        temp.path().join("values.csv"),
+        "\u{feff}name,kind\nSyntheticBomCsv,fixture\n",
+    )
+    .unwrap();
+    let config = Config {
+        watchlists: vec![
+            WatchlistSource::Lines {
+                optional: false,
+                path: "${FIXTURE_ROOT}/lines.txt".to_owned(),
+                label: Some("synthetic lines".to_owned()),
+            },
+            WatchlistSource::Csv {
+                optional: false,
+                path: "${FIXTURE_ROOT}/values.csv".to_owned(),
+                column: Some(ColumnSpec::Name("name".to_owned())),
+                columns: None,
+                label: Some("synthetic csv".to_owned()),
+                paren_variants: false,
+            },
+        ],
+        ..Default::default()
+    };
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+
+    assert!(matcher.matches("SyntheticBomLine").next().is_some());
+    assert!(matcher.matches("SyntheticBomCsv").next().is_some());
+}
+
+#[test]
+fn watchlist_has_a_hard_size_ceiling_independent_of_config() {
+    let temp = tempdir().unwrap();
+    let path = temp.path().join("oversized.txt");
+    let file = fs::File::create(&path).unwrap();
+    file.set_len((64 * 1024 * 1024) + 1).unwrap();
+    let mut config = Config {
+        max_file_size: 128 * 1024 * 1024,
+        ..Default::default()
+    };
+    config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
+        path: "${FIXTURE_ROOT}/oversized.txt".to_owned(),
+        label: Some("synthetic oversized".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+
+    let error = watchlist::load(&config, temp.path(), &env).unwrap_err();
+
+    assert!(error.to_string().contains("effective limit is 67108864"));
+}
+
+#[test]
+fn config_rejects_unknown_watchlist_fields_and_unsafe_exempt_paths() {
+    let typo =
+        r#"{"watchlists":[{"type":"lines","path":"${FIXTURE_ROOT}/names.txt","lable":"typo"}]}"#;
+    assert!(serde_json::from_str::<Config>(typo).is_err());
+
+    for invalid in [
+        "../private",
+        "/private",
+        "C:/private",
+        "./generated",
+        "generated//nested",
+    ] {
+        let config = Config {
+            exempt_paths: vec![invalid.to_owned()],
+            ..Default::default()
+        };
+        assert!(config.validate().is_err(), "must reject {invalid:?}");
+    }
+
+    for valid in ["generated", "generated/", "docs/generated.txt"] {
+        let config = Config {
+            exempt_paths: vec![valid.to_owned()],
+            ..Default::default()
+        };
+        config.validate().unwrap();
+    }
+}
+
+#[test]
+fn glued_allow_suffixes_do_not_become_bare_allow() {
+    let config = Config::default();
+    // `allow` glued to more characters is not an allow directive and must never
+    // suppress a hit (regression guard for F-A03).
+    for line in [
+        "private@sample.test // doxguard: allow-list",
+        "private@sample.test // doxguard: allow=x",
+        "private@sample.test // doxguard: allow.internal",
+        "private@sample.test // doxguard: allow(x)",
+        "private@sample.test // doxguard: ALLOW-LIST",
+        "private@sample.test // doxguard: allow-listed",
+        "private@sample.test // doxguard: allowlist note",
+    ] {
+        assert!(
+            !allowed_by_directive(line, "private@sample.test", &config),
+            "glued suffix must not act as bare allow: {line}"
+        );
+    }
+    // Carve-out: `allow-->` (comment closer with no separating space) stays the
+    // bare form so existing inline comments keep working.
+    assert!(allowed_by_directive(
+        "192.168.50.9 <!-- doxguard: allow-->",
+        "192.168.50.9",
+        &config
+    ));
+    let mut strict = Config::default();
+    strict.apply_strict();
+    assert!(
+        !allowed_by_directive(
+            "192.168.50.9 <!-- doxguard: allow-->",
+            "192.168.50.9",
+            &strict
+        ),
+        "strict mode must reject the bare comment-closer form too"
+    );
+}
+
+#[test]
+fn exempt_paths_skip_structural_but_still_match_watchlist() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("names.txt"), "SyntheticExemptNeedle\n").unwrap();
+    fs::write(
+        temp.path().join("fixture.txt"),
+        "ip=192.168.50.9\nowner=SyntheticExemptNeedle\n",
+    )
+    .unwrap();
+    let mut config = Config {
+        exempt_paths: vec!["fixture.txt".to_owned()],
+        ..Default::default()
+    };
+    config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
+        path: "${FIXTURE_ROOT}/names.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["fixture.txt".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    // The synthetic private IP (structural) is intentionally silenced for an
+    // exempt file, but a real watchlist identity is still reported (F-B12).
+    assert_eq!(result.scanned, 1);
+    assert!(result.hits.iter().all(|hit| hit.kind == HitKind::Watchlist));
+    assert!(
+        result
+            .hits
+            .iter()
+            .any(|hit| hit.matched.contains("SyntheticExemptNeedle"))
+    );
+    assert!(
+        !result
+            .hits
+            .iter()
+            .any(|hit| hit.matched.contains("192.168"))
+    );
+}
+
+#[test]
+fn lockfiles_run_structural_patterns_but_skip_watchlist() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("names.txt"), "SyntheticLockNeedle\n").unwrap();
+    fs::write(
+        temp.path().join("package-lock.json"),
+        "{\"host\":\"192.168.50.9\",\"note\":\"SyntheticLockNeedle\"}\n",
+    )
+    .unwrap();
+    let mut config = Config::default();
+    config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
+        path: "${FIXTURE_ROOT}/names.txt".to_owned(),
+        label: Some("fixture".to_owned()),
+    });
+    let env = HashMap::from([(
+        "FIXTURE_ROOT".to_owned(),
+        temp.path().to_string_lossy().into_owned(),
+    )]);
+    let matcher = watchlist::load(&config, temp.path(), &env).unwrap().matcher;
+    let patterns = patterns::build(&config).unwrap();
+    let result = scan_paths(
+        ScanMode::AllTracked,
+        vec!["package-lock.json".to_owned()],
+        temp.path(),
+        &config,
+        &matcher,
+        &patterns,
+        Vec::new(),
+    )
+    .unwrap();
+    // A private IP in a lockfile is now caught (F-A01), but the noisy watchlist
+    // match inside the lockfile is skipped.
+    assert_eq!(result.scanned, 1);
+    assert!(
+        result
+            .hits
+            .iter()
+            .any(|hit| hit.kind == HitKind::Structural && hit.matched.contains("192.168"))
+    );
+    assert!(result.hits.iter().all(|hit| hit.kind != HitKind::Watchlist));
+}
+
+#[cfg(unix)]
+#[test]
+fn config_and_watchlist_refuse_non_regular_files() {
+    use std::path::Path;
+
+    let error = doxguard::config::load(Path::new("/"), Some(Path::new("/dev/zero"))).unwrap_err();
+    assert!(
+        error.to_string().contains("not a regular file"),
+        "unexpected error: {error:#}"
+    );
+
+    let mut config = Config::default();
+    config.watchlists.push(WatchlistSource::Lines {
+        optional: false,
+        path: "/dev/zero".to_owned(),
+        label: Some("synthetic device".to_owned()),
+    });
+    let error = watchlist::load(&config, Path::new("/"), &HashMap::new()).unwrap_err();
+    assert!(
+        error.to_string().contains("not a regular file"),
+        "unexpected error: {error:#}"
+    );
 }

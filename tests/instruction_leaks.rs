@@ -445,9 +445,17 @@ fn instruction_staged_profile_scans_default_exemptions_and_lockfiles() {
     ];
     config(temp.path(), serde_json::json!({}));
     let default = run(temp.path(), &args);
-    assert_eq!(default.status.code(), Some(0));
-    assert_eq!(json(&default)["scanned"], 0);
+    assert_eq!(default.status.code(), Some(1));
+    assert_eq!(json(&default)["scanned"], 2);
     assert_eq!(json(&default)["coverage_skips"], 0);
+
+    config(
+        temp.path(),
+        serde_json::json!({"includeDefaultExemptPaths": true}),
+    );
+    let legacy_exemptions = run(temp.path(), &args);
+    assert_eq!(legacy_exemptions.status.code(), Some(0));
+    assert_eq!(json(&legacy_exemptions)["scanned"], 0);
 
     config(
         temp.path(),
@@ -471,7 +479,7 @@ fn instruction_staged_profile_scans_default_exemptions_and_lockfiles() {
     let excluded = run(temp.path(), &args);
     assert_eq!(excluded.status.code(), Some(1));
     let report = json(&excluded);
-    assert_eq!(report["scanned"], 1);
+    assert_eq!(report["scanned"], 2);
     assert_eq!(report["hits"].as_array().unwrap().len(), 1);
     assert_eq!(report["hits"][0]["file"], "package-lock.json");
 }
@@ -584,14 +592,12 @@ fn required_watchlists_fail_closed_without_printing_unavailable_sources() {
         }
         command.output().unwrap()
     };
-    // Omission preserves the existing structural-only behavior even with strict.
+    // Required by default: an unavailable input must never silently drop coverage.
     config(temp.path(), serde_json::json!({"watchlists": watchlists}));
     for root in [None, Some(""), temp.path().to_str()] {
         let compatible = scan(root);
-        assert_eq!(compatible.status.code(), Some(0));
-        let report = json(&compatible);
-        assert_eq!(report["watchlist_needles"], 0);
-        assert_eq!(report["warnings"].as_array().unwrap().len(), 1);
+        assert_eq!(compatible.status.code(), Some(2));
+        assert!(compatible.stdout.is_empty());
     }
     config(
         temp.path(),
