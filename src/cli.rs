@@ -454,7 +454,7 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
             warnings,
         )?
     } else {
-        let paths = if scan_mode == ScanMode::Paths {
+        let targets = if scan_mode == ScanMode::Paths {
             let mut roots = args.paths.clone();
             if let Some(path_from) = &args.path_from {
                 let text = std::fs::read_to_string(path_from)?;
@@ -466,14 +466,17 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
                 );
             }
             scan::files_from_paths(&roots, &cwd, &loaded.config)?
-        } else if let Some(list) = &args.files_from_list {
-            scan::files_from_list(list, &cwd, &scan_root)?
         } else {
-            scan::files_for_mode(scan_mode, &scan_root)?
+            let paths = if let Some(list) = &args.files_from_list {
+                scan::files_from_list(list, &cwd, &scan_root)?
+            } else {
+                scan::files_for_mode(scan_mode, &scan_root)?
+            };
+            paths.into_iter().map(scan::ScanTarget::from).collect()
         };
-        scan::scan_paths(
+        scan::scan_targets(
             scan_mode,
-            paths,
+            targets,
             &scan_root,
             &loaded.config,
             &watchlists.matcher,

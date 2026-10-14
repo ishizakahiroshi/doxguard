@@ -344,6 +344,94 @@ fn recursive_paths_never_follow_links_and_count_them_as_coverage_skips() {
 }
 
 #[test]
+fn path_reports_name_files_as_passed_without_the_working_directory() {
+    let temp = tempdir().unwrap();
+    let work = temp.path().join("work");
+    fs::create_dir_all(work.join("surface/sub")).unwrap();
+    fs::create_dir(temp.path().join("outside")).unwrap();
+    config(&work, serde_json::json!({"maxFileSize": 80}));
+    for file in [
+        "fixture.txt",
+        "surface/sub/nested.txt",
+        "listed.txt",
+        "../outside/parent.txt",
+    ] {
+        fs::write(work.join(file), "build.example.test\n").unwrap();
+    }
+    fs::write(work.join("surface/sub/oversize.txt"), "x".repeat(90)).unwrap();
+    fs::write(work.join("paths.txt"), "listed.txt\n").unwrap();
+    let nested = Path::new("surface").join("sub").join("nested.txt");
+    let oversize = Path::new("surface").join("sub").join("oversize.txt");
+    let (nested, oversize) = (nested.to_str().unwrap(), oversize.to_str().unwrap());
+    // The temporary directory's unique name stands in for the cwd and home
+    // components, and survives JSON's backslash escaping.
+    let marker = temp.path().file_name().unwrap().to_str().unwrap();
+    let args = |format: &'static str| {
+        [
+            "scan",
+            "--path",
+            "fixture.txt",
+            "--path",
+            "./fixture.txt",
+            "--path",
+            "surface",
+            "--path",
+            "../outside/parent.txt",
+            "--path-from",
+            "paths.txt",
+            "--block",
+            "--format",
+            format,
+        ]
+    };
+    let output = run(&work, &args("json"));
+    assert_eq!(output.status.code(), Some(1));
+    let report = json(&output);
+    assert_eq!(report["total_files"], 5);
+    assert_eq!(report["coverage_skips"], 1);
+    let mut files: Vec<_> = report["hits"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|hit| hit["file"].as_str().unwrap().to_owned())
+        .collect();
+    files.sort();
+    let mut expected = vec!["../outside/parent.txt", "fixture.txt", "listed.txt", nested];
+    expected.sort();
+    assert_eq!(files, expected);
+    let skipped = format!("WARN: skipped {oversize} (oversize)");
+    assert!(
+        report["warnings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|warning| warning == skipped.as_str()),
+        "{report}"
+    );
+    for format in ["json", "text"] {
+        let output = run(&work, &args(format));
+        let text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(!text.contains(marker), "{format}: {text}");
+        if format == "text" {
+            assert!(text.contains(&format!("{nested}:1")), "{text}");
+            assert!(text.contains(&skipped), "{text}");
+        }
+    }
+    // An absolute path is reported exactly as it was passed.
+    let absolute = work.join("fixture.txt");
+    let absolute = absolute.to_str().unwrap();
+    let report = json(&run(
+        &work,
+        &["scan", "--path", absolute, "--format", "json"],
+    ));
+    assert_eq!(report["hits"][0]["file"], absolute);
+}
+
+#[test]
 fn non_utf8_data_retains_ascii_findings_and_remains_a_coverage_skip() {
     let temp = tempdir().unwrap();
     config(temp.path(), serde_json::json!({}));

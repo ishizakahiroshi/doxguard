@@ -111,6 +111,8 @@ Exactly one mode is required:
   configured `exemptPaths` and binary-extension exclusions, but does not inherit the
   built-in repository exemptions for tests, config, lockfiles, and local docs.
   Relative configured exemptions are interpreted from the working directory.
+  Findings and skip warnings name each file as it was passed, plus the part found
+  by walking a directory; the working directory's absolute path is not added.
 
 Text and JSON reports redact matched values by default. They retain the file, line
 number, detection type, and variable/key name when recognizable; prose has no key.

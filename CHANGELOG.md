@@ -8,7 +8,7 @@ All notable changes to doxguard are documented here.
 
 - Opt-in allowlist checks for domains, all IPv4 addresses, and private repository paths.
 - Exact/CIDR IPv4 allowances shared with the existing RFC1918 check.
-- Literal `--path` and UTF-8 `--path-from` scans outside git, with missing-path errors and coverage accounting for directory links and junctions.
+- Literal `--path` and UTF-8 `--path-from` scans outside git, with missing-path errors and coverage accounting for directory links and junctions. Reports name each file as it was passed (plus the part found by walking a directory), so the working directory's absolute path, often under the home directory, is never added.
 - Instruction-profile control to disable every inline allow directive (off by default).
 - Opt-in `requireWatchlists` to reject unresolved or missing watchlist sources.
 

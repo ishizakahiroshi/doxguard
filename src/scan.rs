@@ -321,10 +321,36 @@ fn is_link(metadata: &fs::Metadata) -> bool {
     }
 }
 
+/// One file to scan. `path` is what every file-system check and exemption uses;
+/// `display` is the name reports show. They differ only for `--path` targets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScanTarget {
+    pub path: String,
+    pub display: String,
+}
+
+impl From<String> for ScanTarget {
+    fn from(path: String) -> Self {
+        Self {
+            display: path.clone(),
+            path,
+        }
+    }
+}
+
 /// Expand literal paths outside git. Explicit missing paths and enumeration
 /// failures are errors. Links are retained as coverage skips, never followed.
-pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Result<Vec<String>> {
-    fn visit(path: &Path, cwd: &Path, config: &Config, files: &mut HashSet<PathBuf>) -> Result<()> {
+/// Each target is checked at the cwd-joined path, but reported as the user spelled
+/// it plus the part found by walking a directory, so a report never adds the cwd
+/// (often the home directory) that the command did not name.
+pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Result<Vec<ScanTarget>> {
+    fn visit(
+        path: &Path,
+        display: &Path,
+        cwd: &Path,
+        config: &Config,
+        files: &mut HashMap<PathBuf, PathBuf>,
+    ) -> Result<()> {
         let native = path.to_str().context("scan path was not UTF-8")?;
         let meta = fs::symlink_metadata(path).context("cannot inspect requested scan path")?;
         if configured_path_exempt(native, cwd, config) {
@@ -332,39 +358,50 @@ pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Resul
         }
         if meta.is_dir() && !is_link(&meta) {
             for entry in fs::read_dir(path).context("cannot enumerate scan directory")? {
+                let entry = entry.context("cannot read scan directory entry")?;
                 visit(
-                    &entry.context("cannot read scan directory entry")?.path(),
+                    &entry.path(),
+                    &display.join(entry.file_name()),
                     cwd,
                     config,
                     files,
                 )?;
             }
         } else {
-            files.insert(path.to_path_buf());
+            // The same file named twice keeps the first spelling.
+            files
+                .entry(path.to_path_buf())
+                .or_insert_with(|| display.to_path_buf());
         }
         Ok(())
     }
     if roots.is_empty() {
         bail!("path scan requires at least one non-empty path");
     }
-    let mut files = HashSet::new();
+    let mut files = HashMap::new();
     for root in roots {
         if root.as_os_str().is_empty() {
             bail!("scan paths must not be empty");
         }
         // Keep native path semantics: collapsing a symlink/.. changes its target.
         let path = cwd.join(root);
-        visit(&path, cwd, config, &mut files)?;
+        visit(&path, root, cwd, config, &mut files)?;
     }
+    let utf8 = |path: PathBuf| {
+        path.into_os_string()
+            .into_string()
+            .map_err(|_| anyhow!("scan path was not UTF-8"))
+    };
     let mut files: Vec<_> = files
         .into_iter()
-        .map(|path| {
-            path.into_os_string()
-                .into_string()
-                .map_err(|_| anyhow!("scan path was not UTF-8"))
+        .map(|(path, display)| {
+            Ok(ScanTarget {
+                path: utf8(path)?,
+                display: utf8(display)?,
+            })
         })
         .collect::<Result<Vec<_>>>()?;
-    files.sort();
+    files.sort_by(|left, right| left.path.cmp(&right.path));
     Ok(files)
 }
 
@@ -1113,7 +1150,7 @@ fn watchlist_hits(
     line: &str,
     keys: &LineKeys<'_>,
     directives: &LineDirectives<'_>,
-    path: &str,
+    file: &str,
     line_number: usize,
     matcher: &WatchlistMatcher,
     config: &Config,
@@ -1128,7 +1165,7 @@ fn watchlist_hits(
         .filter(|(item, _)| !directives.allows(&item.needle))
         .map(|(item, span)| ScanHit {
             blob_oid: None,
-            file: path.to_owned(),
+            file: file.to_owned(),
             line_number,
             // Slice the original line so the report keeps its casing even when
             // the haystack was lowercased (ASCII lowering preserves offsets).
@@ -1156,7 +1193,12 @@ struct ScanContext<'a> {
     staged_sizes: Option<&'a HashMap<String, u64>>,
 }
 
-fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<FileScanOutcome> {
+fn scan_file(
+    context: &ScanContext<'_>,
+    target: &ScanTarget,
+    kind: ScanKind,
+) -> Result<FileScanOutcome> {
+    let (path, display) = (target.path.as_str(), target.display.as_str());
     let config = context.config;
     let matcher = context.matcher;
     let patterns = context.patterns;
@@ -1169,7 +1211,7 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
                 line,
                 &keys,
                 &directives,
-                path,
+                display,
                 line_number,
                 matcher,
                 config,
@@ -1191,7 +1233,7 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
                 }
                 hits.push(ScanHit {
                     blob_oid: None,
-                    file: path.to_owned(),
+                    file: display.to_owned(),
                     line_number,
                     matched: matched.to_owned(),
                     variable: keys.variable_at(found.start()),
@@ -1235,24 +1277,49 @@ pub fn scan_paths(
     patterns: &[StructuralPattern],
     warnings: Vec<String>,
 ) -> Result<ScanResult> {
-    let total_files = paths.len();
+    scan_targets(
+        mode,
+        paths.into_iter().map(ScanTarget::from).collect(),
+        cwd,
+        config,
+        matcher,
+        patterns,
+        warnings,
+    )
+}
+
+/// Like `scan_paths`, but findings and skip warnings name each target by its
+/// `display` path.
+pub fn scan_targets(
+    mode: ScanMode,
+    targets: Vec<ScanTarget>,
+    cwd: &Path,
+    config: &Config,
+    matcher: &WatchlistMatcher,
+    patterns: &[StructuralPattern],
+    warnings: Vec<String>,
+) -> Result<ScanResult> {
+    let total_files = targets.len();
     let mut warnings = warnings;
     let mut coverage_skips = 0usize;
-    let mut files: Vec<(String, ScanKind)> = Vec::new();
-    for path in paths {
-        match classify_path(&path, cwd, config, mode) {
-            Eligibility::Scan(kind) => files.push((path, kind)),
+    let mut files: Vec<(ScanTarget, ScanKind)> = Vec::new();
+    for target in targets {
+        match classify_path(&target.path, cwd, config, mode) {
+            Eligibility::Scan(kind) => files.push((target, kind)),
             Eligibility::QuietSkip => {}
             Eligibility::CoverageSkip(reason) => {
                 coverage_skips += 1;
 
-                warnings.push(format!("WARN: skipped {path} ({reason})"));
+                warnings.push(format!("WARN: skipped {} ({reason})", target.display));
             }
         }
     }
     // One batched size probe for the whole staged set instead of one per file.
     let staged_sizes = if mode == ScanMode::Staged && !files.is_empty() {
-        let staged: Vec<String> = files.iter().map(|(path, _)| path.clone()).collect();
+        let staged: Vec<String> = files
+            .iter()
+            .map(|(target, _)| target.path.clone())
+            .collect();
         staged_blob_sizes(&staged, cwd)
     } else {
         None
@@ -1268,20 +1335,20 @@ pub fn scan_paths(
     let outcomes: Result<Vec<FileScanOutcome>> = if files.len() <= 4 {
         files
             .iter()
-            .map(|(path, kind)| scan_file(&context, path, *kind))
+            .map(|(target, kind)| scan_file(&context, target, *kind))
             .collect()
     } else {
         files
             .par_iter()
-            .map(|(path, kind)| scan_file(&context, path, *kind))
+            .map(|(target, kind)| scan_file(&context, target, *kind))
             .collect()
     };
     let mut hits = Vec::new();
     let mut scanned = 0usize;
-    for ((path, _kind), outcome) in files.iter().zip(outcomes?) {
+    for ((target, _kind), outcome) in files.iter().zip(outcomes?) {
         if let Some(reason) = outcome.coverage_skip {
             coverage_skips += 1;
-            warnings.push(format!("WARN: skipped {path} ({reason})"));
+            warnings.push(format!("WARN: skipped {} ({reason})", target.display));
         } else {
             scanned += 1;
         }
@@ -1297,8 +1364,11 @@ pub fn scan_paths(
     if baseline_applied {
         let mut added = HashMap::new();
         // Validate every scanned file, even when no hit happened to be found.
-        for (path, _) in &files {
-            added.insert(path.clone(), staged_added_lines(path, cwd)?);
+        for (target, _) in &files {
+            added.insert(
+                target.display.clone(),
+                staged_added_lines(&target.path, cwd)?,
+            );
         }
         hits.retain(|hit| {
             let keep = added

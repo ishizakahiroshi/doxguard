@@ -151,6 +151,7 @@ fn parent_after_symlink_uses_os_resolution() {
     symlink(outer.join("inner"), cwd.join("link")).unwrap();
     let json = blocked(&cwd, &["--path", "link/../policy.md"]);
     assert_eq!(json["hits"].as_array().unwrap().len(), 1);
+    assert_eq!(json["hits"][0]["file"], "link/../policy.md");
 }
 
 #[test]
@@ -210,12 +211,7 @@ fn mixed_case_metadata_is_redacted_unless_explicitly_requested() {
         assert!(!text.contains("syntheticneedle"), "{text}");
     }
     let json = blocked(cwd, &["--path", "SyntheticNeedle.md"]);
-    assert!(
-        json["hits"][0]["file"]
-            .as_str()
-            .unwrap()
-            .ends_with("SyntheticNeedle.md")
-    );
+    assert_eq!(json["hits"][0]["file"], "SyntheticNeedle.md");
 }
 
 #[test]
