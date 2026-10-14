@@ -291,15 +291,28 @@ impl Redactor {
         // A value is folded first: only its folded form occurs in the folded
         // texts, and that form is no longer than the value.
         // A path-like value can be detected with a leading separator or a
-        // sentence-ending `.` that its name in another text lacks, so the form
-        // without them is a pattern too, while that form still names a path (a
-        // `/` before its end). Shorter forms would over-redact: `/opt` would
-        // hide every `opt`.
+        // trailing `.`, `-`, `_` or `.git` (a sentence end, a hyphenated word,
+        // a clone URL) that its name in another text lacks, so the form without
+        // them is a pattern too, while that form still names a path (a `/`
+        // before its end). Shorter forms would over-redact: `/opt` would hide
+        // every `opt`.
+        fn trim_path_name(folded: &str) -> &str {
+            let mut name = folded.trim_start_matches('/');
+            loop {
+                if let Some(rest) = name.strip_suffix(['.', '-', '_']) {
+                    name = rest;
+                } else if let Some(rest) = name.strip_suffix(".git") {
+                    name = rest;
+                } else {
+                    return name;
+                }
+            }
+        }
         let mut values: Vec<_> = values
             .into_iter()
             .flat_map(|value| {
                 let folded = unify_separators(&value.to_ascii_lowercase()).0.into_owned();
-                let trimmed = folded.trim_start_matches('/').trim_end_matches('.');
+                let trimmed = trim_path_name(&folded);
                 let trimmed = trimmed
                     .trim_end_matches('/')
                     .contains('/')
@@ -715,13 +728,21 @@ mod redaction_tests {
         for value in values {
             let folded = fold(value);
             // A path-like value also hides its form without leading `/` and
-            // trailing `.`, while that form keeps a `/` before its end.
+            // trailing `.`, `-`, `_` or `.git`, while that form keeps a `/`
+            // before its end.
             let mut trimmed = folded.as_str();
             while let Some(rest) = trimmed.strip_prefix('/') {
                 trimmed = rest;
             }
-            while let Some(rest) = trimmed.strip_suffix('.') {
-                trimmed = rest;
+            loop {
+                let last = trimmed.chars().next_back();
+                if matches!(last, Some('.' | '-' | '_')) {
+                    trimmed = &trimmed[..trimmed.len() - 1];
+                } else if trimmed.ends_with(".git") {
+                    trimmed = &trimmed[..trimmed.len() - 4];
+                } else {
+                    break;
+                }
             }
             let mut inner = trimmed;
             while let Some(rest) = inner.strip_suffix('/') {
@@ -959,6 +980,44 @@ mod redaction_tests {
         ] {
             assert_matches_reference(values, text);
         }
+    }
+
+    #[test]
+    fn path_like_values_also_hide_the_form_without_name_suffixes() {
+        // A clone-URL `.git`, a hyphen or underscore, or a mix of them after
+        // the name is not part of the name in a file path.
+        for value in [
+            "github/private/x.git",
+            "github/private/x-",
+            "github/private/x_",
+            "github/private/x.git.",
+            "github/private/x.git-",
+            "github/private/x..",
+            "GitHub/Private/X.GIT",
+        ] {
+            let redactor = Redactor::new([value], usize::MAX);
+            assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 2);
+            assert_eq!(
+                redactor.redact(r"github\private\x\f.md"),
+                r"[redacted]\f.md",
+                "{value}"
+            );
+            assert_matches_reference(&[value], r"github\private\x\f.md Github/Private/X.git-");
+        }
+        // Without a `/` before the end the shorter form is not added.
+        for value in ["inc-", "/a-", "/e.git", "a/.git", "x_"] {
+            let redactor = Redactor::new([value], usize::MAX);
+            assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+            assert_matches_reference(&[value], "inc a e a/ x");
+        }
+        // A trailing separator ends the name already: nothing more is dropped.
+        let home = format!("/{}/{}/", "home", "synthetic-user");
+        let redactor = Redactor::new([home.as_str()], usize::MAX);
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 2);
+        assert_eq!(
+            redactor.redact("home/synthetic-user/notes.md"),
+            "[redacted]notes.md"
+        );
     }
 
     #[test]

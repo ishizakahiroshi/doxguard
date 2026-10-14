@@ -121,8 +121,10 @@ the `matched` field as `"[redacted]"` and adds a nullable `variable` field.
 Redaction treats `/` and `\` as the same separator and a run of them as one, so a
 value found in a file's text is also hidden from that file's name on Windows.
 A path-like value is also hidden in its form without a leading separator and
-trailing `.`, so a path that ended a sentence or started at `/` is hidden in a
-relative file name too.
+trailing `.`, `-`, `_` and `.git`, so a path that ended a sentence, was a clone
+URL or started at `/` is hidden in a relative file name too.
+A name you write on the command line is reported as written (for example,
+running `--path <name>` from inside your home folder reports that folder name).
 
 `--strict` (or config `allow.disallowBareAllow` + `failOnSkip`) turns on a harder gate: bare
 `doxguard: allow` is ignored, and unscanned coverage skips (oversize / non-UTF-8 / symlink) fail

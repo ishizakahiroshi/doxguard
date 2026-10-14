@@ -509,6 +509,38 @@ fn redaction_hides_a_path_value_that_ends_a_sentence_in_the_file_name() {
 }
 
 #[test]
+fn redaction_hides_a_path_value_followed_by_git_or_a_hyphen_in_the_file_name() {
+    for body in [
+        "clone github/private/synthetic-internal.git\n",
+        "see github/private/synthetic-internal- now\n",
+    ] {
+        let temp = tempdir().unwrap();
+        config(temp.path(), serde_json::json!({}));
+        let directory = temp.path().join("github/private/synthetic-internal");
+        fs::create_dir_all(&directory).unwrap();
+        fs::write(directory.join("f.md"), body).unwrap();
+        let json_output = run(
+            temp.path(),
+            &["scan", "--path", "github", "--format", "json", "--block"],
+        );
+        assert_eq!(json_output.status.code(), Some(1), "{body}");
+        assert_eq!(
+            json(&json_output)["hits"][0]["file"],
+            format!("[redacted]{}f.md", std::path::MAIN_SEPARATOR),
+            "{body}"
+        );
+        let text_output = run(temp.path(), &["scan", "--path", "github", "--block"]);
+        assert_eq!(text_output.status.code(), Some(1), "{body}");
+        let text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&text_output.stdout),
+            String::from_utf8_lossy(&text_output.stderr)
+        );
+        assert!(!text.contains("synthetic-internal"), "{body}: {text}");
+    }
+}
+
+#[test]
 fn redaction_hides_a_home_value_in_a_relative_file_name() {
     let temp = tempdir().unwrap();
     let git = |args: &[&str]| {
