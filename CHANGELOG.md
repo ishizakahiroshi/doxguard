@@ -21,7 +21,7 @@ All notable changes to doxguard are documented here.
 
 ### Fixed
 
-- A long line with many matches no longer re-reads its inline allow directives for every match, so it scans in linear time even when the line carries an unrelated allow comment.
+- Inline allow directives are parsed once per line instead of once per match, so a long line with many matches no longer slows the scan down quadratically.
 
 ## [0.1.0] - 2026-08-03
 
