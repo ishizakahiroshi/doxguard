@@ -793,7 +793,7 @@ fn init_refuses_to_scaffold_through_parent_symlink() {
 
 #[cfg(unix)]
 #[test]
-fn init_skips_dangling_leaf_symlink_without_creating_its_target() {
+fn init_refuses_dangling_leaf_symlink_before_writing_anything() {
     use std::os::unix::fs::symlink;
 
     let temp = tempdir().unwrap();
@@ -807,14 +807,12 @@ fn init_skips_dangling_leaf_symlink_without_creating_its_target() {
     )
     .unwrap();
 
+    // Every scaffold destination is checked before the first write, so a linked
+    // workflow leaf stops init before the config is created.
     let output = run(binary(), temp.path(), &["init"]);
-    assert!(
-        output.status.success(),
-        "stderr: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert_eq!(output.status.code(), Some(2));
     assert!(!external_target.exists());
-    assert!(String::from_utf8_lossy(&output.stdout).contains("SKIPPED"));
+    assert!(!temp.path().join("doxguard.config.json").exists());
 }
 
 #[cfg(windows)]

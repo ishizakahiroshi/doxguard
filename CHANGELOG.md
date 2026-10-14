@@ -9,11 +9,12 @@ All notable changes to doxguard are documented here.
 - Opt-in allowlist checks for domains, all IPv4 addresses, and private repository paths.
 - Exact/CIDR IPv4 allowances shared with the existing RFC1918 check.
 - Literal `--path` and UTF-8 `--path-from` scans outside git, with missing-path errors and coverage accounting for directory links and junctions.
-- Instruction-profile controls to disable every inline allow directive and the built-in repository/lockfile exemptions, while preserving existing defaults.
+- Instruction-profile control to disable every inline allow directive (off by default).
 - Opt-in `requireWatchlists` to reject unresolved or missing watchlist sources.
 
 ### Changed
 
+- The built-in repository exemptions (tests, config, local docs, hooks, workflow files, and lockfiles) are now opt-in, so these files are scanned by default. 0.1.0 always skipped them; set `includeDefaultExemptPaths: true` to keep that behavior.
 - Text and JSON scan reports redact matched values by default and report line numbers and recognizable variable/key names; `--show-matches` explicitly reveals values.
 - Staged, worktree, list, and path scans stream text files line by line and read them to the end whatever their size, so large generated text no longer becomes a coverage skip that stops a strict gate. `maxFileSize` is now optional: when set, larger scan targets are still coverage skips, and the former 16 MiB staged ceiling no longer caps it. Watchlist sources and history blobs keep the 1 MiB default.
 - The staged added-line baseline streams the diff instead of failing when it exceeds 64 MiB.

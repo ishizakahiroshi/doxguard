@@ -122,10 +122,13 @@ the `matched` field as `"[redacted]"` and adds a nullable `variable` field.
 when combined with `--block`. Prefer `--strict` in CI.
 
 For instruction files that must use only the configured allowlist, also set
-`allow.disallowInlineAllow: true` to ignore all inline allow directives, and
-`includeDefaultExemptPaths: false` to inspect repository tests, config, local docs,
-hooks, and lockfiles. Explicit `exemptPaths` and binary exclusions still apply.
-Both options preserve the existing behavior unless explicitly configured.
+`allow.disallowInlineAllow: true` to ignore all inline allow directives (default: off).
+
+The built-in repository exemptions (tests, config, local docs, hooks, workflow files, and
+lockfiles) are off by default, so those files are scanned as well. Set
+`includeDefaultExemptPaths: true` to skip them as 0.1.0 always did. Explicit `exemptPaths`
+and binary exclusions apply either way.
+
 Set `requireWatchlists: true` when configured watchlist sources must all be
 available; unresolved environment variables and missing source files then exit
 with a configuration error instead of reducing watchlist coverage.
