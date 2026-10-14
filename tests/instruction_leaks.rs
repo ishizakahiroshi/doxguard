@@ -479,6 +479,76 @@ fn redaction_treats_both_path_separators_as_one() {
 }
 
 #[test]
+fn redaction_hides_a_path_value_that_ends_a_sentence_in_the_file_name() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({}));
+    let directory = temp.path().join("github/private/synthetic-internal");
+    fs::create_dir_all(&directory).unwrap();
+    fs::write(
+        directory.join("f.md"),
+        "A sentence mentioning github/private/synthetic-internal.\n",
+    )
+    .unwrap();
+    let json_output = run(
+        temp.path(),
+        &["scan", "--path", "github", "--format", "json", "--block"],
+    );
+    assert_eq!(json_output.status.code(), Some(1));
+    assert_eq!(
+        json(&json_output)["hits"][0]["file"],
+        format!("[redacted]{}f.md", std::path::MAIN_SEPARATOR)
+    );
+    let text_output = run(temp.path(), &["scan", "--path", "github", "--block"]);
+    assert_eq!(text_output.status.code(), Some(1));
+    let text = format!(
+        "{}{}",
+        String::from_utf8_lossy(&text_output.stdout),
+        String::from_utf8_lossy(&text_output.stderr)
+    );
+    assert!(!text.contains("synthetic-internal"), "{text}");
+}
+
+#[test]
+fn redaction_hides_a_home_value_in_a_relative_file_name() {
+    let temp = tempdir().unwrap();
+    let git = |args: &[&str]| {
+        assert!(
+            Command::new("git")
+                .current_dir(temp.path())
+                .args(args)
+                .status()
+                .unwrap()
+                .success()
+        );
+    };
+    git(&["init", "-q"]);
+    config(
+        temp.path(),
+        serde_json::json!({"structural": {
+            "windowsPath": false, "posixHome": true, "privateIp": false, "email": false,
+            "domain": false, "ipv4": false, "privateRepoPath": false
+        }}),
+    );
+    // Built at run time so the source holds no POSIX home path.
+    let home = format!("/{}/{}/", "home", "synthetic-user");
+    fs::create_dir_all(temp.path().join("home/synthetic-user")).unwrap();
+    fs::write(
+        temp.path().join("home/synthetic-user/notes.md"),
+        format!("see {home}project\n"),
+    )
+    .unwrap();
+    git(&["add", "home/synthetic-user/notes.md"]);
+    let output = run(
+        temp.path(),
+        &["scan", "--staged", "--format", "json", "--block"],
+    );
+    assert_eq!(output.status.code(), Some(1));
+    let report = json(&output);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+    assert_eq!(report["hits"][0]["file"], "[redacted]notes.md");
+}
+
+#[test]
 fn non_utf8_data_retains_ascii_findings_and_remains_a_coverage_skip() {
     let temp = tempdir().unwrap();
     config(temp.path(), serde_json::json!({}));

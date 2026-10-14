@@ -290,9 +290,23 @@ impl Redactor {
         // differing only in ASCII case or in path separators are one pattern.
         // A value is folded first: only its folded form occurs in the folded
         // texts, and that form is no longer than the value.
+        // A path-like value (one holding a `/`) can be detected with a leading
+        // separator or a sentence-ending `.` that its name in another text
+        // lacks, so the form without them is a pattern too. Other values keep
+        // their `.` and are not shortened, which would over-redact.
         let mut values: Vec<_> = values
             .into_iter()
-            .map(|value| unify_separators(&value.to_ascii_lowercase()).0.into_owned())
+            .flat_map(|value| {
+                let folded = unify_separators(&value.to_ascii_lowercase()).0.into_owned();
+                let trimmed = folded.contains('/').then(|| {
+                    folded
+                        .trim_start_matches('/')
+                        .trim_end_matches('.')
+                        .to_owned()
+                });
+                [Some(folded), trimmed]
+            })
+            .flatten()
             .filter(|value| !value.is_empty() && value.len() <= max_text_len)
             .collect();
         values.sort_unstable();
@@ -697,11 +711,24 @@ mod redaction_tests {
     /// range of `text` (on character boundaries) whose fold equals the fold of
     /// some value, so values match across case and separator spelling.
     fn redact_reference(values: &[&str], text: &str) -> String {
-        let needles: std::collections::HashSet<String> = values
-            .iter()
-            .map(|value| fold(value))
-            .filter(|needle| !needle.is_empty())
-            .collect();
+        let mut needles = std::collections::HashSet::new();
+        for value in values {
+            let folded = fold(value);
+            if folded.contains('/') {
+                // A path-like value also hides its form without leading `/`
+                // and trailing `.`.
+                let mut trimmed = folded.as_str();
+                while let Some(rest) = trimmed.strip_prefix('/') {
+                    trimmed = rest;
+                }
+                while let Some(rest) = trimmed.strip_suffix('.') {
+                    trimmed = rest;
+                }
+                needles.insert(trimmed.to_owned());
+            }
+            needles.insert(folded);
+        }
+        needles.remove("");
         let bounds: Vec<usize> = text
             .char_indices()
             .map(|(index, _)| index)
@@ -880,6 +907,47 @@ mod redaction_tests {
         // Values equal after folding runs are one pattern.
         let redactor = Redactor::new(["a/b", r"a\\b", "a//b"], 4);
         assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+    }
+
+    #[test]
+    fn path_like_values_also_hide_their_trimmed_form() {
+        // A trailing `.` that ended a sentence is not part of the name.
+        let redactor = Redactor::new(["github/private/x."], usize::MAX);
+        assert_eq!(
+            redactor.redact(r"github\private\x\f.md"),
+            r"[redacted]\f.md"
+        );
+        // Leading separators are not part of the relative name.
+        let home = format!("/{}/{}/", "home", "synthetic-user");
+        let redactor = Redactor::new([home.as_str()], usize::MAX);
+        assert_eq!(
+            redactor.redact("home/synthetic-user/notes.md"),
+            "[redacted]notes.md"
+        );
+        assert_eq!(
+            redactor.redact(&format!("{home}notes.md")),
+            "[redacted]notes.md"
+        );
+        // Without a `/` the value is kept whole, so `Inc` stays visible.
+        let redactor = Redactor::new(["inc."], usize::MAX);
+        assert_eq!(redactor.redact("Inc and Inc."), "Inc and [redacted]");
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+        // A trimmed form that would be empty is not a pattern.
+        let redactor = Redactor::new(["/", "//."], usize::MAX);
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 2);
+        // A path-like value adds exactly one trimmed form.
+        let redactor = Redactor::new(["/a/b."], usize::MAX);
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 2);
+        // The trimmed form is subject to the same length bound.
+        let redactor = Redactor::new(["/a/b."], 3);
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+        for (values, text) in [
+            (&["/a/b."][..], "a/b. /a/b./ a\\b x/a/b"),
+            (&["inc."], "Inc. Inc"),
+            (&["//."], "x// ./"),
+        ] {
+            assert_matches_reference(values, text);
+        }
     }
 
     #[test]
