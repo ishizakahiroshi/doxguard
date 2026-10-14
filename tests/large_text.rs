@@ -271,6 +271,42 @@ fn many_distinct_matches_are_redacted_in_linear_time() {
 }
 
 #[test]
+fn many_distinct_keyed_matches_on_one_line_are_reported_in_linear_time() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // 20,000 distinct `kN = 10.0.x.y` pairs on a single line, so every hit
+    // also looks up its key. Before the per-line key search and the
+    // single-pass redaction, 20,000 distinct addresses on one line took
+    // about 81 s in release.
+    let mut line = String::new();
+    for index in 0..20_000 {
+        line.push_str(&format!("k{index} = 10.0.{}.{} ", index / 256, index % 256));
+    }
+    fs::write(cwd.join("minified.cfg"), line).unwrap();
+    git(cwd, &["add", "--", "minified.cfg"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    // The full report is megabytes long; show only the warnings on failure.
+    assert_eq!(code, Some(1), "{}", report["warnings"]);
+    assert_eq!(counts(&report), (1, 0, 20_000));
+    let hits = report["hits"].as_array().unwrap();
+    assert!(hits.iter().all(|hit| hit["matched"] == "[redacted]"));
+    let variables: std::collections::HashSet<_> = hits
+        .iter()
+        .map(|hit| hit["variable"].as_str().unwrap())
+        .collect();
+    assert_eq!(variables.len(), 20_000);
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
 fn crlf_lines_are_split_exactly_like_str_lines() {
     let temp = tempdir().unwrap();
     let cwd = temp.path();
