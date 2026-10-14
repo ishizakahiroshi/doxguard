@@ -292,12 +292,16 @@ impl Redactor {
         // texts, and that form is no longer than the value.
         // A path-like value can be detected with a leading separator or a
         // trailing `.`, `-`, `_` or `.git` (a sentence end, a hyphenated word,
-        // a clone URL) that its name in another text lacks, so the form without
-        // them is a pattern too, while that form still names a path (a `/`
-        // before its end). Shorter forms would over-redact: `/opt` would hide
-        // every `opt`.
-        fn trim_path_name(folded: &str) -> &str {
-            let mut name = folded.trim_start_matches('/');
+        // a clone URL) that its name in another text lacks, so shorter forms
+        // are patterns too: the form without leading separators and trailing
+        // dots, and the form without any of those suffixes. Both are kept, so
+        // a name that keeps part of the suffix still matches the longer one.
+        // A form is added only while it still names a path (a `/` before its
+        // end): `/opt` would hide every `opt`. A form whose last name was all
+        // suffix (`github/private/-` to `github/private/`) would hide every
+        // name in that folder, so it is not added either.
+        fn without_suffixes(name: &str) -> &str {
+            let mut name = name;
             loop {
                 if let Some(rest) = name.strip_suffix(['.', '-', '_']) {
                     name = rest;
@@ -308,16 +312,18 @@ impl Redactor {
                 }
             }
         }
+        let names_path = |form: &str| form.trim_end_matches('/').contains('/');
         let mut values: Vec<_> = values
             .into_iter()
             .flat_map(|value| {
                 let folded = unify_separators(&value.to_ascii_lowercase()).0.into_owned();
-                let trimmed = trim_path_name(&folded);
-                let trimmed = trimmed
-                    .trim_end_matches('/')
-                    .contains('/')
-                    .then(|| trimmed.to_owned());
-                [Some(folded), trimmed]
+                let dotless = folded.trim_start_matches('/').trim_end_matches('.');
+                let bare = without_suffixes(dotless);
+                let lost_last_name = bare.ends_with('/') && !dotless.ends_with('/');
+                let bare = (bare != dotless && names_path(bare) && !lost_last_name)
+                    .then(|| bare.to_owned());
+                let dotless = names_path(dotless).then(|| dotless.to_owned());
+                [Some(folded), dotless, bare]
             })
             .flatten()
             .filter(|value| !value.is_empty() && value.len() <= max_text_len)
@@ -728,28 +734,40 @@ mod redaction_tests {
         for value in values {
             let folded = fold(value);
             // A path-like value also hides its form without leading `/` and
-            // trailing `.`, `-`, `_` or `.git`, while that form keeps a `/`
-            // before its end.
-            let mut trimmed = folded.as_str();
-            while let Some(rest) = trimmed.strip_prefix('/') {
-                trimmed = rest;
+            // trailing `.`, and its form without trailing `.`, `-`, `_` or
+            // `.git` as well, while a form keeps a `/` before its end; the
+            // shorter one only if it still ends in a name.
+            let keeps_inner_slash = |form: &str| {
+                let mut inner = form;
+                while let Some(rest) = inner.strip_suffix('/') {
+                    inner = rest;
+                }
+                inner.contains('/')
+            };
+            let mut dotless = folded.as_str();
+            while let Some(rest) = dotless.strip_prefix('/') {
+                dotless = rest;
             }
+            while let Some(rest) = dotless.strip_suffix('.') {
+                dotless = rest;
+            }
+            let mut bare = dotless;
             loop {
-                let last = trimmed.chars().next_back();
+                let last = bare.chars().next_back();
                 if matches!(last, Some('.' | '-' | '_')) {
-                    trimmed = &trimmed[..trimmed.len() - 1];
-                } else if trimmed.ends_with(".git") {
-                    trimmed = &trimmed[..trimmed.len() - 4];
+                    bare = &bare[..bare.len() - 1];
+                } else if bare.ends_with(".git") {
+                    bare = &bare[..bare.len() - 4];
                 } else {
                     break;
                 }
             }
-            let mut inner = trimmed;
-            while let Some(rest) = inner.strip_suffix('/') {
-                inner = rest;
+            if keeps_inner_slash(dotless) {
+                needles.insert(dotless.to_owned());
             }
-            if inner.contains('/') {
-                needles.insert(trimmed.to_owned());
+            let ends_in_name = !bare.ends_with('/') || dotless.ends_with('/');
+            if keeps_inner_slash(bare) && ends_in_name {
+                needles.insert(bare.to_owned());
             }
             needles.insert(folded);
         }
@@ -990,7 +1008,6 @@ mod redaction_tests {
             "github/private/x.git",
             "github/private/x-",
             "github/private/x_",
-            "github/private/x.git.",
             "github/private/x.git-",
             "github/private/x..",
             "GitHub/Private/X.GIT",
@@ -1003,6 +1020,32 @@ mod redaction_tests {
                 "{value}"
             );
             assert_matches_reference(&[value], r"github\private\x\f.md Github/Private/X.git-");
+        }
+        // The form without only the trailing dots is kept as well, so a name
+        // that keeps part of the suffix is still hidden whole.
+        for (value, name) in [
+            ("github/private/x.git.", r"github\private\x.git\f.md"),
+            ("github/private/x-.", r"github\private\x-\f.md"),
+            ("github/private/x_.", r"github\private\x_\f.md"),
+        ] {
+            let redactor = Redactor::new([value], usize::MAX);
+            assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 3);
+            assert_eq!(redactor.redact(name), r"[redacted]\f.md", "{value}");
+            assert_eq!(
+                redactor.redact(r"github\private\x\f.md"),
+                r"[redacted]\f.md",
+                "{value}"
+            );
+            assert_matches_reference(&[value], name);
+        }
+        // A last name that is all suffix is not cut back to its folder, which
+        // would hide the start of every name in that folder.
+        for value in ["github/private/-", "github/private/.git"] {
+            let redactor = Redactor::new([value], usize::MAX);
+            assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+            let name = r"github\private\y\f.md";
+            assert_eq!(redactor.redact(name), name, "{value}");
+            assert_matches_reference(&[value], name);
         }
         // Without a `/` before the end the shorter form is not added.
         for value in ["inc-", "/a-", "/e.git", "a/.git", "x_"] {
