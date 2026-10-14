@@ -276,14 +276,20 @@ fn text_report(result: &ScanResult) -> String {
 /// automaton, so each text is scanned once however many values there are.
 struct Redactor {
     matcher: Option<AhoCorasick>,
+    max_text_len: usize,
 }
 
 impl Redactor {
-    fn new<'a>(values: impl IntoIterator<Item = &'a str>) -> Self {
-        // An empty pattern would match at every offset.
+    /// `max_text_len` bounds every text later passed to `redact`. A longer
+    /// value cannot occur in any of them, so it stays out of the automaton,
+    /// whose size grows with the value bytes (a DFA has no size limit).
+    fn new<'a>(values: impl IntoIterator<Item = &'a str>, max_text_len: usize) -> Self {
+        // An empty pattern would match at every offset. Matching ignores ASCII
+        // case, so values differing only in ASCII case are one pattern.
         let mut values: Vec<_> = values
             .into_iter()
-            .filter(|value| !value.is_empty())
+            .filter(|value| !value.is_empty() && value.len() <= max_text_len)
+            .map(str::to_ascii_lowercase)
             .collect();
         values.sort_unstable();
         values.dedup();
@@ -292,13 +298,24 @@ impl Redactor {
                 .ascii_case_insensitive(true)
                 .match_kind(MatchKind::Standard)
                 .build(values)
-                // Fails only when the automaton outgrows its 2^31-entry tables.
+                // Only the noncontiguous NFA can fail to build (a DFA or
+                // contiguous NFA that does not fit falls back to it), once its
+                // tables pass 2^31 entries: about a GiB of distinct values.
+                // Each value is at most the longest redacted text, so a single
+                // long match no longer gets near that.
                 .expect("redaction automaton exceeds aho-corasick limits")
         });
-        Self { matcher }
+        Self {
+            matcher,
+            max_text_len,
+        }
     }
 
     fn redact(&self, text: &str) -> String {
+        debug_assert!(
+            text.len() <= self.max_text_len,
+            "text is longer than the bound given to Redactor::new"
+        );
         let Some(matcher) = &self.matcher else {
             return text.to_owned();
         };
@@ -336,7 +353,24 @@ fn report_result(result: &ScanResult, show_matches: bool) -> ScanResult {
     if show_matches {
         return report;
     }
-    let redactor = Redactor::new(result.hits.iter().map(|hit| hit.matched.as_str()));
+    // The longest text redacted below. A longer value cannot occur in any of
+    // them, so the redactor leaves it out.
+    let max_text_len = result
+        .hits
+        .iter()
+        .flat_map(|hit| {
+            [&hit.file, &hit.source, &hit.suggestion]
+                .into_iter()
+                .chain(&hit.variable)
+        })
+        .chain(&result.warnings)
+        .map(String::len)
+        .max()
+        .unwrap_or(0);
+    let redactor = Redactor::new(
+        result.hits.iter().map(|hit| hit.matched.as_str()),
+        max_text_len,
+    );
     for hit in &mut report.hits {
         hit.matched = "[redacted]".to_owned();
         hit.file = redactor.redact(&hit.file);
@@ -587,6 +621,7 @@ pub fn run() -> ExitCode {
 mod redaction_tests {
     use super::{Redactor, report_result};
     use crate::scan::{HitKind, ScanHit, ScanMode, ScanResult};
+    use aho_corasick::AhoCorasickKind;
 
     /// The per-value redaction that `Redactor` replaced, kept as the oracle.
     fn redact_reference(values: &[&str], text: &str) -> String {
@@ -630,9 +665,10 @@ mod redaction_tests {
         redacted
     }
 
+    /// Uses the tightest bound, which drops every value longer than the text.
     fn assert_matches_reference(values: &[&str], text: &str) {
         assert_eq!(
-            Redactor::new(values.iter().copied()).redact(text),
+            Redactor::new(values.iter().copied(), text.len()).redact(text),
             redact_reference(values, text),
             "values={values:?} text={text:?}"
         );
@@ -668,10 +704,93 @@ mod redaction_tests {
             assert_matches_reference(values, text);
         }
         assert_eq!(
-            Redactor::new(["abcab", "cabx"]).redact("zabcabxz"),
+            Redactor::new(["abcab", "cabx"], usize::MAX).redact("zabcabxz"),
             "z[redacted]z"
         );
-        assert_eq!(Redactor::new([""]).redact("unchanged"), "unchanged");
+        assert_eq!(
+            Redactor::new([""], usize::MAX).redact("unchanged"),
+            "unchanged"
+        );
+    }
+
+    #[test]
+    fn values_longer_than_the_bound_stay_out_of_the_automaton() {
+        let text = "at 192.0.2.1 and 192.0.2.10";
+        let long = format!("{text} and more");
+        let values = [long.as_str(), "192.0.2.1", "192.0.2.10"];
+        let redactor = Redactor::new(values, text.len());
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 2);
+        assert_eq!(redactor.redact(text), redact_reference(&values, text));
+        // A value exactly as long as the bound is kept.
+        assert_eq!(Redactor::new([text], text.len()).redact(text), "[redacted]");
+        // With only over-long values there is no automaton at all.
+        let redactor = Redactor::new([long.as_str()], text.len());
+        assert!(redactor.matcher.is_none());
+        assert_eq!(redactor.redact(text), text);
+    }
+
+    #[test]
+    fn ascii_case_variants_share_one_pattern() {
+        let text = "HOST-A host-a Host-A x";
+        let values = ["host-a", "HOST-A", "Host-A", "hOsT-a"];
+        let redactor = Redactor::new(values, text.len());
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+        assert_eq!(redactor.redact(text), redact_reference(&values, text));
+        // Non-ASCII letters are compared exactly, so they stay apart.
+        let redactor = Redactor::new(["é", "É"], 2);
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 2);
+    }
+
+    #[test]
+    fn the_length_bound_covers_every_redacted_field() {
+        // Each field in turn is the only text long enough to hold the value, so
+        // leaving that field out of the bound would leave the value in it.
+        let value = "synthetic-long-value";
+        for field in 0..5 {
+            let text = |index: usize| {
+                if index == field {
+                    format!("<{value}>")
+                } else {
+                    "x".to_owned()
+                }
+            };
+            let input = ScanResult {
+                watchlist_statistics: Default::default(),
+                baseline_applied: false,
+                baseline_suppressed_hits: 0,
+                mode: ScanMode::Paths,
+                scanned: 1,
+                total_files: 1,
+                exempt_or_skipped: 0,
+                coverage_skips: 0,
+                watchlist_needles: 1,
+                structural_patterns: 0,
+                hits: vec![ScanHit {
+                    blob_oid: None,
+                    file: text(0),
+                    line_number: 1,
+                    matched: value.to_owned(),
+                    variable: Some(text(1)),
+                    source: text(2),
+                    kind: HitKind::Watchlist,
+                    suggestion: text(3),
+                }],
+                warnings: vec![text(4)],
+            };
+            let output = report_result(&input, false);
+            let hit = &output.hits[0];
+            let redacted = [
+                hit.file.as_str(),
+                hit.variable.as_deref().unwrap(),
+                hit.source.as_str(),
+                hit.suggestion.as_str(),
+                output.warnings[0].as_str(),
+            ];
+            for (index, got) in redacted.into_iter().enumerate() {
+                let expected = if index == field { "<[redacted]>" } else { "x" };
+                assert_eq!(got, expected, "field {field}");
+            }
+        }
     }
 
     /// xorshift64: deterministic and dependency-free.
@@ -701,6 +820,59 @@ mod redaction_tests {
             let values: Vec<String> = (0..count).map(|_| random_word(&mut state, 4)).collect();
             let values: Vec<&str> = values.iter().map(String::as_str).collect();
             assert_matches_reference(&values, &text);
+        }
+    }
+
+    #[test]
+    fn single_pass_redaction_matches_the_reference_with_over_a_hundred_values() {
+        // Over 100 patterns make aho-corasick build an NFA instead of a DFA.
+        let mut state = 0x9e37_79b9_7f4a_7c15_u64;
+        for case in 0..200 {
+            // At least 32 characters, so every short value fits the bound.
+            let text = loop {
+                let text = random_word(&mut state, 64);
+                if text.chars().count() >= 32 {
+                    break text;
+                }
+            };
+            let chars: Vec<char> = text.chars().collect();
+            let mut values = Vec::new();
+            // Words of 5 to 8 characters, which mostly do not occur.
+            while values.len() < 150 {
+                let word = random_word(&mut state, 8);
+                if word.chars().count() >= 5 {
+                    values.push(word);
+                }
+            }
+            // Pieces of the text, so spans overlap and touch.
+            for _ in 0..12 {
+                let start = next(&mut state, chars.len() as u64) as usize;
+                let end = (start + 1 + next(&mut state, 6) as usize).min(chars.len());
+                values.push(chars[start..end].iter().collect());
+            }
+            // ASCII case variants, which fold into the same pattern.
+            let variants: Vec<String> = values
+                .iter()
+                .step_by(5)
+                .map(|value| value.to_ascii_uppercase())
+                .collect();
+            values.extend(variants);
+            // The whole text is as long as the bound; the others are longer.
+            if case % 10 == 0 {
+                values.push(text.to_ascii_uppercase());
+            }
+            values.push(format!("{text}a"));
+            values.push(format!("B{}", text.to_ascii_uppercase()));
+            let values: Vec<&str> = values.iter().map(String::as_str).collect();
+            let redactor = Redactor::new(values.iter().copied(), text.len());
+            let matcher = redactor.matcher.as_ref().unwrap();
+            assert!(matcher.patterns_len() > 100, "{}", matcher.patterns_len());
+            assert_ne!(matcher.kind(), AhoCorasickKind::DFA);
+            assert_eq!(
+                redactor.redact(&text),
+                redact_reference(&values, &text),
+                "values={values:?} text={text:?}"
+            );
         }
     }
 

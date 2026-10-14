@@ -277,8 +277,7 @@ fn many_distinct_keyed_matches_on_one_line_are_reported_in_linear_time() {
     repo(cwd, "{}");
     // 20,000 distinct `kN = 10.0.x.y` pairs on a single line, so every hit
     // also looks up its key. Before the per-line key search and the
-    // single-pass redaction, 20,000 distinct addresses on one line took
-    // about 81 s in release.
+    // single-pass redaction, this fixture took about 165 s in release.
     let mut line = String::new();
     for index in 0..20_000 {
         line.push_str(&format!("k{index} = 10.0.{}.{} ", index / 256, index % 256));
@@ -299,6 +298,37 @@ fn many_distinct_keyed_matches_on_one_line_are_reported_in_linear_time() {
         .map(|hit| hit["variable"].as_str().unwrap())
         .collect();
     assert_eq!(variables.len(), 20_000);
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn one_very_long_matched_value_is_redacted_in_linear_time() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // One home path of 8 MiB. When every matched value went into the
+    // redaction automaton, this fixture took about 80 s in debug; a random
+    // 4 MiB home path needed about 2.2 GB of memory in release.
+    let segment = "synthetic_cache-dir.";
+    let line = format!(
+        "cache_dir = /home/{}/x\n",
+        segment.repeat(8 * MIB / segment.len())
+    );
+    fs::write(cwd.join("settings.cfg"), line).unwrap();
+    git(cwd, &["add", "--", "settings.cfg"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (1, 0, 1), "{report}");
+    let hit = &report["hits"][0];
+    assert_eq!(hit["matched"], "[redacted]", "{report}");
+    assert_eq!(hit["variable"], "cache_dir", "{report}");
     assert!(
         started.elapsed() < std::time::Duration::from_secs(30),
         "{:?}",
