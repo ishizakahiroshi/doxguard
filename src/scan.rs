@@ -914,7 +914,8 @@ fn staged_read_complete(ended: &std::io::Result<LinesEnd>, size: u64, exited: bo
 
 /// The key-name pattern. `LineKeys` relies on it having no assertion that looks
 /// past the end of a match (`$`, `\b`), so a match inside a prefix of a line is
-/// also a match of the whole line. The test oracle repeats this pattern.
+/// also a match of the whole line, and on every match ending in `[:=]\s*`.
+/// The test oracle repeats this pattern.
 fn key_regex() -> &'static Regex {
     static KEY: OnceLock<Regex> = OnceLock::new();
     KEY.get_or_init(|| Regex::new(
@@ -930,11 +931,23 @@ fn key_spans(found: &regex::Captures<'_>) -> KeySpans {
     (found.get_match().range(), name.range())
 }
 
+/// The whitespace run at the start of a haystack, with the key regex's `\s`.
+fn whitespace_run() -> &'static Regex {
+    static RUN: OnceLock<Regex> = OnceLock::new();
+    RUN.get_or_init(|| Regex::new(r"\A\s*").expect("static whitespace regex"))
+}
+
 /// Variable names for the hits on one line. The key regex runs over the whole
-/// line once, on the first hit, instead of over a prefix for every hit.
+/// line once, on the first hit, instead of over a prefix for every hit, and
+/// the other per-line facts a hit needs are also recorded once, on first use.
 struct LineKeys<'a> {
     line: &'a str,
     matches: OnceCell<Vec<KeySpans>>,
+    /// Byte offsets of `;` `,` `{` `}`, which part a value from its key.
+    delimiters: OnceCell<Vec<usize>>,
+    /// Byte offsets of `:` and `=`, each with the end of the whitespace run
+    /// right after it.
+    assigns: OnceCell<Vec<(usize, usize)>>,
 }
 
 impl<'a> LineKeys<'a> {
@@ -942,14 +955,15 @@ impl<'a> LineKeys<'a> {
         Self {
             line,
             matches: OnceCell::new(),
+            delimiters: OnceCell::new(),
+            assigns: OnceCell::new(),
         }
     }
 
     /// Same result as taking the last key-regex match in `&line[..start]`.
     fn variable_at(&self, start: usize) -> Option<String> {
-        let regex = key_regex();
         let matches = self.matches.get_or_init(|| {
-            regex
+            key_regex()
                 .captures_iter(self.line)
                 .map(|found| key_spans(&found))
                 .collect()
@@ -960,22 +974,76 @@ impl<'a> LineKeys<'a> {
         let mut last = ended.checked_sub(1).map(|index| matches[index].clone());
         // A match running across `start` can hide shorter ones that only the
         // cut prefix allows; those start inside it, so rescan just that stretch.
-        if let Some((crossing, _)) = matches.get(ended).filter(|(whole, _)| whole.start < start) {
-            let prefix = &self.line[..start];
-            let mut at = crossing.start;
-            while let Some(found) = regex.captures_at(prefix, at) {
-                let spans = key_spans(&found);
-                at = spans.0.end;
-                last = Some(spans);
-            }
+        let crossing = matches.get(ended).filter(|(whole, _)| whole.start < start);
+        if let Some(found) = crossing.and_then(|(whole, _)| self.rescan(whole.start, start)) {
+            last = Some(found);
         }
         let (whole, name) = last?;
-        let after = &self.line[whole.end..start];
         // A key is useful only when the match is in its value; reject prose/URLs.
-        if after.contains([';', ',', '{', '}']) || after.starts_with("//") {
+        if self.has_delimiter(whole.end..start) || self.line[whole.end..start].starts_with("//") {
             return None;
         }
         Some(self.line[name].to_owned())
+    }
+
+    /// The last match that a scan of `&line[..start]` finds when it resumes at
+    /// `from`, where a whole-line match that runs across `start` begins.
+    fn rescan(&self, from: usize, start: usize) -> Option<KeySpans> {
+        let assigns = self.assigns.get_or_init(|| {
+            self.line
+                .bytes()
+                .enumerate()
+                .filter(|&(_, byte)| matches!(byte, b':' | b'='))
+                .map(|(offset, _)| {
+                    // Runs after distinct `:` and `=` never overlap, so this
+                    // reads the line about once.
+                    let run = whitespace_run().find(&self.line[offset + 1..]);
+                    (offset, offset + 1 + run.map_or(0, |run| run.end()))
+                })
+                .collect()
+        });
+        // Every key match ends in `[:=]\s*`, so one that starts at `from` or
+        // later needs a `:` or `=` between `from` and `start`.
+        let before = assigns.partition_point(|&(offset, _)| offset < start);
+        let (last_assign, run_end) = before
+            .checked_sub(1)
+            .map(|index| assigns[index])
+            .filter(|&(offset, _)| offset >= from)?;
+        // No such match runs past the whitespace after the last of them, and
+        // the regex has no assertion past a match, so cutting the prefix there
+        // keeps exactly the same matches. The search then never has to read
+        // the rest of a long key name only to rule it out.
+        let prefix = &self.line[..run_end.min(start)];
+        let mut found = None;
+        let mut at = from;
+        // A match found from `at` on has its `:` or `=` after `at`; once past
+        // the last one, the search would find nothing more.
+        while at <= last_assign {
+            let Some(next) = key_regex().captures_at(prefix, at) else {
+                break;
+            };
+            let spans = key_spans(&next);
+            at = spans.0.end;
+            found = Some(spans);
+        }
+        found
+    }
+
+    /// Whether `;` `,` `{` or `}` lies in `range`. They are ASCII, so finding
+    /// their bytes is the same as finding the characters.
+    fn has_delimiter(&self, range: Range<usize>) -> bool {
+        let delimiters = self.delimiters.get_or_init(|| {
+            self.line
+                .bytes()
+                .enumerate()
+                .filter(|&(_, byte)| matches!(byte, b';' | b',' | b'{' | b'}'))
+                .map(|(offset, _)| offset)
+                .collect()
+        });
+        let first = delimiters.partition_point(|&offset| offset < range.start);
+        delimiters
+            .get(first)
+            .is_some_and(|&offset| offset < range.end)
     }
 }
 
@@ -1559,5 +1627,158 @@ mod line_key_tests {
                 .iter()
                 .any(|hit| hit.variable.as_deref() == Some("env"))
         );
+    }
+
+    /// Every code point the regex `\s` accepts.
+    const WHITESPACE: [&str; 25] = [
+        "\t", "\n", "\u{b}", "\u{c}", "\r", " ", "\u{85}", "\u{a0}", "\u{1680}", "\u{2000}",
+        "\u{2001}", "\u{2002}", "\u{2003}", "\u{2004}", "\u{2005}", "\u{2006}", "\u{2007}",
+        "\u{2008}", "\u{2009}", "\u{200a}", "\u{2028}", "\u{2029}", "\u{202f}", "\u{205f}",
+        "\u{3000}",
+    ];
+
+    /// Like `assert_same_as_reference`, but asks in the given order, so the
+    /// per-line records are first built by whichever start comes first.
+    fn assert_same_in_order(line: &str, starts: &[usize]) {
+        let keys = LineKeys::new(line);
+        for &start in starts {
+            assert_eq!(
+                keys.variable_at(start),
+                variable_at_reference(line, start),
+                "{line:?} at byte {start}"
+            );
+        }
+    }
+
+    #[test]
+    fn line_keys_match_the_prefix_scan_on_long_keys_and_value_runs() {
+        let values = |count: usize, separator: &str| {
+            (0..count)
+                .map(|index| format!("10.0.{}.{}", index / 256, index % 256))
+                .collect::<Vec<_>>()
+                .join(separator)
+        };
+        let lines = [
+            // One short key followed by many values.
+            format!("ips = {}", values(120, " ")),
+            format!("ips:\u{a0}{}", values(120, "\u{2028}")),
+            format!("ips =\u{85}{}", values(120, "\u{3000}")),
+            // A delimiter part way through cuts the later values off.
+            format!("ips = {}; {}", values(40, " "), values(40, " ")),
+            format!(
+                "ips = {} , {} {{{}}}",
+                values(30, " "),
+                values(30, " "),
+                values(30, " ")
+            ),
+            format!("k = //{}", values(40, " ")),
+            format!("k =\u{a0}//{}", values(40, " ")),
+            format!("k = /{}", values(40, "//")),
+            // Hits inside one long key name, with and without a namespace.
+            format!("k-{}=v", values(120, "-")),
+            format!("$env:k-{}=v", values(120, "-")),
+            format!("$script:k.{} = v", values(120, ".")),
+            format!("global:k_{}\u{2028}:\u{85}v", values(120, "_")),
+            format!("\"$env:k-{}\" = v", values(60, "-")),
+            format!("$env:k-{}==:=v", values(50, "-")),
+            format!("x=$env:k-{}=v", values(50, "-")),
+            format!("{{$env:k-{};k2-{}:v", values(40, "-"), values(40, "-")),
+            // Hits in a whitespace run after a long key's `=`.
+            format!(
+                "k-{}=\u{a0} \u{2028}\u{85}\u{3000} {}",
+                values(40, "-"),
+                values(40, " ")
+            ),
+            // Several long keys in a row.
+            format!(
+                "a-{}=1 $env:b-{}=2;c-{}: 3",
+                values(30, "-"),
+                values(30, "-"),
+                values(30, "-")
+            ),
+        ];
+        let mut rescued = 0;
+        for line in &lines {
+            rescued += assert_same_as_reference(line);
+        }
+        assert!(rescued > 500, "only {rescued} rescued boundaries");
+    }
+
+    #[test]
+    fn line_keys_match_the_prefix_scan_on_random_unicode_lines() {
+        const TOKENS: [&str; 40] = [
+            "a",
+            "Z",
+            "_",
+            "k",
+            "0",
+            "9",
+            ".",
+            "-",
+            ":",
+            "=",
+            ";",
+            ",",
+            "{",
+            "}",
+            "\"",
+            "'",
+            "$",
+            "/",
+            "//",
+            "env:",
+            "script:",
+            "global:",
+            "$env:",
+            "é",
+            "名",
+            "🙂",
+            "k=",
+            "k:",
+            " = ",
+            "=:",
+            "::",
+            "==",
+            ":=",
+            "long-key.name_",
+            "192.0.2.1",
+            "\u{200b}",
+            "\u{feff}",
+            "\u{180e}",
+            "\u{ff1d}",
+            "\u{ff1a}",
+        ];
+        let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let mut rescued = 0;
+        for round in 0..3000 {
+            let length = (next() % 48) as usize;
+            let line: String = (0..length)
+                .map(|_| {
+                    if next() % 4 == 0 {
+                        WHITESPACE[(next() % WHITESPACE.len() as u64) as usize]
+                    } else {
+                        TOKENS[(next() % TOKENS.len() as u64) as usize]
+                    }
+                })
+                .collect();
+            if round % 2 == 0 {
+                rescued += assert_same_as_reference(&line);
+                continue;
+            }
+            let mut starts: Vec<usize> = (0..=line.len())
+                .filter(|&start| line.is_char_boundary(start))
+                .collect();
+            for index in (1..starts.len()).rev() {
+                starts.swap(index, (next() % (index as u64 + 1)) as usize);
+            }
+            assert_same_in_order(&line, &starts);
+        }
+        assert!(rescued > 200, "only {rescued} rescued boundaries");
     }
 }

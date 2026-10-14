@@ -432,3 +432,95 @@ fn added_line_baseline_reads_large_staged_changes() {
     assert_eq!(counts(&report), (1, 0, 1), "{report}");
     assert_eq!(report["baseline_suppressed_hits"], 2, "{report}");
 }
+
+/// A distinct private address for every index below 2^24.
+fn private_address(index: usize) -> String {
+    format!(
+        "10.{}.{}.{}",
+        index / 65_536 % 256,
+        index / 256 % 256,
+        index % 256
+    )
+}
+
+#[test]
+fn one_key_followed_by_many_distinct_values_is_reported_in_linear_time() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // `ips = 10.0.0.0 10.0.0.1 ...`: every hit belongs to the same key, and
+    // the text between that key and each hit used to be searched again for
+    // `;` `,` `{` `}` (100,000 values took about 36 s in release).
+    const COUNT: usize = 50_000;
+    let mut line = "ips = ".to_owned();
+    for index in 0..COUNT {
+        line.push_str(&private_address(index));
+        line.push(' ');
+    }
+    fs::write(cwd.join("minified.cfg"), line).unwrap();
+    git(cwd, &["add", "--", "minified.cfg"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    // The full report is megabytes long; show only the warnings on failure.
+    assert_eq!(code, Some(1), "{}", report["warnings"]);
+    assert_eq!(counts(&report), (1, 0, COUNT));
+    assert!(
+        report["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|hit| hit["variable"] == "ips" && hit["matched"] == "[redacted]")
+    );
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn many_hits_inside_one_long_key_name_are_reported_in_linear_time() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // `k-10.0.0.0-10.0.0.1-...=v`: every hit sits inside one long key name,
+    // and the key search used to read that name again from its start for
+    // every hit (100,000 values took minutes in release). With `$env:` in
+    // front, the cut prefix still yields the key `env` for every hit.
+    const COUNT: usize = 40_000;
+    for (file, prefix) in [("plain.cfg", "k"), ("env.ps1", "$env:k")] {
+        let mut line = prefix.to_owned();
+        for index in 0..COUNT {
+            line.push('-');
+            line.push_str(&private_address(index));
+        }
+        line.push_str("=v");
+        fs::write(cwd.join(file), line).unwrap();
+    }
+    git(cwd, &["add", "--", "plain.cfg", "env.ps1"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{}", report["warnings"]);
+    assert_eq!(counts(&report), (2, 0, 2 * COUNT));
+    let hits = report["hits"].as_array().unwrap();
+    for (file, variable) in [
+        ("plain.cfg", serde_json::Value::Null),
+        ("env.ps1", "env".into()),
+    ] {
+        let in_file: Vec<_> = hits.iter().filter(|hit| hit["file"] == file).collect();
+        assert_eq!(in_file.len(), COUNT, "{file}");
+        assert!(
+            in_file.iter().all(|hit| hit["variable"] == variable),
+            "{file}"
+        );
+    }
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}
