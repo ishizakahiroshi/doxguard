@@ -1,4 +1,5 @@
 use std::{
+    cell::OnceCell,
     collections::{HashMap, HashSet},
     fs,
     io::{BufRead, BufReader, Read, Write},
@@ -911,22 +912,76 @@ fn staged_read_complete(ended: &std::io::Result<LinesEnd>, size: u64, exited: bo
     exited && matches!(ended, Ok(LinesEnd::Complete { bytes, .. }) if *bytes == size)
 }
 
-fn variable_at(line: &str, start: usize) -> Option<String> {
+/// The key-name pattern. `LineKeys` relies on it having no assertion that looks
+/// past the end of a match (`$`, `\b`), so a match inside a prefix of a line is
+/// also a match of the whole line. The test oracle repeats this pattern.
+fn key_regex() -> &'static Regex {
     static KEY: OnceLock<Regex> = OnceLock::new();
-    let regex = KEY.get_or_init(|| Regex::new(
+    KEY.get_or_init(|| Regex::new(
         r#"(?:^|[\s{,;])(?:\$?(?:env:|script:|global:)?)?["']?([A-Za-z_][A-Za-z0-9_.-]*)["']?\s*[:=]\s*"#
-    ).expect("static key regex"));
-    let capture = regex.captures_iter(&line[..start]).last()?;
-    let after = &line[capture.get(0)?.end()..start];
-    // A key is useful only when the match is in its value; reject prose/URLs.
-    if after.contains([';', ',', '{', '}']) || after.starts_with("//") {
-        return None;
+    ).expect("static key regex"))
+}
+
+/// Key-regex matches as (whole match, name) byte ranges.
+type KeySpans = (Range<usize>, Range<usize>);
+
+fn key_spans(found: &regex::Captures<'_>) -> KeySpans {
+    let name = found.get(1).expect("the key name group is not optional");
+    (found.get_match().range(), name.range())
+}
+
+/// Variable names for the hits on one line. The key regex runs over the whole
+/// line once, on the first hit, instead of over a prefix for every hit.
+struct LineKeys<'a> {
+    line: &'a str,
+    matches: OnceCell<Vec<KeySpans>>,
+}
+
+impl<'a> LineKeys<'a> {
+    fn new(line: &'a str) -> Self {
+        Self {
+            line,
+            matches: OnceCell::new(),
+        }
     }
-    Some(capture.get(1)?.as_str().to_owned())
+
+    /// Same result as taking the last key-regex match in `&line[..start]`.
+    fn variable_at(&self, start: usize) -> Option<String> {
+        let regex = key_regex();
+        let matches = self.matches.get_or_init(|| {
+            regex
+                .captures_iter(self.line)
+                .map(|found| key_spans(&found))
+                .collect()
+        });
+        // Whole-line matches that end by `start` are exactly the first ones a
+        // scan of the prefix finds.
+        let ended = matches.partition_point(|(whole, _)| whole.end <= start);
+        let mut last = ended.checked_sub(1).map(|index| matches[index].clone());
+        // A match running across `start` can hide shorter ones that only the
+        // cut prefix allows; those start inside it, so rescan just that stretch.
+        if let Some((crossing, _)) = matches.get(ended).filter(|(whole, _)| whole.start < start) {
+            let prefix = &self.line[..start];
+            let mut at = crossing.start;
+            while let Some(found) = regex.captures_at(prefix, at) {
+                let spans = key_spans(&found);
+                at = spans.0.end;
+                last = Some(spans);
+            }
+        }
+        let (whole, name) = last?;
+        let after = &self.line[whole.end..start];
+        // A key is useful only when the match is in its value; reject prose/URLs.
+        if after.contains([';', ',', '{', '}']) || after.starts_with("//") {
+            return None;
+        }
+        Some(self.line[name].to_owned())
+    }
 }
 
 fn watchlist_hits(
     line: &str,
+    keys: &LineKeys<'_>,
     path: &str,
     line_number: usize,
     matcher: &WatchlistMatcher,
@@ -947,7 +1002,7 @@ fn watchlist_hits(
             line_number,
             // Slice the original line so the report keeps its casing even when
             // the haystack was lowercased (ASCII lowering preserves offsets).
-            variable: variable_at(line, span.start),
+            variable: keys.variable_at(span.start),
             matched: line[span].to_owned(),
             source: item.source.clone(),
             kind: HitKind::Watchlist,
@@ -978,9 +1033,11 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
     let mut hits = Vec::new();
     let mut on_line = |line_number: usize, line: &str| {
         let may_allow = line_may_allow(line, config);
+        let keys = LineKeys::new(line);
         if kind.wants_watchlist() {
             hits.extend(watchlist_hits(
                 line,
+                &keys,
                 path,
                 line_number,
                 matcher,
@@ -1007,7 +1064,7 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
                     file: path.to_owned(),
                     line_number,
                     matched: matched.to_owned(),
-                    variable: variable_at(line, found.start()),
+                    variable: keys.variable_at(found.start()),
                     source: format!("structural: {}", pattern.name),
                     kind: HitKind::Structural,
                     suggestion: pattern.suggestion.clone(),
@@ -1303,6 +1360,204 @@ mod tests {
         assert_eq!(
             nul_paths(" leading.txt\0trailing.txt \0line\nbreak.txt\0".to_owned()).unwrap(),
             [" leading.txt", "trailing.txt ", "line\nbreak.txt"]
+        );
+    }
+}
+
+#[cfg(test)]
+mod line_key_tests {
+    use std::{fs, sync::OnceLock};
+
+    use regex::Regex;
+
+    use super::{LineKeys, ScanMode, key_regex, scan_paths};
+    use crate::{
+        config::Config,
+        patterns,
+        watchlist::{WatchlistItem, WatchlistMatcher},
+    };
+
+    /// The per-hit lookup that `LineKeys` replaced, kept verbatim as the oracle.
+    fn variable_at_reference(line: &str, start: usize) -> Option<String> {
+        static KEY: OnceLock<Regex> = OnceLock::new();
+        let regex = KEY.get_or_init(|| Regex::new(
+            r#"(?:^|[\s{,;])(?:\$?(?:env:|script:|global:)?)?["']?([A-Za-z_][A-Za-z0-9_.-]*)["']?\s*[:=]\s*"#
+        ).expect("static key regex"));
+        let capture = regex.captures_iter(&line[..start]).last()?;
+        let after = &line[capture.get(0)?.end()..start];
+        // A key is useful only when the match is in its value; reject prose/URLs.
+        if after.contains([';', ',', '{', '}']) || after.starts_with("//") {
+            return None;
+        }
+        Some(capture.get(1)?.as_str().to_owned())
+    }
+
+    /// Compares every char boundary of `line` with the oracle and counts the
+    /// boundaries that sit inside a whole-line match whose cut prefix still
+    /// matches, i.e. where the rescan decides the answer.
+    fn assert_same_as_reference(line: &str) -> usize {
+        let keys = LineKeys::new(line);
+        let mut rescued = 0;
+        for start in (0..=line.len()).filter(|&start| line.is_char_boundary(start)) {
+            assert_eq!(
+                keys.variable_at(start),
+                variable_at_reference(line, start),
+                "{line:?} at byte {start}"
+            );
+            let crossing = keys
+                .matches
+                .get()
+                .and_then(|matches| matches.iter().find(|(whole, _)| whole.contains(&start)))
+                .filter(|(whole, _)| whole.start < start);
+            if crossing.is_some_and(|(whole, _)| {
+                key_regex()
+                    .captures_at(&line[..start], whole.start)
+                    .is_some()
+            }) {
+                rescued += 1;
+            }
+        }
+        rescued
+    }
+
+    #[test]
+    fn line_keys_match_the_prefix_scan_on_synthetic_lines() {
+        let lines = [
+            "",
+            " \t ",
+            "ip = 192.0.2.3",
+            "ip=192.0.2.3",
+            r#""ip": "192.0.2.3""#,
+            r#"{"ip": "192.0.2.3", "next": "192.0.2.4"}"#,
+            "'host_a': '192.0.2.3' \"host_b\" = \"192.0.2.4\"",
+            "first = 192.0.2.3 second: 192.0.2.4 third=192.0.2.5",
+            "a = 1; b = 192.0.2.3, c: 192.0.2.4 {d=192.0.2.5} e = 192.0.2.6",
+            "url = https://example.test/path; next = 192.0.2.3",
+            "link: //example.test/x and 192.0.2.3",
+            "path = a//b/c",
+            "$env:FIXTURE_HOST = 192.0.2.3; $script:Other = x; $global:third=y",
+            "$env:=192.0.2.3 $Plain=192.0.2.4 env:k=v script:=w",
+            " env:k=v",
+            "x=1 env:y=2 global:z = 3",
+            "192.0.2.3 starts the line",
+            "key=192.0.2.3 starts too",
+            " foo192.0.2.3=x",
+            " a-192.0.2.3=x b-192.0.2.4 = y",
+            "a=b=c",
+            "a: b: c: d",
+            "k: v k2 = w",
+            "{a:{b:c}}",
+            "key   =    value     ",
+            "  name-with.dots_and-dash :  value",
+            "word word word key = value",
+            "名前 = 値; キー: 192.0.2.3 name＝全角 k\u{3000}=\u{3000}v",
+            "émoji = 🙂 then k=192.0.2.3",
+        ];
+        for line in lines {
+            assert_same_as_reference(line);
+        }
+    }
+
+    #[test]
+    fn line_keys_match_the_prefix_scan_on_generated_lines() {
+        const TOKENS: [&str; 26] = [
+            "a", "b", "_", ".", "-", "1", "0", ":", "=", ";", ",", "{", "}", "\"", "'", "$", "/",
+            " ", " ", "\t", "env:", "script:", "global:", "é", "\u{3000}", "k=",
+        ];
+        let mut state: u64 = 0x2545_F491_4F6C_DD1D;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let mut rescued = 0;
+        for _ in 0..4000 {
+            let length = (next() % 32) as usize;
+            let line: String = (0..length)
+                .map(|_| TOKENS[(next() % TOKENS.len() as u64) as usize])
+                .collect();
+            rescued += assert_same_as_reference(&line);
+        }
+        // Make sure the sweep reached the rescan of a crossing match.
+        assert!(rescued > 50, "only {rescued} rescued boundaries");
+    }
+
+    #[test]
+    fn many_distinct_hits_on_one_line_keep_the_reference_variables() {
+        let mut line = String::new();
+        let mut planted = Vec::new();
+        let mut needles = Vec::new();
+        for index in 0..600 {
+            let ip = format!(
+                "10.{}.{}.{}",
+                100 + index / 100,
+                100 + index / 10 % 10,
+                100 + index % 10
+            );
+            let needle = format!("fixture-needle-{index:04}");
+            let entry = match index % 8 {
+                0 => format!("k{index} = {ip}; "),
+                1 => format!("\"q{index}\": \"{ip}\", "),
+                2 => format!("{ip} "),
+                3 => format!("a-{ip}=v "),
+                4 => format!("$env:E{index}={needle} "),
+                5 => format!("{needle}: {ip} "),
+                // The key match crosses the hit; only the prefix yields `env`.
+                6 => format!("$env:{needle}=v "),
+                _ => format!("値 k{index}\u{3000}=\u{3000}{needle} {{{ip}}} "),
+            };
+            if entry.contains(&ip) {
+                planted.push(ip);
+            }
+            if entry.contains(&needle) {
+                planted.push(needle.clone());
+                needles.push(WatchlistItem {
+                    needle,
+                    source: "fixture".to_owned(),
+                });
+            }
+            line.push_str(&entry);
+        }
+        let temp = tempfile::tempdir().unwrap();
+        fs::write(temp.path().join("many.txt"), format!("{line}\n")).unwrap();
+        let config = Config::default();
+        let result = scan_paths(
+            ScanMode::Paths,
+            vec!["many.txt".to_owned()],
+            temp.path(),
+            &config,
+            &WatchlistMatcher::new(needles).unwrap(),
+            &patterns::build(&config).unwrap(),
+            Vec::new(),
+        )
+        .unwrap();
+
+        for value in &planted {
+            assert!(
+                result.hits.iter().any(|hit| &hit.matched == value),
+                "{value} was not reported"
+            );
+        }
+        let mut named = 0;
+        for hit in &result.hits {
+            // Every planted value occurs once and none contains another.
+            assert!(planted.contains(&hit.matched), "{}", hit.matched);
+            let start = line.find(&hit.matched).unwrap();
+            assert_eq!(
+                hit.variable,
+                variable_at_reference(&line, start),
+                "{}",
+                hit.matched
+            );
+            named += usize::from(hit.variable.is_some());
+        }
+        assert!(named > 100 && named < result.hits.len(), "{named}");
+        assert!(
+            result
+                .hits
+                .iter()
+                .any(|hit| hit.variable.as_deref() == Some("env"))
         );
     }
 }
