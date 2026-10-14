@@ -355,6 +355,7 @@ pub fn scan_history(
         };
         scanned += 1;
         for (index, line) in content.lines().enumerate() {
+            let directives = LineDirectives::new(line, config);
             if kind.wants_watchlist() {
                 let haystack = if config.noise.ascii_case_insensitive {
                     line.to_ascii_lowercase()
@@ -364,7 +365,7 @@ pub fn scan_history(
                 for (item, span) in matcher
                     .matches_spanned_with_boundary(&haystack, config.noise.short_needle_max_length)
                 {
-                    if allowed_by_directive(line, &item.needle, config) {
+                    if directives.allows(&item.needle) {
                         continue;
                     }
                     if hits.len() >= HIT_LIMIT {
@@ -389,7 +390,7 @@ pub fn scan_history(
                         let matched = found.as_str();
                         if !pattern.valid_span(line, found.range())
                             || pattern.is_allowed(matched, config)
-                            || allowed_by_directive(line, matched, config)
+                            || directives.allows(matched)
                             || !seen.insert(matched)
                         {
                             continue;

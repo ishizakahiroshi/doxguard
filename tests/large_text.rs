@@ -524,3 +524,69 @@ fn many_hits_inside_one_long_key_name_are_reported_in_linear_time() {
         started.elapsed()
     );
 }
+
+#[test]
+fn a_long_line_with_many_matches_and_an_allow_directive_is_scanned_in_linear_time() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // The repeated-address line of the linear-time test above, ending in an
+    // allow directive. Every match used to parse all of the line's directives
+    // again (about 62 s in release for the unrelated one).
+    let line = "10.1.2.3 ".repeat(2 * MIB / 9 + 1024);
+    for (file, directive) in [
+        // A scoped token that is not in the address keeps the hit.
+        ("unrelated.js", "# doxguard: allow fixture-unrelated"),
+        // A scoped token that is the address allows every match.
+        ("scoped.js", "# doxguard: allow 10.1.2.3"),
+        // `--strict` refuses the bare form, so the hit stays.
+        ("bare.js", "# doxguard: allow"),
+    ] {
+        fs::write(cwd.join(file), format!("{line}{directive}\n")).unwrap();
+    }
+    git(cwd, &["add", "--", "unrelated.js", "scoped.js", "bare.js"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (3, 0, 2), "{report}");
+    let mut files: Vec<_> = report["hits"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|hit| hit["file"].as_str().unwrap().to_owned())
+        .collect();
+    files.sort();
+    assert_eq!(files, ["bare.js", "unrelated.js"], "{report}");
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn history_scan_of_a_long_line_with_many_matches_is_linear() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // History checked the allow directives of the whole line for every match,
+    // with no per-line shortcut at all. Just under the default 1 MiB blob cap.
+    let line = "10.1.2.3 ".repeat(110_000);
+    fs::write(cwd.join("minified.js"), format!("{line}\n")).unwrap();
+    git(cwd, &["add", "--", "minified.js"]);
+    git(cwd, &["commit", "-qm", "synthetic long line"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--history"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (1, 0, 1), "{report}");
+    assert_eq!(report["mode"], "history", "{report}");
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}

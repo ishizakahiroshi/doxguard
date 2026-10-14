@@ -488,57 +488,119 @@ fn directive_regex() -> &'static Regex {
     })
 }
 
-/// Whether `allowed_by_directive` can return true for any match on `line`.
-/// Checked once per line so a long line with many matches stays linear.
-fn line_may_allow(line: &str, config: &Config) -> bool {
-    !config.allow.disallow_inline_allow && directive_regex().is_match(line)
+pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool {
+    LineDirectives::new(line, config).allows(matched)
 }
 
-pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool {
-    if config.allow.disallow_inline_allow {
-        return false;
+/// What the inline allow directives on one line permit. They are read once,
+/// when the first match on the line asks, and every other match is answered
+/// from that, so a long line with many matches stays linear.
+struct LineDirectives<'a> {
+    line: &'a str,
+    config: &'a Config,
+    parsed: OnceCell<ParsedDirectives>,
+}
+
+#[derive(Default)]
+struct ParsedDirectives {
+    /// A bare `doxguard: allow` the config honours: every match is allowed.
+    bare: bool,
+    /// Lowercased scoped tokens: a match that contains one is allowed.
+    tokens: Vec<String>,
+}
+
+impl<'a> LineDirectives<'a> {
+    fn new(line: &'a str, config: &'a Config) -> Self {
+        Self {
+            line,
+            config,
+            parsed: OnceCell::new(),
+        }
     }
-    directive_regex().captures_iter(line).any(|capture| {
-        // Characters glued directly to `allow` with no separating space.
-        let glued = capture.get(1).map(|m| m.as_str()).unwrap_or_default();
-        if !glued.is_empty() {
-            // `allow-->` (comment closer, no space) is still the bare form; every
-            // other glued suffix (`allow-list`, `allow=x`, `allowlist`, ...) is not
-            // an allow directive at all and must never suppress a hit.
-            if glued == "-->" {
-                return !config.allow.disallow_bare_allow;
-            }
-            return false;
+
+    /// Whether a directive on the line allows `matched`.
+    fn allows(&self, matched: &str) -> bool {
+        let parsed = self.parsed.get_or_init(|| self.parse());
+        if parsed.bare {
+            return true;
         }
-        let Some(target) = capture.get(2) else {
-            // Bare `doxguard: allow` — optional hard-off for CI / --strict.
-            return !config.allow.disallow_bare_allow;
-        };
-        let mut token = target.as_str();
-        // `allow token-->` captures `token--`; drop the HTML comment closer.
-        if line[target.end()..].starts_with('>') {
-            token = token.strip_suffix("--").unwrap_or(token);
-        }
-        if token.is_empty() {
-            // `<!-- doxguard: allow -->` is the bare form, not a token.
-            return !config.allow.disallow_bare_allow;
-        }
-        token = token.trim_end_matches([
-            ',', '.', ';', ':', '!', '?', '、', '。', '；', '：', '！', '？',
-        ]);
-        if token.is_empty() {
-            // An explicit punctuation-only token must never become a bare allow.
-            return false;
-        }
-        let target = token.to_ascii_lowercase();
-        // Short tokens (e.g. "168", ".") over-suppress structural hits.
-        if target.chars().count() < 4 {
+        if parsed.tokens.is_empty() {
             return false;
         }
         let matched = matched.to_ascii_lowercase();
         // Scoped allow: token must appear in the match (not reverse substring).
-        matched == target || matched.contains(&target)
-    })
+        parsed
+            .tokens
+            .iter()
+            .any(|token| matched.contains(token.as_str()))
+    }
+
+    /// Everything about a directive except whether its token is in the match
+    /// depends only on the line and the config, so it is worked out once.
+    fn parse(&self) -> ParsedDirectives {
+        let mut parsed = ParsedDirectives::default();
+        if self.config.allow.disallow_inline_allow {
+            return parsed;
+        }
+        for capture in directive_regex().captures_iter(self.line) {
+            match directive(self.line, &capture) {
+                // Bare `doxguard: allow` — optional hard-off for CI / --strict.
+                Directive::Bare => parsed.bare |= !self.config.allow.disallow_bare_allow,
+                Directive::Scoped(token) => parsed.tokens.push(token),
+                Directive::Inert => {}
+            }
+        }
+        parsed
+    }
+}
+
+/// What one directive permits, before any match is looked at.
+enum Directive {
+    /// The bare form: every match on the line, unless the config refuses it.
+    Bare,
+    /// A scoped token, lowercased: the matches that contain it.
+    Scoped(String),
+    /// Not an allow directive, or a token that must not allow anything.
+    Inert,
+}
+
+fn directive(line: &str, capture: &regex::Captures<'_>) -> Directive {
+    // Characters glued directly to `allow` with no separating space.
+    let glued = capture.get(1).map(|m| m.as_str()).unwrap_or_default();
+    if !glued.is_empty() {
+        // `allow-->` (comment closer, no space) is still the bare form; every
+        // other glued suffix (`allow-list`, `allow=x`, `allowlist`, ...) is not
+        // an allow directive at all and must never suppress a hit.
+        if glued == "-->" {
+            return Directive::Bare;
+        }
+        return Directive::Inert;
+    }
+    let Some(target) = capture.get(2) else {
+        return Directive::Bare;
+    };
+    let mut token = target.as_str();
+    // `allow token-->` captures `token--`; drop the HTML comment closer.
+    if line[target.end()..].starts_with('>') {
+        token = token.strip_suffix("--").unwrap_or(token);
+    }
+    if token.is_empty() {
+        // `<!-- doxguard: allow -->` is the bare form, not a token.
+        return Directive::Bare;
+    }
+    token = token.trim_end_matches([
+        ',', '.', ';', ':', '!', '?', '、', '。', '；', '：', '！', '？',
+    ]);
+    if token.is_empty() {
+        // An explicit punctuation-only token must never become a bare allow.
+        return Directive::Inert;
+    }
+    let target = token.to_ascii_lowercase();
+    // Short tokens (e.g. "168", ".") over-suppress structural hits.
+    if target.chars().count() < 4 {
+        return Directive::Inert;
+    }
+    Directive::Scoped(target)
 }
 
 fn native_exemption_path(path: &str) -> String {
@@ -1050,11 +1112,11 @@ impl<'a> LineKeys<'a> {
 fn watchlist_hits(
     line: &str,
     keys: &LineKeys<'_>,
+    directives: &LineDirectives<'_>,
     path: &str,
     line_number: usize,
     matcher: &WatchlistMatcher,
     config: &Config,
-    may_allow: bool,
 ) -> Vec<ScanHit> {
     let haystack = if config.noise.ascii_case_insensitive {
         line.to_ascii_lowercase()
@@ -1063,7 +1125,7 @@ fn watchlist_hits(
     };
     matcher
         .matches_spanned_with_boundary(&haystack, config.noise.short_needle_max_length)
-        .filter(|(item, _)| !(may_allow && allowed_by_directive(line, &item.needle, config)))
+        .filter(|(item, _)| !directives.allows(&item.needle))
         .map(|(item, span)| ScanHit {
             blob_oid: None,
             file: path.to_owned(),
@@ -1100,17 +1162,17 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
     let patterns = context.patterns;
     let mut hits = Vec::new();
     let mut on_line = |line_number: usize, line: &str| {
-        let may_allow = line_may_allow(line, config);
+        let directives = LineDirectives::new(line, config);
         let keys = LineKeys::new(line);
         if kind.wants_watchlist() {
             hits.extend(watchlist_hits(
                 line,
                 &keys,
+                &directives,
                 path,
                 line_number,
                 matcher,
                 config,
-                may_allow,
             ));
         }
         if !kind.wants_structural() {
@@ -1122,7 +1184,7 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
                 let matched = found.as_str();
                 if !pattern.valid_span(line, found.range())
                     || pattern.is_allowed(matched, config)
-                    || (may_allow && allowed_by_directive(line, matched, config))
+                    || directives.allows(matched)
                     || !seen.insert(matched)
                 {
                     continue;
@@ -1780,5 +1842,233 @@ mod line_key_tests {
             assert_same_in_order(&line, &starts);
         }
         assert!(rescued > 200, "only {rescued} rescued boundaries");
+    }
+}
+
+#[cfg(test)]
+mod directive_tests {
+    use super::{LineDirectives, allowed_by_directive, directive_regex};
+    use crate::config::Config;
+
+    /// The per-match check that `LineDirectives` replaced, kept verbatim as
+    /// the oracle.
+    fn allowed_by_directive_reference(line: &str, matched: &str, config: &Config) -> bool {
+        if config.allow.disallow_inline_allow {
+            return false;
+        }
+        directive_regex().captures_iter(line).any(|capture| {
+            // Characters glued directly to `allow` with no separating space.
+            let glued = capture.get(1).map(|m| m.as_str()).unwrap_or_default();
+            if !glued.is_empty() {
+                // `allow-->` (comment closer, no space) is still the bare form; every
+                // other glued suffix (`allow-list`, `allow=x`, `allowlist`, ...) is not
+                // an allow directive at all and must never suppress a hit.
+                if glued == "-->" {
+                    return !config.allow.disallow_bare_allow;
+                }
+                return false;
+            }
+            let Some(target) = capture.get(2) else {
+                // Bare `doxguard: allow` — optional hard-off for CI / --strict.
+                return !config.allow.disallow_bare_allow;
+            };
+            let mut token = target.as_str();
+            // `allow token-->` captures `token--`; drop the HTML comment closer.
+            if line[target.end()..].starts_with('>') {
+                token = token.strip_suffix("--").unwrap_or(token);
+            }
+            if token.is_empty() {
+                // `<!-- doxguard: allow -->` is the bare form, not a token.
+                return !config.allow.disallow_bare_allow;
+            }
+            token = token.trim_end_matches([
+                ',', '.', ';', ':', '!', '?', '、', '。', '；', '：', '！', '？',
+            ]);
+            if token.is_empty() {
+                // An explicit punctuation-only token must never become a bare allow.
+                return false;
+            }
+            let target = token.to_ascii_lowercase();
+            // Short tokens (e.g. "168", ".") over-suppress structural hits.
+            if target.chars().count() < 4 {
+                return false;
+            }
+            let matched = matched.to_ascii_lowercase();
+            // Scoped allow: token must appear in the match (not reverse substring).
+            matched == target || matched.contains(&target)
+        })
+    }
+
+    /// Every combination of the two allow switches, plus `--strict`.
+    fn configs() -> Vec<Config> {
+        let mut configs = Vec::new();
+        for bare_off in [false, true] {
+            for inline_off in [false, true] {
+                let mut config = Config::default();
+                config.allow.disallow_bare_allow = bare_off;
+                config.allow.disallow_inline_allow = inline_off;
+                configs.push(config);
+            }
+        }
+        let mut strict = Config::default();
+        strict.apply_strict();
+        configs.push(strict);
+        configs
+    }
+
+    /// A synthetic private address, assembled so the source holds none.
+    fn address() -> String {
+        [10, 1, 2, 3].map(|octet: u8| octet.to_string()).join(".")
+    }
+
+    /// Directive fragments; lines are made by joining several of them.
+    fn parts() -> Vec<String> {
+        let address = address();
+        let mut parts: Vec<String> = [
+            "doxguard: allow",
+            "DOXGUARD:allow",
+            "DoxGuard:\tALLOW",
+            "secrets-scan: allow",
+            "SECRETS-SCAN:\u{3000}allow",
+            "doxguard: allow-list",
+            "doxguard: allowlist",
+            "doxguard: allow=x",
+            "doxguard: allow-->",
+            "doxguard: allow -->",
+            "<!-- doxguard: allow -->",
+            "<!-- doxguard: allow fixa-->",
+            "<!-- doxguard: allow fixalpha-->",
+            "<!-- doxguard: allow fixalpha -->",
+            "doxguard: allow fixalpha",
+            "doxguard: allow FixAlpha,",
+            "doxguard: allow fixalpha。",
+            "doxguard: allow\u{3000}FIXALPHA",
+            "doxguard: allow fixalpha>",
+            "doxguard: allow ;;;",
+            "doxguard: allow 名前テスト。",
+            "doxguard: allow 名前",
+            "doxguard: allow abc",
+            "doxguard: allow abcd",
+            "doxguard: allow ab--",
+            "doxguard: allow --",
+            "doxguard: allow -legacy",
+            "doxguard: allow fixture-unrelated",
+            "doxguard:",
+            ": allow",
+            " allow ",
+            " ",
+            "x",
+            ">",
+            "-",
+            "--",
+            "-->",
+            "\t",
+            "é",
+            "fixalpha",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+        parts.push(format!("doxguard: allow {address}"));
+        parts.push(format!("doxguard: allow {}", &address[..6]));
+        parts.push(format!("doxguard: allow {}", &address[..4]));
+        parts.push(format!("<!-- secrets-scan: allow {address}-->"));
+        parts.push(address);
+        parts
+    }
+
+    fn matched_values() -> Vec<String> {
+        let address = address();
+        let mut values: Vec<String> = [
+            "fixalpha",
+            "FIXALPHA-x",
+            "xFixAlphay",
+            "名前テスト",
+            "名前",
+            "abc",
+            "abcd",
+            "zz",
+            "",
+            "fixture-unrelated",
+            "Fixture-Unrelated-Value",
+            "-legacy-x",
+            ";;;",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+        values.push(address[..6].to_owned());
+        values.push(address);
+        values
+    }
+
+    /// Compares the parse-once answer, through the struct and through the
+    /// public function, with the oracle; returns how many were allowed.
+    fn assert_same_as_reference(line: &str, values: &[String], configs: &[Config]) -> usize {
+        let mut allowed = 0;
+        for config in configs {
+            let directives = LineDirectives::new(line, config);
+            for value in values {
+                let expected = allowed_by_directive_reference(line, value, config);
+                let context = format!(
+                    "{line:?} {value:?} bare_off={} inline_off={}",
+                    config.allow.disallow_bare_allow, config.allow.disallow_inline_allow
+                );
+                assert_eq!(directives.allows(value), expected, "{context}");
+                assert_eq!(
+                    allowed_by_directive(line, value, config),
+                    expected,
+                    "{context}"
+                );
+                allowed += usize::from(expected);
+            }
+        }
+        allowed
+    }
+
+    #[test]
+    fn line_directives_match_the_per_match_check_on_every_pair_of_parts() {
+        let parts = parts();
+        let values = matched_values();
+        let configs = configs();
+        let (mut allowed, mut checked) = (0, 0);
+        for first in &parts {
+            for second in &parts {
+                let line = format!("{first}{second}");
+                allowed += assert_same_as_reference(&line, &values, &configs);
+                checked += values.len() * configs.len();
+            }
+        }
+        assert!(
+            allowed > checked / 50 && allowed < checked / 2,
+            "{allowed} of {checked}"
+        );
+    }
+
+    #[test]
+    fn line_directives_match_the_per_match_check_on_random_lines() {
+        let parts = parts();
+        let values = matched_values();
+        let configs = configs();
+        let mut state: u64 = 0xD1EC_7100_0000_0001;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state
+        };
+        let (mut allowed, mut checked) = (0, 0);
+        for _ in 0..2000 {
+            let count = (next() % 8) as usize;
+            let line: String = (0..count)
+                .map(|_| parts[(next() % parts.len() as u64) as usize].as_str())
+                .collect();
+            allowed += assert_same_as_reference(&line, &values, &configs);
+            checked += values.len() * configs.len();
+        }
+        assert!(
+            allowed > checked / 50 && allowed < checked / 2,
+            "{allowed} of {checked}"
+        );
     }
 }
