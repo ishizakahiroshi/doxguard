@@ -487,6 +487,12 @@ fn directive_regex() -> &'static Regex {
     })
 }
 
+/// Whether `allowed_by_directive` can return true for any match on `line`.
+/// Checked once per line so a long line with many matches stays linear.
+fn line_may_allow(line: &str, config: &Config) -> bool {
+    !config.allow.disallow_inline_allow && directive_regex().is_match(line)
+}
+
 pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool {
     if config.allow.disallow_inline_allow {
         return false;
@@ -876,24 +882,33 @@ fn read_staged_lines(
     let Ok(mut child) = spawned else {
         return LineRead::Skipped(UNREADABLE);
     };
-    let complete = child.stdout.take().is_some_and(|stdout| {
+    let ended = child.stdout.take().map(|stdout| {
         // Reading one byte past the probed size detects any mismatch.
         let reader = BufReader::new(stdout.take(size.saturating_add(1)));
-        matches!(
-            for_each_line(reader, false, None, on_line),
-            Ok(LinesEnd::Complete { bytes, .. }) if bytes == size
-        )
+        for_each_line(reader, false, None, on_line)
     });
-    if !complete {
+    if !ended
+        .as_ref()
+        .is_some_and(|ended| staged_read_complete(ended, size, true))
+    {
         // Stop a blob that is no longer being read instead of draining it.
         let _ = child.kill();
     }
     let exited = child.wait().is_ok_and(|status| status.success());
-    if complete && exited {
+    if ended
+        .as_ref()
+        .is_some_and(|ended| staged_read_complete(ended, size, exited))
+    {
         LineRead::Complete
     } else {
         LineRead::Skipped(UNREADABLE)
     }
+}
+
+/// A staged blob counts as scanned only when exactly the probed number of
+/// bytes arrived as valid lines and `git cat-file` itself succeeded.
+fn staged_read_complete(ended: &std::io::Result<LinesEnd>, size: u64, exited: bool) -> bool {
+    exited && matches!(ended, Ok(LinesEnd::Complete { bytes, .. }) if *bytes == size)
 }
 
 fn variable_at(line: &str, start: usize) -> Option<String> {
@@ -916,6 +931,7 @@ fn watchlist_hits(
     line_number: usize,
     matcher: &WatchlistMatcher,
     config: &Config,
+    may_allow: bool,
 ) -> Vec<ScanHit> {
     let haystack = if config.noise.ascii_case_insensitive {
         line.to_ascii_lowercase()
@@ -924,7 +940,7 @@ fn watchlist_hits(
     };
     matcher
         .matches_spanned_with_boundary(&haystack, config.noise.short_needle_max_length)
-        .filter(|(item, _)| !allowed_by_directive(line, &item.needle, config))
+        .filter(|(item, _)| !(may_allow && allowed_by_directive(line, &item.needle, config)))
         .map(|(item, span)| ScanHit {
             blob_oid: None,
             file: path.to_owned(),
@@ -961,8 +977,16 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
     let patterns = context.patterns;
     let mut hits = Vec::new();
     let mut on_line = |line_number: usize, line: &str| {
+        let may_allow = line_may_allow(line, config);
         if kind.wants_watchlist() {
-            hits.extend(watchlist_hits(line, path, line_number, matcher, config));
+            hits.extend(watchlist_hits(
+                line,
+                path,
+                line_number,
+                matcher,
+                config,
+                may_allow,
+            ));
         }
         if !kind.wants_structural() {
             return;
@@ -973,7 +997,7 @@ fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<Fi
                 let matched = found.as_str();
                 if !pattern.valid_span(line, found.range())
                     || pattern.is_allowed(matched, config)
-                    || allowed_by_directive(line, matched, config)
+                    || (may_allow && allowed_by_directive(line, matched, config))
                     || !seen.insert(matched)
                 {
                     continue;
@@ -1233,7 +1257,34 @@ fn hunk_range(hunk: &Regex, line: &str) -> Result<Range<usize>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AddedLines, nul_paths};
+    use super::{AddedLines, LinesEnd, nul_paths, staged_read_complete};
+
+    #[test]
+    fn staged_reads_count_only_when_every_byte_arrived_and_git_succeeded() {
+        let complete = |bytes| {
+            Ok(LinesEnd::Complete {
+                bytes,
+                replaced: false,
+            })
+        };
+        assert!(staged_read_complete(&complete(10), 10, true));
+        assert!(!staged_read_complete(&complete(9), 10, true), "truncated");
+        assert!(
+            !staged_read_complete(&complete(11), 10, true),
+            "extra bytes"
+        );
+        assert!(
+            !staged_read_complete(&complete(10), 10, false),
+            "git failed"
+        );
+        assert!(!staged_read_complete(&Ok(LinesEnd::NonUtf8), 10, true));
+        assert!(!staged_read_complete(&Ok(LinesEnd::OverLimit), 10, true));
+        assert!(!staged_read_complete(
+            &Err(std::io::Error::other("synthetic")),
+            10,
+            true
+        ));
+    }
 
     #[test]
     fn added_lines_merge_unsorted_overlapping_and_empty_ranges() {

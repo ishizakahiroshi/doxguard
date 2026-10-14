@@ -215,6 +215,82 @@ fn large_non_utf8_staged_text_remains_a_coverage_skip() {
 }
 
 #[test]
+fn a_long_line_with_many_matches_is_scanned_in_linear_time() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // Before the per-line directive check this took about a minute.
+    let line = "10.1.2.3 ".repeat(2 * MIB / 9 + 1024);
+    fs::write(cwd.join("minified.js"), line).unwrap();
+    git(cwd, &["add", "--", "minified.js"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (1, 0, 1), "{report}");
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
+fn crlf_lines_are_split_exactly_like_str_lines() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    // `$` only matches when the line ending, including `\r`, was removed.
+    repo(
+        cwd,
+        r#"{"structural": {"custom": [{"name": "synthetic eol", "regex": "EOL-TOKEN-[0-9]+$", "suggestion": "synthetic"}]}}"#,
+    );
+    let body = format!(
+        "{}a EOL-TOKEN-1\r\nb EOL-TOKEN-2\r\nc EOL-TOKEN-3",
+        "filler\r\n".repeat(MIB / 8)
+    );
+    let first = body
+        .lines()
+        .position(|line| line.ends_with("EOL-TOKEN-1"))
+        .unwrap()
+        + 1;
+    fs::write(cwd.join("crlf.txt"), &body).unwrap();
+    git(cwd, &["add", "--", "crlf.txt"]);
+    let staged = scan(cwd, &["--staged"]).1;
+    git(cwd, &["commit", "-qm", "synthetic crlf"]);
+    let tracked = scan(cwd, &["--all-tracked"]).1;
+
+    for report in [staged, tracked] {
+        let mut lines: Vec<u64> = report["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|hit| hit["source"] == "structural: synthetic eol")
+            .map(|hit| hit["line_number"].as_u64().unwrap())
+            .collect();
+        lines.sort_unstable();
+        let first = first as u64;
+        assert_eq!(lines, [first, first + 1, first + 2], "{report}");
+    }
+}
+
+#[test]
+fn a_leading_invalid_byte_stops_a_large_staged_read_early() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    let mut bytes = vec![0xff, b'\n'];
+    bytes.extend_from_slice(format!("{}{SYNTHETIC_IP}\n", filler(17 * MIB)).as_bytes());
+    fs::write(cwd.join("mixed.txt"), bytes).unwrap();
+    git(cwd, &["add", "--", "mixed.txt"]);
+
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    assert_eq!(code, Some(1), "{report}");
+    assert_eq!(counts(&report), (0, 1, 0), "{report}");
+}
+
+#[test]
 fn added_line_baseline_reads_large_staged_changes() {
     let temp = tempdir().unwrap();
     let cwd = temp.path();
