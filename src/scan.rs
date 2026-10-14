@@ -1,8 +1,10 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs,
+    io::{BufRead, BufReader, Read, Write},
+    ops::Range,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     sync::OnceLock,
 };
 
@@ -11,7 +13,15 @@ use rayon::prelude::*;
 use regex::Regex;
 use serde::Serialize;
 
-use crate::{config::Config, patterns::StructuralPattern, watchlist::WatchlistMatcher};
+#[path = "history.rs"]
+mod history;
+pub use history::scan_history;
+
+use crate::{
+    config::Config,
+    patterns::StructuralPattern,
+    watchlist::{WatchlistMatcher, WatchlistStatistics},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -20,6 +30,9 @@ pub enum ScanMode {
     Diff,
     AllTracked,
     Packaged,
+    Paths,
+    FilesFromList,
+    History,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -31,17 +44,23 @@ pub enum HitKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ScanHit {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub blob_oid: Option<String>,
     pub file: String,
     #[serde(rename = "line_number")]
     pub line_number: usize,
     pub matched: String,
+    pub variable: Option<String>,
     pub source: String,
     pub kind: HitKind,
     pub suggestion: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ScanResult {
+    pub watchlist_statistics: WatchlistStatistics,
+    pub baseline_applied: bool,
+    pub baseline_suppressed_hits: usize,
     pub mode: ScanMode,
     pub scanned: usize,
     #[serde(rename = "total_files")]
@@ -60,16 +79,50 @@ pub struct ScanResult {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Eligibility {
-    Scan,
-    QuietSkip,
-    CoverageSkip,
+enum ScanKind {
+    /// Watchlist needles and structural patterns.
+    Full,
+    /// Watchlist needles only; structural patterns skipped. Used for `exemptPaths`,
+    /// which are meant to silence synthetic structural fixtures but must still catch
+    /// a real private identity that lands in an "exempt" file (F-B12).
+    WatchlistOnly,
+    /// Structural patterns only; watchlist matching skipped. Used for dependency
+    /// lockfiles, which can carry private registry hosts / `file:` paths / private
+    /// IPs but are noisy for watchlist matching (F-A01).
+    StructuralOnly,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum ContentLoad {
-    Text(String),
+impl ScanKind {
+    fn wants_watchlist(self) -> bool {
+        matches!(self, ScanKind::Full | ScanKind::WatchlistOnly)
+    }
+
+    fn wants_structural(self) -> bool {
+        matches!(self, ScanKind::Full | ScanKind::StructuralOnly)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Eligibility {
+    Scan(ScanKind),
+    QuietSkip,
     CoverageSkip(&'static str),
+}
+
+/// How a scan target's lines were delivered to the matcher.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LineRead {
+    Complete,
+    /// Preserve ASCII findings in non-UTF-8 data without claiming full coverage.
+    Partial(&'static str),
+    /// Not fully scanned; findings from the partial read are discarded.
+    Skipped(&'static str),
+}
+
+enum LinesEnd {
+    Complete { bytes: u64, replaced: bool },
+    NonUtf8,
+    OverLimit,
 }
 
 const BINARY_EXTENSIONS: &[&str] = &[
@@ -97,7 +150,7 @@ fn cached_program(
     cache
         .get_or_init(|| which::which_global(name).ok())
         .as_deref()
-        .ok_or_else(|| anyhow!("could not find `{name}` on PATH"))
+        .ok_or_else(|| anyhow!("could not find `{name}` on PATH. Install it or add it to PATH"))
 }
 
 pub(crate) fn git_program() -> Result<&'static Path> {
@@ -116,15 +169,32 @@ fn run_command(program: &Path, args: &[&str], cwd: &Path, strip_env: &[&str]) ->
     for variable in strip_env {
         command.env_remove(variable);
     }
-    let output = command
-        .output()
-        .with_context(|| format!("failed to start {}", program.display()))?;
+    // The tool is named by its file name; the full location (which can reveal a home
+    // directory) is shown only with `--show-paths`.
+    let tool = if crate::config::show_paths() {
+        program.display().to_string()
+    } else {
+        program.file_stem().map_or_else(
+            || "command".to_owned(),
+            |stem| stem.to_string_lossy().into_owned(),
+        )
+    };
+    let output = command.output().with_context(|| {
+        format!(
+            "failed to start {tool}{}",
+            if crate::config::show_paths() {
+                ""
+            } else {
+                " (location hidden; pass --show-paths to show it)"
+            }
+        )
+    })?;
     if !output.status.success() {
         let message = String::from_utf8_lossy(&output.stderr).trim().to_owned();
         bail!(
             "{}",
             if message.is_empty() {
-                format!("{} {} failed", program.display(), args.join(" "))
+                format!("{tool} {} failed", args.join(" "))
             } else {
                 message
             }
@@ -135,19 +205,33 @@ fn run_command(program: &Path, args: &[&str], cwd: &Path, strip_env: &[&str]) ->
 
 fn run_git(args: &[&str], cwd: &Path) -> Result<String> {
     let mut full = Vec::with_capacity(args.len() + 2);
+    full.push("--no-replace-objects");
     full.push("-c");
     full.push("core.quotepath=false");
     full.extend_from_slice(args);
     run_command(git_program()?, &full, cwd, &[])
 }
 
-fn lines(output: String) -> Vec<String> {
-    output
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty())
+/// Resolve the worktree root once so Git enumeration and file reads use the
+/// same repository-relative coordinate system even when invoked below it.
+pub fn repository_root(cwd: &Path) -> Result<PathBuf> {
+    let output = run_git(&["rev-parse", "--show-toplevel"], cwd)?;
+    let root = output.trim_end_matches(['\r', '\n']);
+    if root.is_empty() {
+        bail!("git rev-parse returned an empty repository root");
+    }
+    Ok(PathBuf::from(root))
+}
+
+fn nul_paths(output: String) -> Result<Vec<String>> {
+    if !output.is_empty() && !output.ends_with('\0') {
+        bail!("Git file list was not NUL terminated");
+    }
+    Ok(output
+        .split('\0')
+        .filter(|path| !path.is_empty())
         .map(str::to_owned)
-        .collect()
+        .collect())
 }
 
 fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
@@ -165,6 +249,18 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
     let packages = packages
         .as_array()
         .ok_or_else(|| anyhow!("npm pack did not return a package array"))?;
+    let root_manifest: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(cwd.join("package.json")).context("cannot read package root")?,
+    )?;
+    if packages.len() != 1
+        || packages[0].get("name") != root_manifest.get("name")
+        || packages[0].get("version") != root_manifest.get("version")
+        || root_manifest.get("workspaces").is_some()
+    {
+        bail!(
+            "workspace or multi-package scanning is unsupported; scan each package from its own root"
+        );
+    }
     let mut paths = Vec::new();
     let mut seen = HashSet::new();
     for package in packages {
@@ -180,39 +276,240 @@ fn packaged_files(cwd: &Path) -> Result<Vec<String>> {
         }
     }
     if paths.is_empty() {
-        bail!("npm pack did not return a file list");
+        bail!(
+            "npm pack did not return a file list. Run --packaged from the package directory (the one with package.json)"
+        );
     }
     Ok(paths)
 }
 
 pub fn files_for_mode(mode: ScanMode, cwd: &Path) -> Result<Vec<String>> {
     match mode {
-        ScanMode::Staged => Ok(lines(run_git(
-            &["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        ScanMode::Staged => nul_paths(run_git(
+            &[
+                "diff",
+                "--cached",
+                "--name-only",
+                "-z",
+                "--diff-filter=ACMRT",
+            ],
             cwd,
-        )?)),
-        ScanMode::Diff => Ok(lines(run_git(
-            &["diff", "--name-only", "--diff-filter=ACMR", "HEAD"],
+        )?),
+        ScanMode::Diff => nul_paths(run_git(
+            &["diff", "--name-only", "-z", "--diff-filter=ACMRT", "HEAD"],
             cwd,
-        )?)),
-        ScanMode::AllTracked => Ok(lines(run_git(&["ls-files"], cwd)?)),
+        )?),
+        ScanMode::AllTracked => nul_paths(run_git(&["ls-files", "-z"], cwd)?),
         ScanMode::Packaged => packaged_files(cwd),
+        ScanMode::FilesFromList => bail!("--files-from-list requires an explicit list path"),
+        ScanMode::History => bail!("history uses reachable Git objects"),
+        ScanMode::Paths => bail!("path mode requires --path or --path-from"),
     }
+}
+
+fn is_link(metadata: &fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        // Junctions are reparse points too; never recursively follow them.
+        metadata.file_attributes() & 0x400 != 0
+    }
+    #[cfg(not(windows))]
+    {
+        metadata.file_type().is_symlink()
+    }
+}
+
+/// Expand literal paths outside git. Explicit missing paths and enumeration
+/// failures are errors. Links are retained as coverage skips, never followed.
+pub fn files_from_paths(roots: &[PathBuf], cwd: &Path, config: &Config) -> Result<Vec<String>> {
+    fn visit(path: &Path, cwd: &Path, config: &Config, files: &mut HashSet<PathBuf>) -> Result<()> {
+        let native = path.to_str().context("scan path was not UTF-8")?;
+        let meta = fs::symlink_metadata(path).context("cannot inspect requested scan path")?;
+        if configured_path_exempt(native, cwd, config) {
+            return Ok(());
+        }
+        if meta.is_dir() && !is_link(&meta) {
+            for entry in fs::read_dir(path).context("cannot enumerate scan directory")? {
+                visit(
+                    &entry.context("cannot read scan directory entry")?.path(),
+                    cwd,
+                    config,
+                    files,
+                )?;
+            }
+        } else {
+            files.insert(path.to_path_buf());
+        }
+        Ok(())
+    }
+    if roots.is_empty() {
+        bail!("path scan requires at least one non-empty path");
+    }
+    let mut files = HashSet::new();
+    for root in roots {
+        if root.as_os_str().is_empty() {
+            bail!("scan paths must not be empty");
+        }
+        // Keep native path semantics: collapsing a symlink/.. changes its target.
+        let path = cwd.join(root);
+        visit(&path, cwd, config, &mut files)?;
+    }
+    let mut files: Vec<_> = files
+        .into_iter()
+        .map(|path| {
+            path.into_os_string()
+                .into_string()
+                .map_err(|_| anyhow!("scan path was not UTF-8"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    files.sort();
+    Ok(files)
+}
+
+/// Read a bounded, local list. Every entry stays inside the repository and uses
+/// the invocation cwd as its base; reported paths always use the repository root.
+pub fn files_from_list(list: &Path, cwd: &Path, repo_root: &Path) -> Result<Vec<String>> {
+    const MAX_LIST_BYTES: u64 = 64 * 1024 * 1024;
+    const MAX_LIST_PATHS: usize = 100_000;
+    let list_path = cwd.join(list);
+    let metadata = fs::symlink_metadata(&list_path)
+        .map_err(|_| anyhow!("cannot read file list; check the list path and permissions"))?;
+    if is_link(&metadata) || !metadata.is_file() || metadata.len() > MAX_LIST_BYTES {
+        bail!("file list must be a regular UTF-8 file no larger than 64 MiB");
+    }
+    // Bounded read also protects against growth after the metadata check.
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    fs::File::open(&list_path)
+        .map_err(|_| anyhow!("cannot open file list"))?
+        .take(MAX_LIST_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| anyhow!("cannot read file list"))?;
+    if bytes.len() as u64 > MAX_LIST_BYTES {
+        bail!("file list exceeds 64 MiB");
+    }
+    let text = String::from_utf8(bytes).map_err(|_| anyhow!("file list must be valid UTF-8"))?;
+    let root = repo_root
+        .canonicalize()
+        .context("cannot resolve repository root")?;
+    // Git and Windows cwd can spell the same directory differently (short names,
+    // casing, or a verbatim prefix). Match its filesystem identity, then retain
+    // the lexical suffix so in-repository links and parent traversal remain visible.
+    // Use the outermost matching ancestor: a nested link back to root must not
+    // disappear from the suffix used for coverage checks.
+    let invocation_root = cwd
+        .ancestors()
+        .filter(|ancestor| ancestor.canonicalize().is_ok_and(|path| path == root))
+        .last()
+        .ok_or_else(|| anyhow!("file list target must resolve from a repository directory"))?;
+    let mut seen = HashSet::new();
+    let mut paths = Vec::new();
+    for line in text.strip_prefix('\u{feff}').unwrap_or(&text).lines() {
+        let entry = line;
+        if entry.trim().is_empty() {
+            continue;
+        }
+        let entry = native_exemption_path(entry);
+        if entry.starts_with('/') || entry.contains(':') || entry.contains('\0') {
+            bail!("file list entries must be repository-relative paths");
+        }
+        let candidate = cwd.join(&entry);
+        let real = candidate
+            .canonicalize()
+            .map_err(|_| anyhow!("file list contains a missing or unresolvable target"))?;
+        if !real.starts_with(&root) {
+            bail!("file list target is outside the repository");
+        }
+        if !fs::metadata(&real)
+            .map_err(|_| anyhow!("file list target is unreadable"))?
+            .is_file()
+        {
+            bail!("file list targets must be regular files");
+        }
+        // Preserve link coverage reporting, but reject any link that escapes root.
+        let relative = candidate
+            .strip_prefix(invocation_root)
+            .map_err(|_| anyhow!("file list target must resolve from a repository directory"))?;
+        let mut component_path = repo_root.to_owned();
+        let mut found_link = false;
+        for component in relative.components() {
+            component_path.push(component);
+            if fs::symlink_metadata(&component_path).is_ok_and(|metadata| is_link(&metadata)) {
+                found_link = true;
+            }
+        }
+        if found_link
+            && relative
+                .components()
+                .any(|part| part == std::path::Component::ParentDir)
+        {
+            bail!("file list paths cannot combine link traversal with parent components");
+        }
+        let mut normalized = PathBuf::new();
+        for component in relative.components() {
+            match component {
+                std::path::Component::Normal(name) => normalized.push(name),
+                std::path::Component::CurDir => {}
+                std::path::Component::ParentDir => {
+                    if !normalized.pop() {
+                        bail!("file list path escapes the repository");
+                    }
+                }
+                _ => bail!("invalid file list path"),
+            }
+        }
+        let path = normalized
+            .to_str()
+            .ok_or_else(|| anyhow!("file list target must have a UTF-8 name"))?
+            .to_owned();
+        let path = native_exemption_path(&path);
+        if seen.insert(path.clone()) {
+            if paths.len() >= MAX_LIST_PATHS {
+                bail!("file list exceeds 100000 distinct paths");
+            }
+            paths.push(path);
+        }
+    }
+    Ok(paths)
 }
 
 fn directive_regex() -> &'static Regex {
     static DIRECTIVE: OnceLock<Regex> = OnceLock::new();
     DIRECTIVE.get_or_init(|| {
-        // Tokens may contain `-` (Anne-Marie); the `-->` comment closer is cut
-        // off below because the regex crate has no lookahead to stop on it.
-        Regex::new(r"(?i)(?:doxguard|secrets-scan):\s*allow\b(?:\s+([^\s>]+))?")
+        // Group 1 captures any non-space characters glued directly onto `allow`
+        // (e.g. `-list`, `=x`, `list` in `allowlist`) so a word like `allowlist`
+        // is not mistaken for a bare allow. Group 2 captures a space-separated
+        // scoped token (which may contain `-`, as in Anne-Marie); the `-->`
+        // comment closer is cut off below because the regex crate has no lookahead.
+        Regex::new(r"(?i)(?:doxguard|secrets-scan):\s*allow(\S*)(?:\s+([^\s>]+))?")
             .expect("static directive regex")
     })
 }
 
+/// Whether `allowed_by_directive` can return true for any match on `line`.
+/// Checked once per line so a long line with many matches stays linear.
+fn line_may_allow(line: &str, config: &Config) -> bool {
+    !config.allow.disallow_inline_allow && directive_regex().is_match(line)
+}
+
 pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool {
+    if config.allow.disallow_inline_allow {
+        return false;
+    }
     directive_regex().captures_iter(line).any(|capture| {
-        let Some(target) = capture.get(1) else {
+        // Characters glued directly to `allow` with no separating space.
+        let glued = capture.get(1).map(|m| m.as_str()).unwrap_or_default();
+        if !glued.is_empty() {
+            // `allow-->` (comment closer, no space) is still the bare form; every
+            // other glued suffix (`allow-list`, `allow=x`, `allowlist`, ...) is not
+            // an allow directive at all and must never suppress a hit.
+            if glued == "-->" {
+                return !config.allow.disallow_bare_allow;
+            }
+            return false;
+        }
+        let Some(target) = capture.get(2) else {
             // Bare `doxguard: allow` — optional hard-off for CI / --strict.
             return !config.allow.disallow_bare_allow;
         };
@@ -225,6 +522,13 @@ pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool 
             // `<!-- doxguard: allow -->` is the bare form, not a token.
             return !config.allow.disallow_bare_allow;
         }
+        token = token.trim_end_matches([
+            ',', '.', ';', ':', '!', '?', '、', '。', '；', '：', '！', '？',
+        ]);
+        if token.is_empty() {
+            // An explicit punctuation-only token must never become a bare allow.
+            return false;
+        }
         let target = token.to_ascii_lowercase();
         // Short tokens (e.g. "168", ".") over-suppress structural hits.
         if target.chars().count() < 4 {
@@ -236,19 +540,39 @@ pub fn allowed_by_directive(line: &str, matched: &str, config: &Config) -> bool 
     })
 }
 
-fn normalize_path(path: &str) -> String {
-    path.replace('\\', "/")
+fn native_exemption_path(path: &str) -> String {
+    // Only Windows treats both slashes as separators. On Unix a backslash is
+    // part of a filename, including during exemption and lockfile matching.
+    #[cfg(windows)]
+    {
+        path.replace('\\', "/")
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_owned()
+    }
 }
 
 /// Path exemption uses path-boundary matching, not raw substring contains.
 /// Empty / blank exempt entries never match (and are rejected at config load).
 pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
-    let path = normalize_path(path);
-    let exempt = normalize_path(exempt.trim());
-    if exempt.is_empty() || exempt == "." || exempt == "/" {
+    let path = native_exemption_path(path);
+    let exempt = native_exemption_path(exempt.trim());
+    let is_directory = exempt.ends_with('/');
+    let drive_absolute = exempt
+        .as_bytes()
+        .get(1)
+        .is_some_and(|separator| *separator == b':');
+    if exempt.is_empty()
+        || exempt.starts_with('/')
+        || drive_absolute
+        || exempt
+            .trim_end_matches('/')
+            .split('/')
+            .any(|component| component.is_empty() || component == "." || component == "..")
+    {
         return false;
     }
-    let dir_style = exempt.ends_with('/');
     let exempt = exempt.trim_end_matches('/');
     if exempt.is_empty() {
         return false;
@@ -256,102 +580,349 @@ pub fn path_is_exempt(path: &str, exempt: &str) -> bool {
     if path == exempt {
         return true;
     }
-    if path.starts_with(&format!("{exempt}/")) {
+    if is_directory && path.starts_with(&format!("{exempt}/")) {
         return true;
     }
-    if dir_style {
-        return false;
-    }
-    // Prefix with boundary: next char is end, '/', or '.' (workflow stem → .yml).
-    if let Some(rest) = path.strip_prefix(exempt) {
-        if rest.is_empty() || rest.starts_with('/') || rest.starts_with('.') {
-            return true;
-        }
-    }
-    path.ends_with(&format!("/{exempt}")) || path.contains(&format!("/{exempt}/"))
+    false
 }
 
 fn classify_path(path: &str, cwd: &Path, config: &Config, mode: ScanMode) -> Eligibility {
-    let normalized = normalize_path(path);
-    if config
-        .all_exempt_paths()
-        .any(|exempt| path_is_exempt(&normalized, exempt))
+    if mode == ScanMode::Paths && configured_path_exempt(path, cwd, config) {
+        return Eligibility::QuietSkip;
+    }
+    if mode != ScanMode::Paths
+        && config.include_default_exempt_paths
+        && config
+            .all_exempt_paths()
+            .any(|exempt| path_is_exempt(path, exempt))
     {
         return Eligibility::QuietSkip;
     }
+    if mode == ScanMode::Paths {
+        match fs::symlink_metadata(cwd.join(path)) {
+            Ok(meta) if !is_link(&meta) && meta.is_file() => {}
+            _ => {
+                return Eligibility::CoverageSkip("missing, unreadable or non-regular scan target");
+            }
+        }
+    }
+    if mode == ScanMode::FilesFromList {
+        let mut target = cwd.to_owned();
+        for component in Path::new(path).components() {
+            target.push(component);
+            match fs::symlink_metadata(&target) {
+                Ok(metadata) if is_link(&metadata) => {
+                    return Eligibility::CoverageSkip("symlink or reparse point");
+                }
+                Ok(_) => {}
+                Err(_) => return Eligibility::CoverageSkip("missing or unreadable listed target"),
+            }
+        }
+    }
+    let normalized = native_exemption_path(path);
     let lower = normalized.to_ascii_lowercase();
+    // Binaries are never scanned for either pattern class.
+
     if BINARY_EXTENSIONS
         .iter()
         .any(|extension| lower.ends_with(extension))
     {
         return Eligibility::QuietSkip;
     }
-    let filename = Path::new(&normalized)
+    let filename = Path::new(path)
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or_default();
-    if SKIP_FILENAMES.contains(&filename) {
+    if mode != ScanMode::Paths
+        && config.include_default_exempt_paths
+        && SKIP_FILENAMES.contains(&filename)
+    {
         return Eligibility::QuietSkip;
     }
+    // Which pattern classes apply. exemptPaths keep watchlist matching (a real
+    // identity must not hide in an "exempt" file); lockfiles keep structural
+    // matching (private hosts / paths / IPs) but drop noisy watchlist matching.
+    let kind = if mode == ScanMode::Paths {
+        ScanKind::Full
+    } else if config
+        .all_exempt_paths()
+        .any(|exempt| path_is_exempt(&normalized, exempt))
+    {
+        ScanKind::WatchlistOnly
+    } else if SKIP_FILENAMES.contains(&filename) && !config.require_watchlists {
+        ScanKind::StructuralOnly
+    } else {
+        ScanKind::Full
+    };
+
     // Staged mode reads index blobs; worktree size/symlink checks would false-skip.
     if mode == ScanMode::Staged {
-        return Eligibility::Scan;
+        return Eligibility::Scan(kind);
     }
     let joined = cwd.join(path);
     let metadata = match fs::symlink_metadata(&joined) {
         Ok(metadata) => metadata,
-        Err(_) => return Eligibility::QuietSkip,
+        Err(_) => return Eligibility::CoverageSkip("missing or unreadable metadata"),
     };
-    if metadata.file_type().is_symlink() {
-        return Eligibility::CoverageSkip;
+    if is_link(&metadata) {
+        return Eligibility::CoverageSkip("symlink or reparse point");
     }
     if !metadata.is_file() {
-        return Eligibility::QuietSkip;
+        return Eligibility::CoverageSkip("non-regular target");
     }
-    if metadata.len() > config.max_file_size {
-        return Eligibility::CoverageSkip;
+    if config
+        .max_file_size
+        .is_some_and(|limit| metadata.len() > limit)
+    {
+        return Eligibility::CoverageSkip("oversize");
     }
-    Eligibility::Scan
+    Eligibility::Scan(kind)
 }
 
-const STAGED_BLOB_MAX_BYTES: u64 = 16 * 1024 * 1024;
+fn configured_path_exempt(path: &str, cwd: &Path, config: &Config) -> bool {
+    let relative = Path::new(path)
+        .strip_prefix(cwd)
+        .ok()
+        .and_then(Path::to_str);
+    config.exempt_paths.iter().any(|exempt| {
+        path_is_exempt(path, exempt)
+            || relative.is_some_and(|relative| path_is_exempt(relative, exempt))
+    })
+}
 
-fn read_scan_content(
+/// Size-probe every staged blob with a single `git cat-file --batch-check` instead
+/// of one process per file, halving the child processes a pre-commit hook spawns
+/// (F-A05). Returns `None` when the batch probe is unavailable (`-Z` needs git
+/// 2.42) so the caller falls back to the per-file probe. Only the *size probe* is
+/// batched: blob content is still read per file, leaving the security-critical
+/// read path unchanged.
+fn staged_blob_sizes(paths: &[String], cwd: &Path) -> Option<HashMap<String, u64>> {
+    let git = git_program().ok()?;
+    let mut child = Command::new(git)
+        .args([
+            "--no-replace-objects",
+            "-c",
+            "core.quotepath=false",
+            "cat-file",
+            "--batch-check",
+            "-Z",
+        ])
+        .current_dir(cwd)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let mut stdin = child.stdin.take()?;
+    let specs: Vec<String> = paths.iter().map(|path| format!(":0:{path}")).collect();
+    // Write from a separate thread: git streams records back while we are still
+    // writing, so writing everything first would deadlock on a full pipe buffer
+    // exactly in the large-staged-set case this optimizes.
+    let writer = std::thread::spawn(move || {
+        for spec in specs {
+            if stdin.write_all(spec.as_bytes()).is_err() || stdin.write_all(b"\0").is_err() {
+                return;
+            }
+        }
+    });
+    let output = child.wait_with_output().ok()?;
+    let _ = writer.join();
+    if !output.status.success() {
+        return None;
+    }
+    // Records come back in input order, so zip them with the requested paths.
+    let records = output
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|record| !record.is_empty());
+    let mut sizes = HashMap::new();
+    for (path, record) in paths.iter().zip(records) {
+        let Ok(record) = std::str::from_utf8(record) else {
+            continue;
+        };
+        // "<oid> <type> <size>" for a resolved blob; "<spec> missing" otherwise.
+        let fields: Vec<&str> = record.split_whitespace().collect();
+        if fields.len() == 3 {
+            if let Ok(size) = fields[2].parse::<u64>() {
+                sizes.insert(path.clone(), size);
+            }
+        }
+    }
+    Some(sizes)
+}
+
+/// Feed `reader` to `on_line` one line at a time, split exactly like
+/// `str::lines`, so memory is bounded by the longest line instead of the file.
+fn for_each_line(
+    mut reader: impl BufRead,
+    lossy: bool,
+    limit: Option<u64>,
+    on_line: &mut dyn FnMut(usize, &str),
+) -> std::io::Result<LinesEnd> {
+    let mut buffer = Vec::new();
+    let mut bytes = 0u64;
+    let mut replaced = false;
+    let mut line_number = 0usize;
+    loop {
+        buffer.clear();
+        let read = reader.read_until(b'\n', &mut buffer)?;
+        if read == 0 {
+            return Ok(LinesEnd::Complete { bytes, replaced });
+        }
+        bytes += read as u64;
+        if limit.is_some_and(|limit| bytes > limit) {
+            return Ok(LinesEnd::OverLimit);
+        }
+        line_number += 1;
+        let mut line = buffer.as_slice();
+        if let Some(rest) = line.strip_suffix(b"\n") {
+            line = rest.strip_suffix(b"\r").unwrap_or(rest);
+        }
+        match std::str::from_utf8(line) {
+            Ok(text) => on_line(line_number, text),
+            Err(_) if lossy => {
+                replaced = true;
+                on_line(line_number, &String::from_utf8_lossy(line));
+            }
+            Err(_) => return Ok(LinesEnd::NonUtf8),
+        }
+    }
+}
+
+/// `Read::take` bound that stops a line without newlines from growing past
+/// an explicit `maxFileSize`; unlimited when none is configured.
+fn read_cap(limit: Option<u64>) -> u64 {
+    limit.map_or(u64::MAX, |limit| limit.saturating_add(1))
+}
+
+fn read_scan_lines(
     mode: ScanMode,
     path: &str,
     cwd: &Path,
-    max_file_size: u64,
-) -> Result<ContentLoad> {
+    max_file_size: Option<u64>,
+    _staged_sizes: Option<&HashMap<String, u64>>,
+    on_line: &mut dyn FnMut(usize, &str),
+) -> LineRead {
     if mode == ScanMode::Staged {
         // Index blob, not worktree — pre-commit must gate what will be committed.
-        let spec = format!(":{path}");
-        let limit = max_file_size.min(STAGED_BLOB_MAX_BYTES);
-        // Ask for the blob size first so an oversize blob is never loaded.
-        if let Ok(size) = run_git(&["cat-file", "-s", &spec], cwd) {
-            if size.trim().parse::<u64>().is_ok_and(|size| size > limit) {
-                return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
-            }
-        }
-        match run_git(&["show", &spec], cwd) {
-            Ok(content) => {
-                if content.len() as u64 > limit {
-                    return Ok(ContentLoad::CoverageSkip("oversize staged blob"));
-                }
-                Ok(ContentLoad::Text(content))
-            }
-            Err(_) => Ok(ContentLoad::CoverageSkip(
-                "unreadable or non-UTF-8 staged blob",
-            )),
-        }
-    } else {
-        match fs::read_to_string(cwd.join(path)) {
-            Ok(content) => Ok(ContentLoad::Text(content)),
-            Err(error) if error.kind() == std::io::ErrorKind::InvalidData => {
-                Ok(ContentLoad::CoverageSkip("non-UTF-8 content"))
-            }
-            Err(error) => Err(error).with_context(|| format!("failed to read {path}")),
-        }
+        return read_staged_lines(path, cwd, max_file_size, on_line);
     }
+    let file = match fs::File::open(cwd.join(path)) {
+        Ok(file) => file,
+        Err(_) => return LineRead::Skipped("unreadable content"),
+    };
+    let reader = BufReader::new(file.take(read_cap(max_file_size)));
+    match for_each_line(reader, mode == ScanMode::Paths, max_file_size, on_line) {
+        Ok(LinesEnd::Complete {
+            replaced: false, ..
+        }) => LineRead::Complete,
+        Ok(LinesEnd::Complete { replaced: true, .. }) => LineRead::Partial("non-UTF-8 content"),
+        Ok(LinesEnd::OverLimit) => LineRead::Skipped("oversize content"),
+        Ok(LinesEnd::NonUtf8) => LineRead::Skipped("non-UTF-8 content"),
+        Err(_) => LineRead::Skipped("unreadable content"),
+    }
+}
+
+fn read_staged_lines(
+    path: &str,
+    cwd: &Path,
+    max_file_size: Option<u64>,
+    on_line: &mut dyn FnMut(usize, &str),
+) -> LineRead {
+    const UNREADABLE: &str = "unreadable or non-UTF-8 staged blob";
+    let literal = format!(":(literal){path}");
+    let listing = match run_git(&["ls-files", "--stage", "-z", "--", &literal], cwd) {
+        Ok(listing) => listing,
+        Err(_) => return LineRead::Skipped("unreadable staged entry"),
+    };
+    let mut entries = listing.split('\0').filter(|entry| !entry.is_empty());
+    let entry = entries.next().unwrap_or_default();
+    let Some((header, entry_path)) = entry.split_once('\t') else {
+        return LineRead::Skipped("missing staged entry");
+    };
+    let fields: Vec<_> = header.split_whitespace().collect();
+    if entries.next().is_some()
+        || entry_path != path
+        || fields.len() != 3
+        || !matches!(fields[0], "100644" | "100755")
+        || fields[2] != "0"
+        || !matches!(fields[1].len(), 40 | 64)
+        || !fields[1].bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
+        return LineRead::Skipped("non-regular or unmerged staged entry");
+    }
+    // Bind type, size and contents to the same immutable index object.
+    let oid = fields[1];
+    let Some(size) = run_git(&["cat-file", "-s", oid], cwd)
+        .ok()
+        .and_then(|size| size.trim().parse::<u64>().ok())
+    else {
+        return LineRead::Skipped("unreadable staged blob");
+    };
+    if max_file_size.is_some_and(|limit| size > limit) {
+        return LineRead::Skipped("oversize staged blob");
+    }
+    let Ok(git) = git_program() else {
+        return LineRead::Skipped(UNREADABLE);
+    };
+    let spawned = Command::new(git)
+        .args([
+            "--no-replace-objects",
+            "-c",
+            "core.quotepath=false",
+            "cat-file",
+            "blob",
+            oid,
+        ])
+        .current_dir(cwd)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn();
+    let Ok(mut child) = spawned else {
+        return LineRead::Skipped(UNREADABLE);
+    };
+    let ended = child.stdout.take().map(|stdout| {
+        // Reading one byte past the probed size detects any mismatch.
+        let reader = BufReader::new(stdout.take(size.saturating_add(1)));
+        for_each_line(reader, false, None, on_line)
+    });
+    if !ended
+        .as_ref()
+        .is_some_and(|ended| staged_read_complete(ended, size, true))
+    {
+        // Stop a blob that is no longer being read instead of draining it.
+        let _ = child.kill();
+    }
+    let exited = child.wait().is_ok_and(|status| status.success());
+    if ended
+        .as_ref()
+        .is_some_and(|ended| staged_read_complete(ended, size, exited))
+    {
+        LineRead::Complete
+    } else {
+        LineRead::Skipped(UNREADABLE)
+    }
+}
+
+/// A staged blob counts as scanned only when exactly the probed number of
+/// bytes arrived as valid lines and `git cat-file` itself succeeded.
+fn staged_read_complete(ended: &std::io::Result<LinesEnd>, size: u64, exited: bool) -> bool {
+    exited && matches!(ended, Ok(LinesEnd::Complete { bytes, .. }) if *bytes == size)
+}
+
+fn variable_at(line: &str, start: usize) -> Option<String> {
+    static KEY: OnceLock<Regex> = OnceLock::new();
+    let regex = KEY.get_or_init(|| Regex::new(
+        r#"(?:^|[\s{,;])(?:\$?(?:env:|script:|global:)?)?["']?([A-Za-z_][A-Za-z0-9_.-]*)["']?\s*[:=]\s*"#
+    ).expect("static key regex"));
+    let capture = regex.captures_iter(&line[..start]).last()?;
+    let after = &line[capture.get(0)?.end()..start];
+    // A key is useful only when the match is in its value; reject prose/URLs.
+    if after.contains([';', ',', '{', '}']) || after.starts_with("//") {
+        return None;
+    }
+    Some(capture.get(1)?.as_str().to_owned())
 }
 
 fn watchlist_hits(
@@ -360,6 +931,7 @@ fn watchlist_hits(
     line_number: usize,
     matcher: &WatchlistMatcher,
     config: &Config,
+    may_allow: bool,
 ) -> Vec<ScanHit> {
     let haystack = if config.noise.ascii_case_insensitive {
         line.to_ascii_lowercase()
@@ -367,13 +939,15 @@ fn watchlist_hits(
         line.to_owned()
     };
     matcher
-        .matches_spanned(&haystack)
-        .filter(|(item, _)| !allowed_by_directive(line, &item.needle, config))
+        .matches_spanned_with_boundary(&haystack, config.noise.short_needle_max_length)
+        .filter(|(item, _)| !(may_allow && allowed_by_directive(line, &item.needle, config)))
         .map(|(item, span)| ScanHit {
+            blob_oid: None,
             file: path.to_owned(),
             line_number,
             // Slice the original line so the report keeps its casing even when
             // the haystack was lowercased (ASCII lowering preserves offsets).
+            variable: variable_at(line, span.start),
             matched: line[span].to_owned(),
             source: item.source.clone(),
             kind: HitKind::Watchlist,
@@ -387,51 +961,82 @@ struct FileScanOutcome {
     coverage_skip: Option<&'static str>,
 }
 
-fn scan_file(
+/// Everything a single file scan needs beyond its own path and scan kind.
+struct ScanContext<'a> {
     mode: ScanMode,
-    path: &str,
-    cwd: &Path,
-    config: &Config,
-    matcher: &WatchlistMatcher,
-    patterns: &[StructuralPattern],
-) -> Result<FileScanOutcome> {
-    match read_scan_content(mode, path, cwd, config.max_file_size)? {
-        ContentLoad::CoverageSkip(reason) => Ok(FileScanOutcome {
+    cwd: &'a Path,
+    config: &'a Config,
+    matcher: &'a WatchlistMatcher,
+    patterns: &'a [StructuralPattern],
+    staged_sizes: Option<&'a HashMap<String, u64>>,
+}
+
+fn scan_file(context: &ScanContext<'_>, path: &str, kind: ScanKind) -> Result<FileScanOutcome> {
+    let config = context.config;
+    let matcher = context.matcher;
+    let patterns = context.patterns;
+    let mut hits = Vec::new();
+    let mut on_line = |line_number: usize, line: &str| {
+        let may_allow = line_may_allow(line, config);
+        if kind.wants_watchlist() {
+            hits.extend(watchlist_hits(
+                line,
+                path,
+                line_number,
+                matcher,
+                config,
+                may_allow,
+            ));
+        }
+        if !kind.wants_structural() {
+            return;
+        }
+        for pattern in patterns {
+            let mut seen = HashSet::new();
+            for found in pattern.regex.find_iter(line) {
+                let matched = found.as_str();
+                if !pattern.valid_span(line, found.range())
+                    || pattern.is_allowed(matched, config)
+                    || (may_allow && allowed_by_directive(line, matched, config))
+                    || !seen.insert(matched)
+                {
+                    continue;
+                }
+                hits.push(ScanHit {
+                    blob_oid: None,
+                    file: path.to_owned(),
+                    line_number,
+                    matched: matched.to_owned(),
+                    variable: variable_at(line, found.start()),
+                    source: format!("structural: {}", pattern.name),
+                    kind: HitKind::Structural,
+                    suggestion: pattern.suggestion.clone(),
+                });
+            }
+        }
+    };
+    let read = read_scan_lines(
+        context.mode,
+        path,
+        context.cwd,
+        config.max_file_size,
+        context.staged_sizes,
+        &mut on_line,
+    );
+    Ok(match read {
+        LineRead::Complete => FileScanOutcome {
+            hits,
+            coverage_skip: None,
+        },
+        LineRead::Partial(reason) => FileScanOutcome {
+            hits,
+            coverage_skip: Some(reason),
+        },
+        LineRead::Skipped(reason) => FileScanOutcome {
             hits: Vec::new(),
             coverage_skip: Some(reason),
-        }),
-        ContentLoad::Text(content) => {
-            let mut hits = Vec::new();
-            for (index, line) in content.lines().enumerate() {
-                let line_number = index + 1;
-                hits.extend(watchlist_hits(line, path, line_number, matcher, config));
-                for pattern in patterns {
-                    let mut seen = HashSet::new();
-                    for found in pattern.regex.find_iter(line) {
-                        let matched = found.as_str();
-                        if !seen.insert(matched)
-                            || pattern.is_allowed(matched, config)
-                            || allowed_by_directive(line, matched, config)
-                        {
-                            continue;
-                        }
-                        hits.push(ScanHit {
-                            file: path.to_owned(),
-                            line_number,
-                            matched: matched.to_owned(),
-                            source: format!("structural: {}", pattern.name),
-                            kind: HitKind::Structural,
-                            suggestion: pattern.suggestion.clone(),
-                        });
-                    }
-                }
-            }
-            Ok(FileScanOutcome {
-                hits,
-                coverage_skip: None,
-            })
-        }
-    }
+        },
+    })
 }
 
 pub fn scan_paths(
@@ -446,48 +1051,52 @@ pub fn scan_paths(
     let total_files = paths.len();
     let mut warnings = warnings;
     let mut coverage_skips = 0usize;
-    let mut files = Vec::new();
+    let mut files: Vec<(String, ScanKind)> = Vec::new();
     for path in paths {
         match classify_path(&path, cwd, config, mode) {
-            Eligibility::Scan => files.push(path),
+            Eligibility::Scan(kind) => files.push((path, kind)),
             Eligibility::QuietSkip => {}
-            Eligibility::CoverageSkip => {
+            Eligibility::CoverageSkip(reason) => {
                 coverage_skips += 1;
-                let reason = {
-                    let joined = cwd.join(&path);
-                    if let Ok(meta) = fs::symlink_metadata(&joined) {
-                        if meta.file_type().is_symlink() {
-                            "symlink"
-                        } else if meta.len() > config.max_file_size {
-                            "oversize"
-                        } else {
-                            "unscannable"
-                        }
-                    } else {
-                        "unscannable"
-                    }
-                };
+
                 warnings.push(format!("WARN: skipped {path} ({reason})"));
             }
         }
     }
-    let scanned = files.len();
+    // One batched size probe for the whole staged set instead of one per file.
+    let staged_sizes = if mode == ScanMode::Staged && !files.is_empty() {
+        let staged: Vec<String> = files.iter().map(|(path, _)| path.clone()).collect();
+        staged_blob_sizes(&staged, cwd)
+    } else {
+        None
+    };
+    let context = ScanContext {
+        mode,
+        cwd,
+        config,
+        matcher,
+        patterns,
+        staged_sizes: staged_sizes.as_ref(),
+    };
     let outcomes: Result<Vec<FileScanOutcome>> = if files.len() <= 4 {
         files
             .iter()
-            .map(|path| scan_file(mode, path, cwd, config, matcher, patterns))
+            .map(|(path, kind)| scan_file(&context, path, *kind))
             .collect()
     } else {
         files
             .par_iter()
-            .map(|path| scan_file(mode, path, cwd, config, matcher, patterns))
+            .map(|(path, kind)| scan_file(&context, path, *kind))
             .collect()
     };
     let mut hits = Vec::new();
-    for (path, outcome) in files.iter().zip(outcomes?) {
+    let mut scanned = 0usize;
+    for ((path, _kind), outcome) in files.iter().zip(outcomes?) {
         if let Some(reason) = outcome.coverage_skip {
             coverage_skips += 1;
             warnings.push(format!("WARN: skipped {path} ({reason})"));
+        } else {
+            scanned += 1;
         }
         hits.extend(outcome.hits);
     }
@@ -496,7 +1105,28 @@ pub fn scan_paths(
             "WARN: {coverage_skips} coverage skip(s); content was not fully scanned"
         ));
     }
+    let baseline_applied = mode == ScanMode::Staged && config.noise.staged_added_lines_only;
+    let mut baseline_suppressed_hits = 0;
+    if baseline_applied {
+        let mut added = HashMap::new();
+        // Validate every scanned file, even when no hit happened to be found.
+        for (path, _) in &files {
+            added.insert(path.clone(), staged_added_lines(path, cwd)?);
+        }
+        hits.retain(|hit| {
+            let keep = added
+                .get(&hit.file)
+                .is_some_and(|lines| lines.contains(hit.line_number));
+            if !keep {
+                baseline_suppressed_hits += 1;
+            }
+            keep
+        });
+    }
     Ok(ScanResult {
+        watchlist_statistics: matcher.statistics().clone(),
+        baseline_applied,
+        baseline_suppressed_hits,
         mode,
         scanned,
         total_files,
@@ -507,4 +1137,172 @@ pub fn scan_paths(
         hits,
         warnings,
     })
+}
+
+/// New-side line ranges of a staged diff, merged and sorted, so a rewrite of a
+/// huge file costs one range instead of one entry per line.
+struct AddedLines(Vec<Range<usize>>);
+
+impl AddedLines {
+    fn new(mut ranges: Vec<Range<usize>>) -> Self {
+        ranges.retain(|range| !range.is_empty());
+        ranges.sort_by_key(|range| range.start);
+        let mut merged: Vec<Range<usize>> = Vec::with_capacity(ranges.len());
+        for range in ranges {
+            match merged.last_mut() {
+                Some(last) if range.start <= last.end => last.end = last.end.max(range.end),
+                _ => merged.push(range),
+            }
+        }
+        Self(merged)
+    }
+
+    fn contains(&self, line: usize) -> bool {
+        let index = self.0.partition_point(|range| range.end <= line);
+        self.0.get(index).is_some_and(|range| range.contains(&line))
+    }
+}
+
+fn staged_added_lines(path: &str, cwd: &Path) -> Result<AddedLines> {
+    // With no HEAD, Git treats the cached diff as a diff against the empty tree.
+    let mut command = Command::new(git_program()?);
+    let literal = format!(":(literal){path}");
+    // GIT_DIFF_OPTS can override -U0 and turn unchanged context into added ranges.
+    command.env_remove("GIT_DIFF_OPTS");
+    command
+        .current_dir(cwd)
+        .args([
+            "--no-replace-objects",
+            "-c",
+            "core.quotepath=false",
+            "diff",
+            "--cached",
+            "--no-ext-diff",
+            "--no-textconv",
+            "--no-renames",
+            "--no-color",
+            "--output-indicator-new=+",
+            "--output-indicator-old=-",
+            "--output-indicator-context= ",
+            "--text",
+            "--unified=0",
+            "--inter-hunk-context=0",
+            "--",
+            &literal,
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    let mut child = command
+        .spawn()
+        .map_err(|_| anyhow!("cannot determine staged baseline; Git diff failed"))?;
+    let Some(stdout) = child.stdout.take() else {
+        let _ = child.kill();
+        let _ = child.wait();
+        bail!("missing baseline diff output");
+    };
+    // Only hunk headers matter, so stream the diff line by line: its size
+    // follows the staged file and must not cap what the gate can check.
+    let hunk = Regex::new(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@").expect("static hunk regex");
+    let mut reader = BufReader::new(stdout);
+    let mut buffer = Vec::new();
+    let mut ranges = Vec::new();
+    let parsed = loop {
+        buffer.clear();
+        match reader.read_until(b'\n', &mut buffer) {
+            Ok(0) => break Ok(()),
+            Ok(_) => {}
+            Err(_) => break Err(anyhow!("cannot determine staged baseline; diff unreadable")),
+        }
+        let Ok(line) = std::str::from_utf8(&buffer) else {
+            break Err(anyhow!("staged baseline diff must be UTF-8"));
+        };
+        if !line.starts_with("@@") {
+            continue;
+        }
+        match hunk_range(&hunk, line) {
+            Ok(range) => ranges.push(range),
+            Err(error) => break Err(error),
+        }
+    };
+    if parsed.is_err() {
+        let _ = child.kill();
+    }
+    let status = child.wait();
+    parsed?;
+    if !status
+        .map_err(|_| anyhow!("cannot wait for baseline diff"))?
+        .success()
+    {
+        bail!("cannot determine staged baseline; Git diff failed");
+    }
+    Ok(AddedLines::new(ranges))
+}
+
+fn hunk_range(hunk: &Regex, line: &str) -> Result<Range<usize>> {
+    let captures = hunk
+        .captures(line)
+        .ok_or_else(|| anyhow!("cannot parse staged baseline hunk"))?;
+    let start: usize = captures[1]
+        .parse()
+        .map_err(|_| anyhow!("invalid staged baseline position"))?;
+    let count: usize = captures
+        .get(2)
+        .map_or(Ok(1), |value| value.as_str().parse())
+        .map_err(|_| anyhow!("invalid staged baseline count"))?;
+    let end = start
+        .checked_add(count)
+        .ok_or_else(|| anyhow!("staged baseline range overflow"))?;
+    Ok(start..end)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AddedLines, LinesEnd, nul_paths, staged_read_complete};
+
+    #[test]
+    fn staged_reads_count_only_when_every_byte_arrived_and_git_succeeded() {
+        let complete = |bytes| {
+            Ok(LinesEnd::Complete {
+                bytes,
+                replaced: false,
+            })
+        };
+        assert!(staged_read_complete(&complete(10), 10, true));
+        assert!(!staged_read_complete(&complete(9), 10, true), "truncated");
+        assert!(
+            !staged_read_complete(&complete(11), 10, true),
+            "extra bytes"
+        );
+        assert!(
+            !staged_read_complete(&complete(10), 10, false),
+            "git failed"
+        );
+        assert!(!staged_read_complete(&Ok(LinesEnd::NonUtf8), 10, true));
+        assert!(!staged_read_complete(&Ok(LinesEnd::OverLimit), 10, true));
+        assert!(!staged_read_complete(
+            &Err(std::io::Error::other("synthetic")),
+            10,
+            true
+        ));
+    }
+
+    #[test]
+    fn added_lines_merge_unsorted_overlapping_and_empty_ranges() {
+        let added = AddedLines::new(vec![5..7, 1..3, 2..4, 10..10]);
+        assert_eq!(added.0, [1..4, 5..7]);
+        for line in [1, 2, 3, 5, 6] {
+            assert!(added.contains(line), "{line}");
+        }
+        for line in [0, 4, 7, 10] {
+            assert!(!added.contains(line), "{line}");
+        }
+    }
+
+    #[test]
+    fn nul_paths_preserves_whitespace_and_newlines() {
+        assert_eq!(
+            nul_paths(" leading.txt\0trailing.txt \0line\nbreak.txt\0".to_owned()).unwrap(),
+            [" leading.txt", "trailing.txt ", "line\nbreak.txt"]
+        );
+    }
 }

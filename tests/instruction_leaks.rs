@@ -1,0 +1,630 @@
+use doxguard::{config::Config, patterns};
+use std::{
+    fs,
+    path::Path,
+    process::{Command, Output},
+};
+use tempfile::tempdir;
+
+fn run(cwd: &Path, args: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_doxguard"))
+        .current_dir(cwd)
+        .args(args)
+        .env_remove("DOXGUARD_CONFIG")
+        .output()
+        .unwrap()
+}
+
+fn config(cwd: &Path, extra: serde_json::Value) {
+    let mut value = serde_json::json!({
+        "structural": {"windowsPath": false, "posixHome": false, "privateIp": false,
+            "email": false, "domain": true, "ipv4": true, "privateRepoPath": true},
+        "failOnSkip": true
+    });
+    for (key, value_extra) in extra.as_object().unwrap() {
+        value[key] = value_extra.clone();
+    }
+    fs::write(cwd.join("doxguard.config.json"), value.to_string()).unwrap();
+}
+
+fn json(output: &Output) -> serde_json::Value {
+    serde_json::from_slice(&output.stdout).unwrap()
+}
+
+#[test]
+fn outside_git_redacts_text_and_json_and_extracts_keys() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({}));
+    fs::write(
+        temp.path().join("fixture.txt"),
+        concat!(
+            "host = build.example.test\n",
+            "{\"endpoint\":\"https://service.example.test\",\"ip\":\"192.0.2.9\"}\n",
+            "$env:TARGET = '203.0.113.9'\n",
+            "A sentence mentioning github/private/synthetic-internal.\n",
+        ),
+    )
+    .unwrap();
+    let args = ["scan", "--path", "fixture.txt", "--block"];
+    let text = run(temp.path(), &args);
+    assert_eq!(text.status.code(), Some(1));
+    let report = String::from_utf8(text.stderr).unwrap();
+    for value in [
+        "build.example.test",
+        "service.example.test",
+        "192.0.2.9",
+        "203.0.113.9",
+        "synthetic-internal",
+    ] {
+        assert!(!report.contains(value));
+    }
+    assert!(report.contains("fixture.txt:1"));
+    assert!(report.contains("variable: host"));
+    assert!(report.contains("variable: (unavailable)"));
+    let output = run(
+        temp.path(),
+        &[
+            "scan",
+            "--path",
+            "fixture.txt",
+            "--block",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(output.status.code(), Some(1));
+    let report = json(&output);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 5);
+    let vars: Vec<_> = report["hits"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|hit| hit["variable"].as_str())
+        .collect();
+    assert_eq!(
+        vars,
+        [
+            Some("host"),
+            Some("ip"),
+            Some("endpoint"),
+            Some("TARGET"),
+            None
+        ]
+    );
+    for hit in report["hits"].as_array().unwrap() {
+        assert_eq!(hit["matched"], "[redacted]");
+    }
+    let shown = run(
+        temp.path(),
+        &[
+            "scan",
+            "--path",
+            "fixture.txt",
+            "--format",
+            "json",
+            "--show-matches",
+        ],
+    );
+    assert!(
+        String::from_utf8(shown.stdout)
+            .unwrap()
+            .contains("build.example.test")
+    );
+}
+
+#[test]
+fn allowlists_cover_subdomains_cidr_and_private_repos_without_suffix_bypasses() {
+    let temp = tempdir().unwrap();
+    config(
+        temp.path(),
+        serde_json::json!({"allow": {
+            "domains": ["example.test"], "ipv4": ["192.0.2.0/24", "203.0.113.9"],
+            "privateRepos": ["synthetic-internal"]
+        }}),
+    );
+    fs::write(
+        temp.path().join("fixture.txt"),
+        concat!(
+            "host = BUILD.EXAMPLE.TEST\n192.0.2.009\n203.0.113.9\n",
+            "github/private/SYNTHETIC-INTERNAL\n",
+            "host = notexample.test\nhost = example.test.attacker.test\n",
+            "198.51.100.9\ngithub\\private\\synthetic-other\n",
+            "host = example.com\n",
+        ),
+    )
+    .unwrap();
+    let output = run(
+        temp.path(),
+        &[
+            "scan",
+            "--path",
+            "fixture.txt",
+            "--format",
+            "json",
+            "--block",
+        ],
+    );
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(json(&output)["hits"].as_array().unwrap().len(), 5);
+}
+
+#[test]
+fn staged_domain_gate_uses_index_and_is_opt_in() {
+    let temp = tempdir().unwrap();
+    let git = |args: &[&str]| {
+        assert!(
+            Command::new("git")
+                .current_dir(temp.path())
+                .args(args)
+                .status()
+                .unwrap()
+                .success()
+        );
+    };
+    git(&["init", "-q"]);
+    fs::write(
+        temp.path().join("fixture.txt"),
+        "host = build.example.test\n",
+    )
+    .unwrap();
+    git(&["add", "fixture.txt"]);
+    assert!(
+        run(temp.path(), &["scan", "--staged", "--block"])
+            .status
+            .success()
+    );
+    config(temp.path(), serde_json::json!({}));
+    fs::write(temp.path().join("fixture.txt"), "safe\n").unwrap();
+    assert_eq!(
+        run(temp.path(), &["scan", "--staged", "--block"])
+            .status
+            .code(),
+        Some(1)
+    );
+    config(
+        temp.path(),
+        serde_json::json!({"allow": {"domains": ["example.test"]}}),
+    );
+    assert!(
+        run(temp.path(), &["scan", "--staged", "--block"])
+            .status
+            .success()
+    );
+}
+
+#[test]
+fn explicit_paths_fail_closed_and_do_not_inherit_repository_exemptions() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({"maxFileSize": 80}));
+    fs::create_dir_all(temp.path().join("tests")).unwrap();
+    fs::write(
+        temp.path().join("tests/fixture.txt"),
+        "build.example.test\n",
+    )
+    .unwrap();
+    fs::write(temp.path().join("oversize.txt"), "x".repeat(90)).unwrap();
+    fs::write(temp.path().join("invalid.txt"), [0xff, 0xfe]).unwrap();
+    fs::write(
+        temp.path().join("paths.txt"),
+        "\u{feff}tests\noversize.txt\ninvalid.txt\n\n",
+    )
+    .unwrap();
+    let output = run(
+        temp.path(),
+        &[
+            "scan",
+            "--path-from",
+            "paths.txt",
+            "--path",
+            "tests/fixture.txt",
+            "--format",
+            "json",
+            "--block",
+        ],
+    );
+    let report = json(&output);
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(report["total_files"], 3);
+    assert_eq!(report["coverage_skips"], 2);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+    for args in [
+        vec!["scan", "--path", "missing.txt"],
+        vec!["scan", "--path", "tests", "--staged"],
+        vec!["scan", "--path", ""],
+    ] {
+        assert_eq!(run(temp.path(), &args).status.code(), Some(2));
+    }
+    fs::write(temp.path().join("empty-paths.txt"), "\n").unwrap();
+    assert_eq!(
+        run(temp.path(), &["scan", "--path-from", "empty-paths.txt"])
+            .status
+            .code(),
+        Some(2)
+    );
+}
+
+#[test]
+fn ip_allow_is_shared_with_rfc1918_and_invalid_config_is_rejected() {
+    let mut config = Config::default();
+    // Build the synthetic private address from octets, never a live host value.
+    let address = [10, 0, 0, 9].map(|n| n.to_string()).join(".");
+    config.allow.ipv4.push(format!("{address}/32"));
+    let pattern = patterns::build(&config)
+        .unwrap()
+        .into_iter()
+        .find(|p| p.name.contains("RFC1918"))
+        .unwrap();
+    assert!(pattern.is_allowed(&address, &config));
+    assert!(!pattern.is_allowed(&address.replace('9', "8"), &config));
+    for invalid in [
+        "192.0.2.1/33",
+        "192.0.2.1/",
+        "192.0.2.999",
+        "example.test",
+        "192.0.2.1/-1",
+    ] {
+        config.allow.ipv4 = vec![invalid.to_owned()];
+        assert!(config.validate().is_err());
+    }
+}
+
+#[test]
+fn public_ip_is_detected_without_host_context_and_invalid_octets_are_quiet() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({}));
+    fs::write(
+        temp.path().join("fixture.txt"),
+        "192.0.2.9\n999.192.0.2.9\n192.0.2.999\n198.51.100.9,203.0.113.9\n",
+    )
+    .unwrap();
+    let output = run(
+        temp.path(),
+        &["scan", "--path", "fixture.txt", "--format", "json"],
+    );
+    assert_eq!(json(&output)["hits"].as_array().unwrap().len(), 3);
+}
+
+#[test]
+fn redaction_also_covers_values_in_source_labels_and_suggestions() {
+    let temp = tempdir().unwrap();
+    config(
+        temp.path(),
+        serde_json::json!({"structural": {
+            "domain": false, "custom": [{"name": "build.example.test", "regex": "build\\.example\\.test", "suggestion": "remove build.example.test"}]
+        }}),
+    );
+    fs::write(
+        temp.path().join("fixture.txt"),
+        "host = build.example.test\n",
+    )
+    .unwrap();
+    let output = run(
+        temp.path(),
+        &["scan", "--path", "fixture.txt", "--format", "json"],
+    );
+    assert!(
+        !String::from_utf8(output.stdout)
+            .unwrap()
+            .contains("build.example.test")
+    );
+}
+
+#[test]
+fn recursive_paths_never_follow_links_and_count_them_as_coverage_skips() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({}));
+    fs::create_dir(temp.path().join("surface")).unwrap();
+    fs::create_dir(temp.path().join("target")).unwrap();
+    fs::write(
+        temp.path().join("target/fixture.txt"),
+        "build.example.test\n",
+    )
+    .unwrap();
+    let link = temp.path().join("surface/link");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(temp.path().join("target"), &link).unwrap();
+    #[cfg(windows)]
+    {
+        let output = Command::new("pwsh.exe").args(["-NoProfile", "-NonInteractive", "-Command",
+            "New-Item -ItemType Junction -Path $env:DOXGUARD_TEST_LINK -Target $env:DOXGUARD_TEST_TARGET -ErrorAction Stop | Out-Null"])
+            .env("DOXGUARD_TEST_LINK", &link).env("DOXGUARD_TEST_TARGET", temp.path().join("target"))
+            .output().unwrap();
+        assert!(output.status.success(), "cannot create synthetic junction");
+    }
+    let output = run(
+        temp.path(),
+        &["scan", "--path", "surface", "--format", "json", "--block"],
+    );
+    assert_eq!(output.status.code(), Some(1));
+    let report = json(&output);
+    assert_eq!(report["coverage_skips"], 1);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 0);
+    #[cfg(windows)]
+    fs::remove_dir(link).unwrap();
+}
+
+#[test]
+fn non_utf8_data_retains_ascii_findings_and_remains_a_coverage_skip() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({}));
+    let mut bytes = vec![0xff, 0xfe, b' '];
+    bytes.extend_from_slice(b"host = build.example.test\n");
+    fs::write(temp.path().join("fixture.txt"), bytes).unwrap();
+    let output = run(
+        temp.path(),
+        &[
+            "scan",
+            "--path",
+            "fixture.txt",
+            "--format",
+            "json",
+            "--block",
+        ],
+    );
+    assert_eq!(output.status.code(), Some(1));
+    let report = json(&output);
+    assert_eq!(report["coverage_skips"], 1);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+    assert_eq!(report["hits"][0]["matched"], "[redacted]");
+}
+
+#[test]
+fn invalid_domain_occurrence_does_not_suppress_valid_repeat_on_same_line() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({}));
+    fs::write(
+        temp.path().join("fixture.txt"),
+        "_build.example.test build.example.test\n",
+    )
+    .unwrap();
+    let output = run(
+        temp.path(),
+        &["scan", "--path", "fixture.txt", "--format", "json"],
+    );
+    assert_eq!(json(&output)["hits"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn explicit_directory_exemptions_remain_relative_to_the_working_directory() {
+    let temp = tempdir().unwrap();
+    config(
+        temp.path(),
+        serde_json::json!({"exemptPaths": ["generated/"]}),
+    );
+    fs::create_dir(temp.path().join("generated")).unwrap();
+    fs::write(
+        temp.path().join("generated/fixture.txt"),
+        "build.example.test\n",
+    )
+    .unwrap();
+    let output = run(
+        temp.path(),
+        &["scan", "--path", "generated", "--block", "--format", "json"],
+    );
+    assert!(output.status.success());
+    assert_eq!(json(&output)["hits"].as_array().unwrap().len(), 0);
+}
+
+#[test]
+fn unicode_prose_does_not_hide_ascii_domains_or_ip_addresses() {
+    let temp = tempdir().unwrap();
+    config(temp.path(), serde_json::json!({}));
+    fs::write(
+        temp.path().join("fixture.txt"),
+        "接続先はbuild.example.testです\n接続先192.0.2.9です\n",
+    )
+    .unwrap();
+    let output = run(
+        temp.path(),
+        &["scan", "--path", "fixture.txt", "--format", "json"],
+    );
+    assert_eq!(json(&output)["hits"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn instruction_staged_profile_scans_default_exemptions_and_lockfiles() {
+    let temp = tempdir().unwrap();
+    let git = |args: &[&str]| {
+        assert!(
+            Command::new("git")
+                .current_dir(temp.path())
+                .args(args)
+                .status()
+                .unwrap()
+                .success()
+        );
+    };
+    git(&["init", "-q"]);
+    fs::create_dir(temp.path().join("tests")).unwrap();
+    for path in ["tests/fixture.md", "package-lock.json"] {
+        fs::write(temp.path().join(path), "host = build.example.test\n").unwrap();
+    }
+    git(&["add", "tests/fixture.md", "package-lock.json"]);
+    let args = [
+        "scan", "--staged", "--block", "--strict", "--format", "json",
+    ];
+    config(temp.path(), serde_json::json!({}));
+    let default = run(temp.path(), &args);
+    assert_eq!(default.status.code(), Some(1));
+    assert_eq!(json(&default)["scanned"], 2);
+    assert_eq!(json(&default)["coverage_skips"], 0);
+
+    config(
+        temp.path(),
+        serde_json::json!({"includeDefaultExemptPaths": true}),
+    );
+    let legacy_exemptions = run(temp.path(), &args);
+    assert_eq!(legacy_exemptions.status.code(), Some(0));
+    assert_eq!(json(&legacy_exemptions)["scanned"], 0);
+
+    config(
+        temp.path(),
+        serde_json::json!({"includeDefaultExemptPaths": false}),
+    );
+    // The gate must still read the index even after the worktree is cleaned.
+    fs::write(temp.path().join("tests/fixture.md"), "safe\n").unwrap();
+    fs::write(temp.path().join("package-lock.json"), "{}\n").unwrap();
+    let checked = run(temp.path(), &args);
+    assert_eq!(checked.status.code(), Some(1));
+    let report = json(&checked);
+    assert_eq!(report["scanned"], 2);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 2);
+    assert_eq!(report["coverage_skips"], 0);
+
+    config(
+        temp.path(),
+        serde_json::json!({"includeDefaultExemptPaths": false,
+            "exemptPaths": ["tests/"]}),
+    );
+    let excluded = run(temp.path(), &args);
+    assert_eq!(excluded.status.code(), Some(1));
+    let report = json(&excluded);
+    assert_eq!(report["scanned"], 2);
+    assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+    assert_eq!(report["hits"][0]["file"], "package-lock.json");
+}
+
+#[test]
+fn instruction_profile_rejects_scoped_bare_and_legacy_inline_allows() {
+    let temp = tempdir().unwrap();
+    let git = |args: &[&str]| {
+        assert!(
+            Command::new("git")
+                .current_dir(temp.path())
+                .args(args)
+                .status()
+                .unwrap()
+                .success()
+        );
+    };
+    git(&["init", "-q"]);
+    fs::write(
+        temp.path().join("fixture.md"),
+        concat!(
+            "host = build.example.test # doxguard: allow build.example.test\n",
+            "host = build.example.test # doxguard: allow\n",
+            "host = build.example.test # secrets-scan: allow example.test\n",
+            "host = build.example.test <!-- doxguard: allow build.example.test-->\n",
+        ),
+    )
+    .unwrap();
+    git(&["add", "fixture.md"]);
+    config(temp.path(), serde_json::json!({}));
+    let args = ["scan", "--staged", "--block", "--format", "json"];
+    let compatible = run(temp.path(), &args);
+    assert_eq!(compatible.status.code(), Some(0));
+    assert_eq!(json(&compatible)["hits"].as_array().unwrap().len(), 0);
+    let strict_args = [
+        "scan", "--staged", "--block", "--strict", "--format", "json",
+    ];
+    let compatible_strict = run(temp.path(), &strict_args);
+    assert_eq!(compatible_strict.status.code(), Some(1));
+    assert_eq!(
+        json(&compatible_strict)["hits"].as_array().unwrap().len(),
+        1
+    );
+
+    config(
+        temp.path(),
+        serde_json::json!({"allow": {"disallowInlineAllow": true}}),
+    );
+    for mode_args in [
+        strict_args.to_vec(),
+        vec![
+            "scan",
+            "--path",
+            "fixture.md",
+            "--block",
+            "--strict",
+            "--format",
+            "json",
+        ],
+    ] {
+        let blocked = run(temp.path(), &mode_args);
+        assert_eq!(blocked.status.code(), Some(1));
+        let report = json(&blocked);
+        // The legacy scoped directive also contains a distinct domain token.
+        let lines: Vec<_> = report["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|hit| hit["line_number"].as_u64().unwrap())
+            .collect();
+        assert_eq!(lines, [1, 2, 3, 3, 4]);
+        assert_eq!(report["coverage_skips"], 0);
+    }
+    config(
+        temp.path(),
+        serde_json::json!({"allow": {"disallowInlineAllow": true,
+            "domains": ["example.test"]}}),
+    );
+    let allowed = run(temp.path(), &strict_args);
+    assert_eq!(allowed.status.code(), Some(0));
+    assert_eq!(json(&allowed)["hits"].as_array().unwrap().len(), 0);
+}
+
+#[test]
+fn required_watchlists_fail_closed_without_printing_unavailable_sources() {
+    let temp = tempdir().unwrap();
+    fs::write(temp.path().join("fixture.md"), "SyntheticWatchword\n").unwrap();
+    let variable = "DOXGUARD_SYNTHETIC_WATCHLIST_ROOT";
+    let watchlists = serde_json::json!([{
+        "type": "lines", "path": "${DOXGUARD_SYNTHETIC_WATCHLIST_ROOT}/words.txt",
+        "label": "synthetic-watchlist"
+    }]);
+    let scan = |root: Option<&str>| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_doxguard"));
+        command
+            .current_dir(temp.path())
+            .args([
+                "scan",
+                "--path",
+                "fixture.md",
+                "--block",
+                "--strict",
+                "--format",
+                "json",
+            ])
+            .env_remove("DOXGUARD_CONFIG")
+            .env_remove(variable);
+        if let Some(root) = root {
+            command.env(variable, root);
+        }
+        command.output().unwrap()
+    };
+    // Required by default: an unavailable input must never silently drop coverage.
+    config(temp.path(), serde_json::json!({"watchlists": watchlists}));
+    for root in [None, Some(""), temp.path().to_str()] {
+        let compatible = scan(root);
+        assert_eq!(compatible.status.code(), Some(2));
+        assert!(compatible.stdout.is_empty());
+    }
+    config(
+        temp.path(),
+        serde_json::json!({"watchlists": watchlists, "requireWatchlists": true}),
+    );
+    for root in [None, Some(""), temp.path().to_str()] {
+        let blocked = scan(root);
+        assert_eq!(blocked.status.code(), Some(2));
+        assert!(blocked.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(blocked.stderr).unwrap().trim(),
+            "ERROR: required watchlist source is unavailable"
+        );
+    }
+    fs::write(temp.path().join("words.txt"), "SyntheticWatchword\n").unwrap();
+    for required in [false, true] {
+        config(
+            temp.path(),
+            serde_json::json!({"watchlists": watchlists, "requireWatchlists": required}),
+        );
+        let checked = scan(temp.path().to_str());
+        assert_eq!(checked.status.code(), Some(1));
+        let report = json(&checked);
+        assert_eq!(report["watchlist_needles"], 1);
+        assert_eq!(report["hits"].as_array().unwrap().len(), 1);
+        assert_eq!(report["hits"][0]["kind"], "watchlist");
+        assert_eq!(report["hits"][0]["matched"], "[redacted]");
+        assert_eq!(report["warnings"].as_array().unwrap().len(), 0);
+    }
+}

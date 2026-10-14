@@ -1,11 +1,14 @@
-use anyhow::{Context, Result};
-use regex::{Regex, RegexBuilder};
+use anyhow::Result;
+use regex::Regex;
 
-use crate::config::Config;
+use crate::config::{Config, compile_custom_regex};
 
 #[derive(Debug, Clone)]
 enum AllowRule {
     Email,
+    Domain,
+    Ipv4,
+    PrivateRepo,
 }
 
 #[derive(Debug, Clone)]
@@ -20,9 +23,84 @@ impl StructuralPattern {
     pub fn is_allowed(&self, matched: &str, config: &Config) -> bool {
         match self.allow {
             Some(AllowRule::Email) => email_allowed(matched, config),
+            Some(AllowRule::Domain) => config.allow.domains.iter().any(|allowed| {
+                let matched = matched.to_ascii_lowercase();
+                let allowed = allowed.trim().trim_matches('.').to_ascii_lowercase();
+                matched == allowed || matched.ends_with(&format!(".{allowed}"))
+            }),
+            Some(AllowRule::Ipv4) => ipv4_address(matched).is_some_and(|address| {
+                config
+                    .allow
+                    .ipv4
+                    .iter()
+                    .filter_map(|s| ipv4_network(s))
+                    .any(|(net, mask)| address & mask == net & mask)
+            }),
+            Some(AllowRule::PrivateRepo) => {
+                matched.rsplit(['/', '\\']).next().is_some_and(|repo| {
+                    config
+                        .allow
+                        .private_repos
+                        .iter()
+                        .any(|allowed| allowed.eq_ignore_ascii_case(repo))
+                })
+            }
             None => false,
         }
     }
+
+    /// Rust regex has no lookaround. Check token boundaries without consuming
+    /// separators so adjacent values can both be found.
+    pub fn valid_span(&self, line: &str, span: std::ops::Range<usize>) -> bool {
+        let before = line[..span.start].chars().next_back();
+        let after = line[span.end..].chars().next();
+        match self.allow {
+            Some(AllowRule::Domain) => {
+                let word = |c: char| c.is_ascii_alphanumeric() || "._-".contains(c);
+                !(before.is_some_and(word)
+                    || after.is_some_and(|c| c.is_ascii_alphanumeric() || "_-".contains(c))
+                    || (after == Some('.')
+                        && line[span.end + 1..].starts_with(|c: char| c.is_ascii_alphanumeric())))
+            }
+            Some(AllowRule::Ipv4) => {
+                !before.is_some_and(|c| c.is_ascii_digit() || c == '.')
+                    && !after.is_some_and(|c| c.is_ascii_digit() || c == '.')
+            }
+            _ => true,
+        }
+    }
+}
+
+fn ipv4_address(value: &str) -> Option<u32> {
+    let parts: Vec<_> = value.split('.').collect();
+    if parts.len() != 4 {
+        return None;
+    }
+    let mut result = 0u32;
+    for part in parts {
+        if part.is_empty() || part.len() > 3 || !part.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        result = (result << 8) | u32::from(part.parse::<u8>().ok()?);
+    }
+    Some(result)
+}
+
+pub(crate) fn ipv4_network(value: &str) -> Option<(u32, u32)> {
+    let (address, prefix) = if let Some((address, prefix)) = value.split_once('/') {
+        (address, prefix.parse::<u32>().ok()?)
+    } else {
+        (value, 32)
+    };
+    if prefix > 32 {
+        return None;
+    }
+    let mask = if prefix == 0 {
+        0
+    } else {
+        u32::MAX << (32 - prefix)
+    };
+    Some((ipv4_address(address)?, mask))
 }
 
 fn email_allowed(matched: &str, config: &Config) -> bool {
@@ -66,7 +144,7 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
             "Windows personal absolute path",
             // Case-insensitive Users/dev; allow JSON-style doubled backslashes.
             r"(?i)[A-Za-z]:(?:\\+|/)(?:Users|dev)(?:\\+|/)",
-            "Remove the personal absolute path or replace it with a placeholder",
+            "Remove the personal absolute path or replace it with a placeholder / 個人の絶対パスを削除するか、プレースホルダーへ置き換えてください",
             None,
         ));
     }
@@ -74,11 +152,11 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
         patterns.push(pattern(
             "POSIX home path",
             r"/(?:Users|home)/[a-zA-Z0-9_.-]+/",
-            "Replace the home path with ~/ or a placeholder",
+            "Replace the home path with ~/ or a placeholder / ホームパスを ~/ またはプレースホルダーへ置き換えてください",
             None,
         ));
     }
-    if config.structural.private_ip {
+    if config.structural.private_ip && !config.structural.ipv4 {
         // Real octets only (0-255, zero padding allowed) so version strings like
         // 10.999.0.1 stay quiet while inventory-style 192.168.001.100 still hits.
         const OCTET: &str = r"(?:25[0-5]|2[0-4]\d|[01]?\d?\d)";
@@ -88,26 +166,47 @@ pub fn build(config: &Config) -> Result<Vec<StructuralPattern>> {
         patterns.push(pattern(
             "Private IPv4 (RFC1918)",
             &private_ip,
-            "Generalize or remove the internal IP address",
-            None,
+            "Generalize or remove the internal IP address; for documentation examples, use RFC5737 addresses (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24) / 内部 IP アドレスを一般化するか削除してください。文書の例には RFC5737 の文書用アドレスを使ってください",
+            Some(AllowRule::Ipv4),
+        ));
+    }
+    if config.structural.ipv4 {
+        const OCTET: &str = r"(?:25[0-5]|2[0-4]\d|[01]?\d?\d)";
+        patterns.push(pattern(
+            "IPv4 (not on allowlist)",
+            &format!(r"{OCTET}\.{OCTET}\.{OCTET}\.{OCTET}"),
+            "Remove the IP address or explicitly allow a public address/network",
+            Some(AllowRule::Ipv4),
+        ));
+    }
+    if config.structural.domain {
+        patterns.push(pattern(
+            "Domain (not on allowlist)",
+            r"(?i)[a-z0-9][a-z0-9-]{0,62}(?:\.[a-z0-9][a-z0-9-]{0,62})*\.(?:jp|com|net|org|io|dev|ai|co|me|app|cloud|tech|test)",
+            "Remove the domain or explicitly allow a public domain",
+            Some(AllowRule::Domain),
+        ));
+    }
+    if config.structural.private_repo_path {
+        patterns.push(pattern(
+            "Private repository path (not on allowlist)",
+            r"(?i)github[\\/]+private[\\/]+[A-Za-z0-9_.-]+",
+            "Remove the private repository path or explicitly allow a public repository name",
+            Some(AllowRule::PrivateRepo),
         ));
     }
     if config.structural.email {
         patterns.push(pattern(
             "Email address (not on public allowlist)",
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}\b",
-            "Remove the non-public email or add an explicitly public address/domain to allow",
+            "Remove the non-public email or add an explicitly public address/domain to allow / 非公開メールを削除するか、公開済みと確認したアドレスまたはドメインを許可設定へ追加してください",
             Some(AllowRule::Email),
         ));
     }
     for custom in &config.structural.custom {
         patterns.push(StructuralPattern {
             name: custom.name.clone(),
-            regex: RegexBuilder::new(&custom.regex)
-                .size_limit(1 << 20)
-                .dfa_size_limit(1 << 20)
-                .build()
-                .with_context(|| format!("invalid custom regex `{}`", custom.name))?,
+            regex: compile_custom_regex(custom)?,
             suggestion: custom
                 .suggestion
                 .clone()
