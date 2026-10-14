@@ -452,6 +452,22 @@ fn redaction_treats_both_path_separators_as_one() {
         report["hits"][0]["file"],
         format!("[redacted]{}f.md", std::path::MAIN_SEPARATOR)
     );
+    // Doubled separators in the text give a value whose separators are doubled,
+    // yet the single-separator file name is still hidden.
+    fs::write(
+        directory.join("f.md"),
+        "see github//private//synthetic-internal\n",
+    )
+    .unwrap();
+    let doubled = run(
+        temp.path(),
+        &["scan", "--path", "github", "--format", "json", "--block"],
+    );
+    assert_eq!(doubled.status.code(), Some(1));
+    assert_eq!(
+        json(&doubled)["hits"][0]["file"],
+        format!("[redacted]{}f.md", std::path::MAIN_SEPARATOR)
+    );
     let text_output = run(temp.path(), &["scan", "--path", "github", "--block"]);
     assert_eq!(text_output.status.code(), Some(1));
     let text = format!(

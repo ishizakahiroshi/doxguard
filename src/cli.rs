@@ -286,12 +286,14 @@ impl Redactor {
     /// whose size grows with the value bytes (a DFA has no size limit).
     fn new<'a>(values: impl IntoIterator<Item = &'a str>, max_text_len: usize) -> Self {
         // An empty pattern would match at every offset. Matching ignores ASCII
-        // case and treats `\` as `/`, so values differing only in ASCII case or
-        // in path separator are one pattern.
+        // case and reads each run of `/` and `\` as one `/`, so values
+        // differing only in ASCII case or in path separators are one pattern.
+        // A value is folded first: only its folded form occurs in the folded
+        // texts, and that form is no longer than the value.
         let mut values: Vec<_> = values
             .into_iter()
+            .map(|value| unify_separators(&value.to_ascii_lowercase()).0.into_owned())
             .filter(|value| !value.is_empty() && value.len() <= max_text_len)
-            .map(|value| value.to_ascii_lowercase().replace('\\', "/"))
             .collect();
         values.sort_unstable();
         values.dedup();
@@ -322,18 +324,18 @@ impl Redactor {
             return text.to_owned();
         };
         // ASCII-only case folding matches watchlist semantics, and non-ASCII
-        // bytes compare exactly. `\` and `/` are one byte each, so matching on
-        // a copy with `\` turned into `/` keeps every span an offset into the
-        // original text. Redact all overlapping spans once; replacement
-        // markers are never fed back into the matcher.
-        let unified = if text.contains('\\') {
-            Cow::Owned(text.replace('\\', "/"))
-        } else {
-            Cow::Borrowed(text)
-        };
+        // bytes compare exactly. Matching runs on a copy where each run of `/`
+        // and `\` is one `/`; `starts` maps its offsets back to the original
+        // text, so a match that touches a run covers the whole run. Redact all
+        // overlapping spans once; replacement markers are never fed back into
+        // the matcher.
+        let (unified, starts) = unify_separators(text);
         let mut spans: Vec<_> = matcher
             .find_overlapping_iter(unified.as_ref())
-            .map(|found| (found.start(), found.end()))
+            .map(|found| match &starts {
+                Some(starts) => (starts[found.start()], starts[found.end()]),
+                None => (found.start(), found.end()),
+            })
             .collect();
         spans.sort_unstable();
         let mut merged: Vec<(usize, usize)> = Vec::new();
@@ -354,6 +356,47 @@ impl Redactor {
         redacted.push_str(&text[cursor..]);
         redacted
     }
+}
+
+/// Reads each run of `/` and `\` in `text` as one `/`, for matching only.
+///
+/// Both are one ASCII byte and never occur inside a multi-byte character. With
+/// no run of two or more, every byte keeps its offset, so no map is needed (a
+/// lone `\` is a plain one-for-one replacement). Otherwise the map holds, for
+/// each byte offset of the returned text plus its end, the offset of the same
+/// position in `text`: a merged `/` maps to the start of its run and the byte
+/// after it to the end of the run.
+fn unify_separators(text: &str) -> (Cow<'_, str>, Option<Vec<usize>>) {
+    let is_separator = |byte: u8| byte == b'/' || byte == b'\\';
+    let has_run = text
+        .as_bytes()
+        .windows(2)
+        .any(|pair| is_separator(pair[0]) && is_separator(pair[1]));
+    if !has_run {
+        return if text.contains('\\') {
+            (Cow::Owned(text.replace('\\', "/")), None)
+        } else {
+            (Cow::Borrowed(text), None)
+        };
+    }
+    let mut unified = String::with_capacity(text.len());
+    let mut starts = Vec::with_capacity(text.len() + 1);
+    let mut in_run = false;
+    for (index, character) in text.char_indices() {
+        if character == '/' || character == '\\' {
+            if !in_run {
+                unified.push('/');
+                starts.push(index);
+            }
+            in_run = true;
+        } else {
+            in_run = false;
+            unified.push(character);
+            starts.extend(index..index + character.len_utf8());
+        }
+    }
+    starts.push(text.len());
+    (Cow::Owned(unified), Some(starts))
 }
 
 fn report_result(result: &ScanResult, show_matches: bool) -> ScanResult {
@@ -634,27 +677,42 @@ mod redaction_tests {
     use crate::scan::{HitKind, ScanHit, ScanMode, ScanResult};
     use aho_corasick::AhoCorasickKind;
 
-    /// The per-value redaction that `Redactor` replaced, kept as the oracle.
-    /// Matching folds ASCII case and treats `\` and `/` as the same separator.
-    fn redact_reference(values: &[&str], text: &str) -> String {
-        let mut values = values.to_vec();
-        values.sort_by_key(|value| std::cmp::Reverse(value.len()));
-        values.dedup();
-        let folded = text.to_ascii_lowercase().replace('\\', "/");
-        let mut spans = Vec::new();
-        for value in &values {
-            if value.is_empty() {
-                continue;
+    /// ASCII lowercase, then each run of `/` and `\` becomes one `/`.
+    fn fold(text: &str) -> String {
+        let mut folded = String::new();
+        let mut in_run = false;
+        for character in text.to_ascii_lowercase().chars() {
+            let separator = character == '/' || character == '\\';
+            if !separator {
+                folded.push(character);
+            } else if !in_run {
+                folded.push('/');
             }
-            let needle = value.to_ascii_lowercase().replace('\\', "/");
-            let mut start = 0;
-            while start < folded.len() {
-                let Some(offset) = folded[start..].find(&needle) else {
-                    break;
-                };
-                let begin = start + offset;
-                spans.push((begin, begin + needle.len()));
-                start = begin + folded[begin..].chars().next().unwrap().len_utf8();
+            in_run = separator;
+        }
+        folded
+    }
+
+    /// The oracle, independent of `Redactor`: a brute force that hides every
+    /// range of `text` (on character boundaries) whose fold equals the fold of
+    /// some value, so values match across case and separator spelling.
+    fn redact_reference(values: &[&str], text: &str) -> String {
+        let needles: std::collections::HashSet<String> = values
+            .iter()
+            .map(|value| fold(value))
+            .filter(|needle| !needle.is_empty())
+            .collect();
+        let bounds: Vec<usize> = text
+            .char_indices()
+            .map(|(index, _)| index)
+            .chain([text.len()])
+            .collect();
+        let mut spans = Vec::new();
+        for (position, &begin) in bounds.iter().enumerate() {
+            for &end in &bounds[position + 1..] {
+                if needles.contains(&fold(&text[begin..end])) {
+                    spans.push((begin, end));
+                }
             }
         }
         spans.sort_unstable();
@@ -775,6 +833,52 @@ mod redaction_tests {
         // The two spellings are one pattern.
         let values = ["a/b", r"a\b"];
         let redactor = Redactor::new(values, 3);
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+    }
+
+    #[test]
+    fn runs_of_separators_are_one_separator() {
+        // A value whose separators come in pairs (as in escaped JSON text)
+        // hides names that use a single separator, whichever one.
+        for value in [r"github\\private\\x", "github//private//x"] {
+            let redactor = Redactor::new([value], usize::MAX);
+            assert_eq!(
+                redactor.redact(r"github\private\x\f.md"),
+                r"[redacted]\f.md"
+            );
+            assert_eq!(redactor.redact("github/private/x/f.md"), "[redacted]/f.md");
+        }
+        // A value with single separators hides a whole run in the text.
+        let redactor = Redactor::new(["a/b"], usize::MAX);
+        assert_eq!(redactor.redact("a//b"), "[redacted]");
+        assert_eq!(redactor.redact(r"a\\b"), "[redacted]");
+        assert_eq!(redactor.redact(r"x a/\/\b y"), "x [redacted] y");
+        // A value starting or ending with a separator reaches the whole run,
+        // even though the match starts or ends inside it.
+        let redactor = Redactor::new(["/b"], usize::MAX);
+        assert_eq!(redactor.redact("a//b"), "a[redacted]");
+        assert_eq!(redactor.redact(r"a\\\b"), "a[redacted]");
+        let redactor = Redactor::new(["a/"], usize::MAX);
+        assert_eq!(redactor.redact("a//b"), "[redacted]b");
+        assert_eq!(redactor.redact(r"a\\\b"), "[redacted]b");
+        // Multi-byte characters next to a run stay intact.
+        let redactor = Redactor::new(["東/é"], usize::MAX);
+        assert_eq!(redactor.redact(r"x東\\é 東//é"), "x[redacted] [redacted]");
+        let redactor = Redactor::new(["/"], usize::MAX);
+        assert_eq!(
+            redactor.redact(r"東//é\\É/"),
+            "東[redacted]é[redacted]É[redacted]"
+        );
+        for (values, text) in [
+            (&["a/b"][..], "a//b a\\\\b a/\\/b"),
+            (&["/b"], "東//b é\\\\b"),
+            (&["a/"], "a//é a\\\\東"),
+            (&["//"], "x///y"),
+        ] {
+            assert_matches_reference(values, text);
+        }
+        // Values equal after folding runs are one pattern.
+        let redactor = Redactor::new(["a/b", r"a\\b", "a//b"], 4);
         assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
     }
 

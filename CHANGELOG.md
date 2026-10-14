@@ -15,7 +15,7 @@ All notable changes to doxguard are documented here.
 ### Changed
 
 - The built-in repository exemptions (tests, config, local docs, hooks, workflow files, and lockfiles) are now opt-in, so these files are scanned by default. 0.1.0 always skipped them; set `includeDefaultExemptPaths: true` to keep that behavior.
-- Text and JSON scan reports redact matched values by default and report line numbers and recognizable variable/key names; `--show-matches` explicitly reveals values. Redaction treats `/` and `\` as the same separator, so a value found with one is hidden from file names written with the other.
+- Text and JSON scan reports redact matched values by default and report line numbers and recognizable variable/key names; `--show-matches` explicitly reveals values. Redaction treats `/` and `\` as the same separator and a run of them as one, so a value found with one spelling is hidden from file names written with another.
 - Staged, worktree, list, and path scans stream text files line by line and read them to the end whatever their size, so large generated text no longer becomes a coverage skip that stops a strict gate. `maxFileSize` is now optional: when set, larger scan targets are still coverage skips, and the former 16 MiB staged ceiling no longer caps it. Watchlist sources and history blobs keep the 1 MiB default.
 - The staged added-line baseline streams the diff instead of failing when it exceeds 64 MiB.
 
