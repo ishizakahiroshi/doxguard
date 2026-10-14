@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     io::{self, Write},
     path::PathBuf,
     process::ExitCode,
@@ -285,11 +286,12 @@ impl Redactor {
     /// whose size grows with the value bytes (a DFA has no size limit).
     fn new<'a>(values: impl IntoIterator<Item = &'a str>, max_text_len: usize) -> Self {
         // An empty pattern would match at every offset. Matching ignores ASCII
-        // case, so values differing only in ASCII case are one pattern.
+        // case and treats `\` as `/`, so values differing only in ASCII case or
+        // in path separator are one pattern.
         let mut values: Vec<_> = values
             .into_iter()
             .filter(|value| !value.is_empty() && value.len() <= max_text_len)
-            .map(str::to_ascii_lowercase)
+            .map(|value| value.to_ascii_lowercase().replace('\\', "/"))
             .collect();
         values.sort_unstable();
         values.dedup();
@@ -320,11 +322,17 @@ impl Redactor {
             return text.to_owned();
         };
         // ASCII-only case folding matches watchlist semantics, and non-ASCII
-        // bytes compare exactly, so spans are offsets into the original text.
-        // Redact all overlapping spans once; replacement markers are never fed
-        // back into the matcher.
+        // bytes compare exactly. `\` and `/` are one byte each, so matching on
+        // a copy with `\` turned into `/` keeps every span an offset into the
+        // original text. Redact all overlapping spans once; replacement
+        // markers are never fed back into the matcher.
+        let unified = if text.contains('\\') {
+            Cow::Owned(text.replace('\\', "/"))
+        } else {
+            Cow::Borrowed(text)
+        };
         let mut spans: Vec<_> = matcher
-            .find_overlapping_iter(text)
+            .find_overlapping_iter(unified.as_ref())
             .map(|found| (found.start(), found.end()))
             .collect();
         spans.sort_unstable();
@@ -627,17 +635,18 @@ mod redaction_tests {
     use aho_corasick::AhoCorasickKind;
 
     /// The per-value redaction that `Redactor` replaced, kept as the oracle.
+    /// Matching folds ASCII case and treats `\` and `/` as the same separator.
     fn redact_reference(values: &[&str], text: &str) -> String {
         let mut values = values.to_vec();
         values.sort_by_key(|value| std::cmp::Reverse(value.len()));
         values.dedup();
-        let folded = text.to_ascii_lowercase();
+        let folded = text.to_ascii_lowercase().replace('\\', "/");
         let mut spans = Vec::new();
         for value in &values {
             if value.is_empty() {
                 continue;
             }
-            let needle = value.to_ascii_lowercase();
+            let needle = value.to_ascii_lowercase().replace('\\', "/");
             let mut start = 0;
             while start < folded.len() {
                 let Some(offset) = folded[start..].find(&needle) else {
@@ -745,6 +754,31 @@ mod redaction_tests {
     }
 
     #[test]
+    fn path_separators_match_each_other() {
+        // A value written with `/` hides the same path written with `\`.
+        assert_eq!(
+            Redactor::new(["github/private/x"], usize::MAX).redact(r"github\private\x\f.md"),
+            r"[redacted]\f.md"
+        );
+        // A value written with `\` hides both spellings.
+        let redactor = Redactor::new([r"a\b"], usize::MAX);
+        assert_eq!(redactor.redact(r"a/b a\b"), "[redacted] [redacted]");
+        // Mixed separators in the value and in the text.
+        let values = [r"a/b\c"];
+        let text = r"A\B/C and a/b/c and a\b\c";
+        assert_eq!(
+            Redactor::new(values, text.len()).redact(text),
+            "[redacted] and [redacted] and [redacted]"
+        );
+        assert_matches_reference(&values, text);
+        assert_matches_reference(&[r"A\B/C"], r"a/b\c");
+        // The two spellings are one pattern.
+        let values = ["a/b", r"a\b"];
+        let redactor = Redactor::new(values, 3);
+        assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+    }
+
+    #[test]
     fn the_length_bound_covers_every_redacted_field() {
         // Each field in turn is the only text long enough to hold the value, so
         // leaving that field out of the bound would leave the value in it.
@@ -804,10 +838,11 @@ mod redaction_tests {
         *state % bound
     }
 
-    /// Up to `max_chars` characters mixing ASCII case variants and multi-byte
-    /// characters, including a non-ASCII pair that differs only in case.
+    /// Up to `max_chars` characters mixing ASCII case variants, both path
+    /// separators and multi-byte characters, including a non-ASCII pair that
+    /// differs only in case.
     fn random_word(state: &mut u64, max_chars: u64) -> String {
-        const ALPHABET: [&str; 8] = ["a", "b", "A", "B", ".", "é", "É", "東"];
+        const ALPHABET: [&str; 10] = ["a", "b", "A", "B", ".", "é", "É", "東", "/", "\\"];
         let length = next(state, max_chars + 1);
         (0..length)
             .map(|_| ALPHABET[next(state, ALPHABET.len() as u64) as usize])
