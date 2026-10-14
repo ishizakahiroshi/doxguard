@@ -237,6 +237,40 @@ fn a_long_line_with_many_matches_is_scanned_in_linear_time() {
 }
 
 #[test]
+fn many_distinct_matches_are_redacted_in_linear_time() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd, "{}");
+    // 20,000 distinct private addresses (10.0.0.0 to 10.0.78.31), one per line.
+    // Before the single-pass redaction this took about 95 s in release.
+    let mut body = String::new();
+    for index in 0..20_000 {
+        body.push_str(&format!("10.0.{}.{}\n", index / 256, index % 256));
+    }
+    fs::write(cwd.join("inventory.txt"), body).unwrap();
+    git(cwd, &["add", "--", "inventory.txt"]);
+
+    let started = std::time::Instant::now();
+    let (code, report) = scan(cwd, &["--staged"]);
+
+    // The full report is megabytes long; show only the warnings on failure.
+    assert_eq!(code, Some(1), "{}", report["warnings"]);
+    assert_eq!(counts(&report), (1, 0, 20_000));
+    assert!(
+        report["hits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|hit| hit["matched"] == "[redacted]")
+    );
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "{:?}",
+        started.elapsed()
+    );
+}
+
+#[test]
 fn crlf_lines_are_split_exactly_like_str_lines() {
     let temp = tempdir().unwrap();
     let cwd = temp.path();

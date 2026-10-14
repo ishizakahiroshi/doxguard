@@ -4,6 +4,7 @@ use std::{
     process::ExitCode,
 };
 
+use aho_corasick::{AhoCorasick, MatchKind};
 use anyhow::Result;
 use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
 
@@ -271,35 +272,44 @@ fn text_report(result: &ScanResult) -> String {
     output
 }
 
-fn report_result(result: &ScanResult, show_matches: bool) -> ScanResult {
-    let mut report = result.clone();
-    if show_matches {
-        return report;
+/// Hides every reported value in metadata text. All distinct values share one
+/// automaton, so each text is scanned once however many values there are.
+struct Redactor {
+    matcher: Option<AhoCorasick>,
+}
+
+impl Redactor {
+    fn new<'a>(values: impl IntoIterator<Item = &'a str>) -> Self {
+        // An empty pattern would match at every offset.
+        let mut values: Vec<_> = values
+            .into_iter()
+            .filter(|value| !value.is_empty())
+            .collect();
+        values.sort_unstable();
+        values.dedup();
+        let matcher = (!values.is_empty()).then(|| {
+            AhoCorasick::builder()
+                .ascii_case_insensitive(true)
+                .match_kind(MatchKind::Standard)
+                .build(values)
+                // Fails only when the automaton outgrows its 2^31-entry tables.
+                .expect("redaction automaton exceeds aho-corasick limits")
+        });
+        Self { matcher }
     }
-    let mut values: Vec<_> = result.hits.iter().map(|hit| hit.matched.as_str()).collect();
-    values.sort_by_key(|value| std::cmp::Reverse(value.len()));
-    values.dedup();
-    // A byte-preserving ASCII fold matches watchlist semantics without changing
-    // UTF-8 offsets. Redact all overlapping spans in the original text once;
-    // replacement markers are never fed back into the matcher.
-    let redact = |text: &str| {
-        let folded = text.to_ascii_lowercase();
-        let mut spans = Vec::new();
-        for value in &values {
-            if value.is_empty() {
-                continue;
-            }
-            let needle = value.to_ascii_lowercase();
-            let mut start = 0;
-            while start < folded.len() {
-                let Some(offset) = folded[start..].find(&needle) else {
-                    break;
-                };
-                let begin = start + offset;
-                spans.push((begin, begin + needle.len()));
-                start = begin + folded[begin..].chars().next().unwrap().len_utf8();
-            }
-        }
+
+    fn redact(&self, text: &str) -> String {
+        let Some(matcher) = &self.matcher else {
+            return text.to_owned();
+        };
+        // ASCII-only case folding matches watchlist semantics, and non-ASCII
+        // bytes compare exactly, so spans are offsets into the original text.
+        // Redact all overlapping spans once; replacement markers are never fed
+        // back into the matcher.
+        let mut spans: Vec<_> = matcher
+            .find_overlapping_iter(text)
+            .map(|found| (found.start(), found.end()))
+            .collect();
         spans.sort_unstable();
         let mut merged: Vec<(usize, usize)> = Vec::new();
         for (start, end) in spans {
@@ -318,18 +328,29 @@ fn report_result(result: &ScanResult, show_matches: bool) -> ScanResult {
         }
         redacted.push_str(&text[cursor..]);
         redacted
-    };
+    }
+}
+
+fn report_result(result: &ScanResult, show_matches: bool) -> ScanResult {
+    let mut report = result.clone();
+    if show_matches {
+        return report;
+    }
+    let redactor = Redactor::new(result.hits.iter().map(|hit| hit.matched.as_str()));
     for hit in &mut report.hits {
         hit.matched = "[redacted]".to_owned();
-        hit.file = redact(&hit.file);
-        hit.variable = hit.variable.as_deref().map(redact);
-        hit.source = redact(&hit.source);
-        hit.suggestion = redact(&hit.suggestion);
+        hit.file = redactor.redact(&hit.file);
+        hit.variable = hit
+            .variable
+            .as_deref()
+            .map(|variable| redactor.redact(variable));
+        hit.source = redactor.redact(&hit.source);
+        hit.suggestion = redactor.redact(&hit.suggestion);
     }
     report.warnings = report
         .warnings
         .iter()
-        .map(|warning| redact(warning))
+        .map(|warning| redactor.redact(warning))
         .collect();
     report
 }
@@ -564,8 +585,124 @@ pub fn run() -> ExitCode {
 
 #[cfg(test)]
 mod redaction_tests {
-    use super::report_result;
+    use super::{Redactor, report_result};
     use crate::scan::{HitKind, ScanHit, ScanMode, ScanResult};
+
+    /// The per-value redaction that `Redactor` replaced, kept as the oracle.
+    fn redact_reference(values: &[&str], text: &str) -> String {
+        let mut values = values.to_vec();
+        values.sort_by_key(|value| std::cmp::Reverse(value.len()));
+        values.dedup();
+        let folded = text.to_ascii_lowercase();
+        let mut spans = Vec::new();
+        for value in &values {
+            if value.is_empty() {
+                continue;
+            }
+            let needle = value.to_ascii_lowercase();
+            let mut start = 0;
+            while start < folded.len() {
+                let Some(offset) = folded[start..].find(&needle) else {
+                    break;
+                };
+                let begin = start + offset;
+                spans.push((begin, begin + needle.len()));
+                start = begin + folded[begin..].chars().next().unwrap().len_utf8();
+            }
+        }
+        spans.sort_unstable();
+        let mut merged: Vec<(usize, usize)> = Vec::new();
+        for (start, end) in spans {
+            if let Some(last) = merged.last_mut().filter(|last| start <= last.1) {
+                last.1 = last.1.max(end);
+            } else {
+                merged.push((start, end));
+            }
+        }
+        let mut redacted = String::new();
+        let mut cursor = 0;
+        for (start, end) in merged {
+            redacted.push_str(&text[cursor..start]);
+            redacted.push_str("[redacted]");
+            cursor = end;
+        }
+        redacted.push_str(&text[cursor..]);
+        redacted
+    }
+
+    fn assert_matches_reference(values: &[&str], text: &str) {
+        assert_eq!(
+            Redactor::new(values.iter().copied()).redact(text),
+            redact_reference(values, text),
+            "values={values:?} text={text:?}"
+        );
+    }
+
+    #[test]
+    fn single_pass_redaction_matches_the_per_value_reference() {
+        let cases: &[(&[&str], &str)] = &[
+            // Overlapping values, and one value overlapping itself.
+            (&["abcab", "cabx"], "zabcabxz"),
+            (&["aba"], "x abababa y"),
+            // Touching spans merge into one marker (RFC 5737 addresses).
+            (&["192.0.2.1", "zz"], "192.0.2.1zz 192.0.2.1 zz"),
+            // One value inside another.
+            (&["198.51.100.7", "100.7"], "at 198.51.100.7 and 100.79"),
+            // ASCII case variants of text and values.
+            (&["host-a", "HOST-B"], "HOST-A host-b Host-A hOsT-b"),
+            // Non-ASCII before, inside and after; non-ASCII compares exactly.
+            (&["東京", "é"], "前東京後 café É 東京x"),
+            (&["xé", "éy"], "東xéy東"),
+            (&["aé"], "AÉ aé Aé"),
+            (&["É"], "é É"),
+            // Duplicates, empty values and values that never appear.
+            (&["dup", "dup", "DUP", ""], "dup Dup x"),
+            (&[""], "unchanged"),
+            (&[], "unchanged"),
+            (&["absent"], "nothing here"),
+            // The whole text, and empty text.
+            (&["203.0.113.9"], "203.0.113.9"),
+            (&["abc"], ""),
+        ];
+        for (values, text) in cases {
+            assert_matches_reference(values, text);
+        }
+        assert_eq!(
+            Redactor::new(["abcab", "cabx"]).redact("zabcabxz"),
+            "z[redacted]z"
+        );
+        assert_eq!(Redactor::new([""]).redact("unchanged"), "unchanged");
+    }
+
+    /// xorshift64: deterministic and dependency-free.
+    fn next(state: &mut u64, bound: u64) -> u64 {
+        *state ^= *state << 13;
+        *state ^= *state >> 7;
+        *state ^= *state << 17;
+        *state % bound
+    }
+
+    /// Up to `max_chars` characters mixing ASCII case variants and multi-byte
+    /// characters, including a non-ASCII pair that differs only in case.
+    fn random_word(state: &mut u64, max_chars: u64) -> String {
+        const ALPHABET: [&str; 8] = ["a", "b", "A", "B", ".", "é", "É", "東"];
+        let length = next(state, max_chars + 1);
+        (0..length)
+            .map(|_| ALPHABET[next(state, ALPHABET.len() as u64) as usize])
+            .collect()
+    }
+
+    #[test]
+    fn single_pass_redaction_matches_the_reference_on_random_inputs() {
+        let mut state = 0x2545_f491_4f6c_dd1d_u64;
+        for _ in 0..20_000 {
+            let text = random_word(&mut state, 24);
+            let count = 1 + next(&mut state, 4);
+            let values: Vec<String> = (0..count).map(|_| random_word(&mut state, 4)).collect();
+            let values: Vec<&str> = values.iter().map(String::as_str).collect();
+            assert_matches_reference(&values, &text);
+        }
+    }
 
     #[test]
     fn overlapping_ascii_variants_are_redacted_in_every_metadata_field() {
