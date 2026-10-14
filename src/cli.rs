@@ -290,20 +290,20 @@ impl Redactor {
         // differing only in ASCII case or in path separators are one pattern.
         // A value is folded first: only its folded form occurs in the folded
         // texts, and that form is no longer than the value.
-        // A path-like value (one holding a `/`) can be detected with a leading
-        // separator or a sentence-ending `.` that its name in another text
-        // lacks, so the form without them is a pattern too. Other values keep
-        // their `.` and are not shortened, which would over-redact.
+        // A path-like value can be detected with a leading separator or a
+        // sentence-ending `.` that its name in another text lacks, so the form
+        // without them is a pattern too, while that form still names a path (a
+        // `/` before its end). Shorter forms would over-redact: `/opt` would
+        // hide every `opt`.
         let mut values: Vec<_> = values
             .into_iter()
             .flat_map(|value| {
                 let folded = unify_separators(&value.to_ascii_lowercase()).0.into_owned();
-                let trimmed = folded.contains('/').then(|| {
-                    folded
-                        .trim_start_matches('/')
-                        .trim_end_matches('.')
-                        .to_owned()
-                });
+                let trimmed = folded.trim_start_matches('/').trim_end_matches('.');
+                let trimmed = trimmed
+                    .trim_end_matches('/')
+                    .contains('/')
+                    .then(|| trimmed.to_owned());
                 [Some(folded), trimmed]
             })
             .flatten()
@@ -714,16 +714,20 @@ mod redaction_tests {
         let mut needles = std::collections::HashSet::new();
         for value in values {
             let folded = fold(value);
-            if folded.contains('/') {
-                // A path-like value also hides its form without leading `/`
-                // and trailing `.`.
-                let mut trimmed = folded.as_str();
-                while let Some(rest) = trimmed.strip_prefix('/') {
-                    trimmed = rest;
-                }
-                while let Some(rest) = trimmed.strip_suffix('.') {
-                    trimmed = rest;
-                }
+            // A path-like value also hides its form without leading `/` and
+            // trailing `.`, while that form keeps a `/` before its end.
+            let mut trimmed = folded.as_str();
+            while let Some(rest) = trimmed.strip_prefix('/') {
+                trimmed = rest;
+            }
+            while let Some(rest) = trimmed.strip_suffix('.') {
+                trimmed = rest;
+            }
+            let mut inner = trimmed;
+            while let Some(rest) = inner.strip_suffix('/') {
+                inner = rest;
+            }
+            if inner.contains('/') {
                 needles.insert(trimmed.to_owned());
             }
             needles.insert(folded);
@@ -932,6 +936,13 @@ mod redaction_tests {
         let redactor = Redactor::new(["inc."], usize::MAX);
         assert_eq!(redactor.redact("Inc and Inc."), "Inc and [redacted]");
         assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+        // A trimmed form with no `/` before its end no longer names a path,
+        // so it is not a pattern: `/e` must not hide every `e`.
+        for value in ["/e", "/opt.", "/a/", r"\\x."] {
+            let redactor = Redactor::new([value], usize::MAX);
+            assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 1);
+            assert_eq!(redactor.redact("release data/x box"), "release data/x box");
+        }
         // A trimmed form that would be empty is not a pattern.
         let redactor = Redactor::new(["/", "//."], usize::MAX);
         assert_eq!(redactor.matcher.as_ref().unwrap().patterns_len(), 2);
