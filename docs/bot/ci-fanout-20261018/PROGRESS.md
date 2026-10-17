@@ -1,6 +1,6 @@
 # P-20261018-007 public CI rollout
 
-Updated: 2026-10-18. Management Issue: pending owner publication.
+Updated: 2026-10-18. Management Issue: https://github.com/ishizakahiroshi/doxguard/issues/14
 Public instructions: ishizakahiroshi/doxguard docs/bot/ci-fanout-20261018/.
 Actual work repos/baselines: FACTS.json. Owner maintains this board.
 
@@ -15,3 +15,4 @@ Actual work repos/baselines: FACTS.json. Owner maintains this board.
 Issue comments are the authoritative status record. Source, instruction,
 review and board SHAs are separate evidence. No target has been migrated merely
 because this instruction folder exists.
+Initial instruction/diff base: c1b1d025d2f09e720ae3613206eecef09909ea84.

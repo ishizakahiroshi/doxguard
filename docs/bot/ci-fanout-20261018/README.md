@@ -1,6 +1,6 @@
 # P-20261018-007 public repository CI migration candidates
 
-Updated: 2026-10-18. Management Issue: pending owner publication.
+Updated: 2026-10-18. Management Issue: https://github.com/ishizakahiroshi/doxguard/issues/14
 Instruction repository: ishizakahiroshi/doxguard (public), branch
 wt/ci-fanout-20261018. Actual work repositories and baselines are the exact
 public repositories in FACTS.json; docsweep is a separate pilot and is excluded.
