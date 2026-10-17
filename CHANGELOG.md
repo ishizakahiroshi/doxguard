@@ -2,7 +2,7 @@
 
 All notable changes to doxguard are documented here.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-18
 
 ### Added
 
@@ -11,6 +11,10 @@ All notable changes to doxguard are documented here.
 - Literal `--path` and UTF-8 `--path-from` scans outside git, with missing-path errors and coverage accounting for directory links and junctions. Reports name each file as it was passed (plus the part found by walking a directory), so the working directory's absolute path, often under the home directory, is never added.
 - Instruction-profile control to disable every inline allow directive (off by default).
 - Opt-in `requireWatchlists` to reject unresolved or missing watchlist sources.
+- Read-only `--history` scans of blobs reachable from Git refs and `--files-from-list` scans of explicit repository-relative submissions.
+- CSV name joining and parenthesis variants, bounded directory-name readers, and opt-in link-name readers that never traverse linked targets.
+- Configurable boundaries for short watchlist terms and noise filters, plus an opt-in staged added-line baseline with explicit candidate and suppression counts.
+- `watch add` to append terms to a private external lines watchlist, with standard-input and dry-run support and count-only output. Scans remain read-only.
 
 ### Changed
 
@@ -22,6 +26,15 @@ All notable changes to doxguard are documented here.
 ### Fixed
 
 - Inline allow directives are parsed once per line instead of once per match, so a long line with many matches no longer slows the scan down quadratically.
+
+### Security
+
+- Bind release jobs to a validated tag commit and record canonical source identity.
+- Preserve Git/OS path identity and regular staged type-change coverage.
+- Accept BOM-prefixed lines watchlists and redact mixed-case report metadata.
+- Reject unsupported npm workspace mappings and linked scaffold destinations.
+- Preserve existing default hooks; update CI Node.js to 24 LTS.
+- Document the current confidential-reporting limitation in SECURITY.md.
 
 ## [0.1.0] - 2026-08-03
 
@@ -58,12 +71,4 @@ All notable changes to doxguard are documented here.
 - Watchlist hits report the original line casing under ASCII case-insensitive matching.
 
 [0.1.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.1.0
-
-### Release-candidate hardening
-
-- Bind release jobs to a validated tag commit and record canonical source identity.
-- Preserve Git/OS path identity and regular staged type-change coverage.
-- Accept BOM-prefixed lines watchlists and redact mixed-case report metadata.
-- Reject unsupported npm workspace mappings and linked scaffold destinations.
-- Preserve existing default hooks; update CI Node.js to 24 LTS.
-- Document the current confidential-reporting limitation in SECURITY.md.
+[0.2.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.2.0

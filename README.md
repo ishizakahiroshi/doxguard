@@ -37,7 +37,7 @@ doxguard init
 
 `pnpm add --global doxguard` and `bun install --global doxguard` use the same npm registry package.
 
-Supported v0.1.0 targets:
+Supported v0.2.0 targets:
 
 - Windows x64 and ARM64
 - Linux x64 and ARM64
@@ -62,6 +62,7 @@ doxguard init
 This creates, without overwriting existing files:
 
 - `doxguard.config.json`
+- `doxguard.ci.json`, with no private watchlists
 - `.githooks/pre-commit` as a portable fallback
 - a direct native `pre-commit` under the local git directory, selected by `core.hooksPath`
 - `.github/workflows/doxguard.yml` for structural-only CI scanning
@@ -77,11 +78,16 @@ $env:DOXGUARD_WATCHLIST_DIR = "D:/private/watchlists"
 export DOXGUARD_WATCHLIST_DIR="$HOME/private/watchlists"
 ```
 
-An unset variable skips that source with a warning. Built-in structural checks continue to run,
-which is the expected CI behavior.
+The generated local config requires its watchlist: an unset variable or an unreadable source
+stops the scan with exit 2. Only sources explicitly marked `optional: true` may skip an unset
+environment variable with a warning; a resolved but missing or unreadable source is still an
+error. The generated CI workflow selects `doxguard.ci.json`, whose empty watchlist
+list enables structural-only scanning without private sources.
 
-For a diagram-rich walkthrough of installation, watchlist setup, and the daily commit flow, see the
-[visual user guide](https://ishizakahiroshi.github.io/doxguard/).
+For diagrams of installation, watchlist setup, and the daily commit flow, see the
+[historical 0.1.0 visual guide](https://ishizakahiroshi.github.io/doxguard/).
+Follow this README for current setup and scan behavior; the older guide predates the stricter
+local watchlist requirements and the separate CI config.
 
 ## Scan commands
 
@@ -280,8 +286,9 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 - Repository config contains environment-variable references, not private absolute paths.
 - CI normally runs structural patterns only because private watchlists are unavailable there.
 - Scan commands are read-only: they report and return an exit code, but never edit or delete files.
-- Binary, lock, and explicitly exempt files are skipped. Text files are read in full unless
-  `maxFileSize` is set.
+- Known binary extensions are skipped. Lockfiles retain structural checks, while `exemptPaths`
+  retain watchlist checks. `includeDefaultExemptPaths: true` opts into the old built-in exemptions
+  and lockfile skips. Text files are read in full unless `maxFileSize` is set.
 
 ## 日本語
 
