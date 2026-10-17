@@ -205,9 +205,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    env:
-      NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/doxguard-npm-oidc.npmrc
-      NPM_CONFIG_GLOBALCONFIG: ${{ runner.temp }}/doxguard-npm-global.npmrc
     steps:
       - uses: actions/checkout@v4
         with:
@@ -218,6 +215,10 @@ jobs:
       - name: Require supported npm OIDC tooling and isolated configuration
         run: |
           set -euo pipefail
+          export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/doxguard-npm-oidc.npmrc"
+          export NPM_CONFIG_GLOBALCONFIG="$RUNNER_TEMP/doxguard-npm-global.npmrc"
+          printf 'NPM_CONFIG_USERCONFIG=%s\n' "$NPM_CONFIG_USERCONFIG" >> "$GITHUB_ENV"
+          printf 'NPM_CONFIG_GLOBALCONFIG=%s\n' "$NPM_CONFIG_GLOBALCONFIG" >> "$GITHUB_ENV"
           umask 077
           printf 'registry=https://registry.npmjs.org/\n' > "$NPM_CONFIG_USERCONFIG"
           : > "$NPM_CONFIG_GLOBALCONFIG"

@@ -147,8 +147,10 @@ fn npm_publish_uses_oidc_without_token_gates_or_auth_config() {
     for required in [
         "id-token: write",
         "node-version: \"24\"",
-        "NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/doxguard-npm-oidc.npmrc",
-        "NPM_CONFIG_GLOBALCONFIG: ${{ runner.temp }}/doxguard-npm-global.npmrc",
+        "export NPM_CONFIG_USERCONFIG=\"$RUNNER_TEMP/doxguard-npm-oidc.npmrc\"",
+        "export NPM_CONFIG_GLOBALCONFIG=\"$RUNNER_TEMP/doxguard-npm-global.npmrc\"",
+        "printf 'NPM_CONFIG_USERCONFIG=%s\\n' \"$NPM_CONFIG_USERCONFIG\" >> \"$GITHUB_ENV\"",
+        "printf 'NPM_CONFIG_GLOBALCONFIG=%s\\n' \"$NPM_CONFIG_GLOBALCONFIG\" >> \"$GITHUB_ENV\"",
         "printf 'registry=https://registry.npmjs.org/\\n' > \"$NPM_CONFIG_USERCONFIG\"",
         ": > \"$NPM_CONFIG_GLOBALCONFIG\"",
         "atLeast(nodeVersion, [22, 14, 0])",
@@ -164,6 +166,106 @@ fn npm_publish_uses_oidc_without_token_gates_or_auth_config() {
     }
     assert!(!job.contains("npm install"));
     assert!(!job.contains("channel skipped"));
+}
+
+fn job_env_does_not_use_runner(job: &str) -> bool {
+    // runner is unavailable in jobs.<job_id>.env according to GitHub's context table.
+    let header = job.split_once("    steps:\n").unwrap().0;
+    let Some((_, env)) = header.split_once("    env:\n") else {
+        return true;
+    };
+    let env = env
+        .lines()
+        .take_while(|line| line.starts_with("      ") || line.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let expressions = regex::Regex::new(r"\$\{\{(.*?)\}\}").unwrap();
+    let runner = regex::Regex::new(r"\brunner\s*(?:\.|\[)").unwrap();
+    !expressions
+        .captures_iter(&env)
+        .any(|expression| runner.is_match(&expression[1]))
+}
+
+#[test]
+fn npm_job_env_rejects_runner_context_before_a_runner_exists() {
+    let job = npm_publish_job();
+    assert!(job_env_does_not_use_runner(&job));
+    for expression in ["runner.temp", "runner['temp']"] {
+        let broken = job.replace(
+            "    steps:\n",
+            &format!("    env:\n      CONFIG: ${{{{ {expression} }}}}\n    steps:\n"),
+        );
+        assert!(!job_env_does_not_use_runner(&broken));
+    }
+    let supported = job.replace(
+        "    steps:\n",
+        "    env:\n      SOURCE: ${{ github.sha }}\n    steps:\n",
+    );
+    assert!(job_env_does_not_use_runner(&supported));
+}
+
+#[test]
+fn npm_config_exports_reach_the_current_step_and_github_env_reaches_the_next_step() {
+    let job = npm_publish_job();
+    let preflight = job
+        .split_once("      - name: Require supported npm OIDC tooling and isolated configuration\n")
+        .unwrap()
+        .1
+        .split_once("          node <<'NODE'\n")
+        .unwrap()
+        .0
+        .split_once("        run: |\n")
+        .unwrap()
+        .1
+        .lines()
+        .map(|line| line.strip_prefix("          ").unwrap())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let temporary = tempfile::tempdir().unwrap();
+    let runner_temp = temporary.path().join("runner temp");
+    fs::create_dir(&runner_temp).unwrap();
+    let github_env = temporary.path().join("github-env");
+    let bash = if cfg!(windows) {
+        "C:\\Program Files\\Git\\bin\\bash.exe"
+    } else {
+        "bash"
+    };
+    let checks = r#"
+test "$NPM_CONFIG_USERCONFIG" = "$RUNNER_TEMP/doxguard-npm-oidc.npmrc"
+test "$NPM_CONFIG_GLOBALCONFIG" = "$RUNNER_TEMP/doxguard-npm-global.npmrc"
+test "$(cat "$NPM_CONFIG_USERCONFIG")" = 'registry=https://registry.npmjs.org/'
+test ! -s "$NPM_CONFIG_GLOBALCONFIG"
+"#;
+    let first = std::process::Command::new(bash)
+        .args(["--noprofile", "--norc", "-c"])
+        .arg(format!("{preflight}\n{checks}"))
+        .env("RUNNER_TEMP", &runner_temp)
+        .env("GITHUB_ENV", &github_env)
+        .env_remove("NPM_CONFIG_USERCONFIG")
+        .env_remove("NPM_CONFIG_GLOBALCONFIG")
+        .output()
+        .expect("Bash is required to verify release environment propagation");
+    assert!(first.status.success(), "current-step config export failed");
+    let environment = fs::read_to_string(github_env).unwrap();
+    let entries = environment
+        .lines()
+        .map(|line| line.split_once('=').unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(entries.len(), 2);
+    assert_eq!(entries[0].0, "NPM_CONFIG_USERCONFIG");
+    assert_eq!(entries[1].0, "NPM_CONFIG_GLOBALCONFIG");
+    let second = std::process::Command::new(bash)
+        .args(["--noprofile", "--norc", "-c", checks])
+        .env("RUNNER_TEMP", runner_temp)
+        .env_remove("NPM_CONFIG_USERCONFIG")
+        .env_remove("NPM_CONFIG_GLOBALCONFIG")
+        .envs(entries)
+        .output()
+        .unwrap();
+    assert!(
+        second.status.success(),
+        "next-step config propagation failed"
+    );
 }
 
 #[test]
