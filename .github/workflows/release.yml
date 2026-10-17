@@ -206,28 +206,44 @@ jobs:
       contents: read
       id-token: write
     env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/doxguard-npm-oidc.npmrc
+      NPM_CONFIG_GLOBALCONFIG: ${{ runner.temp }}/doxguard-npm-global.npmrc
     steps:
-      - name: Check npm publish credential
-        id: npm-token
-        run: |
-          if [[ -n "$NPM_TOKEN" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "NPM_TOKEN is not configured; npm channel skipped"
-          fi
       - uses: actions/checkout@v4
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         with:
           ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: actions/setup-node@v4
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
+      - name: Require supported npm OIDC tooling and isolated configuration
+        run: |
+          set -euo pipefail
+          umask 077
+          printf 'registry=https://registry.npmjs.org/\n' > "$NPM_CONFIG_USERCONFIG"
+          : > "$NPM_CONFIG_GLOBALCONFIG"
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          function atLeast(version, minimum) {
+            const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+            if (!match) return false;
+            for (let index = 0; index < minimum.length; index++) {
+              const part = Number(match[index + 1]);
+              if (part > minimum[index]) return true;
+              if (part < minimum[index]) return false;
+            }
+            return true;
+          }
+          const nodeVersion = process.versions.node;
+          const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();
+          if (!atLeast(nodeVersion, [22, 14, 0]) || !atLeast(npmVersion, [11, 5, 1])) {
+            throw new Error('Trusted publishing requires Node >=22.14.0 and npm >=11.5.1');
+          }
+          if (!process.env.ACTIONS_ID_TOKEN_REQUEST_URL || !process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN) {
+            throw new Error('GitHub Actions OIDC permission is unavailable');
+          }
+          console.log(`Trusted publishing tooling: Node ${nodeVersion}, npm ${npmVersion}`);
+          NODE
       - name: Download and verify canonical release
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ needs.resolve-source.outputs.commit }}
@@ -237,11 +253,8 @@ jobs:
           mkdir canonical artifacts
           gh release download "$RELEASE_TAG" --dir canonical
           (cd canonical && sha256sum --check SHA256SUMS.txt)
-          if [[ -f canonical/SOURCE_COMMIT.txt ]]; then
-            test "$(cat canonical/SOURCE_COMMIT.txt)" = "$SOURCE_SHA"
-          else
-            echo 'Legacy canonical release: source marker unavailable; provenance is unverified.' >&2
-          fi
+          test -f canonical/SOURCE_COMMIT.txt
+          test "$(cat canonical/SOURCE_COMMIT.txt)" = "$SOURCE_SHA"
           for slug in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
             mkdir -p "artifacts/$slug"
             tar -C "artifacts/$slug" -xzf "canonical/doxguard-$slug.tar.gz"
@@ -251,7 +264,6 @@ jobs:
             unzip -q "canonical/doxguard-$slug.zip" -d "artifacts/$slug"
           done
       - name: Validate version and stage platform packages
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
@@ -268,14 +280,10 @@ jobs:
             chmod +x "npm/platforms/$slug/bin/doxguard"
           done
       - name: Scan npm package contents with native doxguard
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
         run: |
           chmod +x artifacts/linux-x64/doxguard
           artifacts/linux-x64/doxguard scan --packaged --block
       - name: Publish platform packages, then root
-        if: ${{ steps.npm-token.outputs.available == 'true' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
         run: |
           set -euo pipefail
           version="${RELEASE_TAG#v}"
