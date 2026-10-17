@@ -21,6 +21,13 @@ conflicts and never fold unrelated commits into your PR. Baseline hashes in
 FACTS describe observed state, not permission to reset a newer remote head.
 If repository facts differ from code, code wins; report the discrepancy.
 
+Use FACTS `integrationBranch` / `integrationBaseSha`, not `defaultBranch`, for
+the implementation and PR base. manabi-map, many-ai-cli, RemoteAudio, setpanel
+and vtype operate their existing scanner on develop. main is the base for the
+other targets; do not import deskly/kinko feature checkout commits. The baseline
+is rechecked live before editing; a default-branch stub is not the operating
+source snapshot used by the local structural preview.
+
 You may inspect and prepare all candidates in parallel with exclusive file
 owners. Do not push implementation PRs or trigger fanout CI until the owner
 comments `PILOT_ACCEPTED` on this management Issue. Before that gate, prepare

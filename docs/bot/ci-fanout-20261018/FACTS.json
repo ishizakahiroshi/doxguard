@@ -14,6 +14,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "2d957dd93dae011cf5d595d8d2b96bef01bf2aa0",
+      "integrationBranch": "main",
+      "integrationBaseSha": "2d957dd93dae011cf5d595d8d2b96bef01bf2aa0",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -47,6 +50,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "f633e6cab98c3e8df2a499e48fcd3460892105e0",
+      "integrationBranch": "main",
+      "integrationBaseSha": "f633e6cab98c3e8df2a499e48fcd3460892105e0",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -116,6 +122,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "4461977124823665d81d0181e09909eb0209294e",
+      "integrationBranch": "main",
+      "integrationBaseSha": "4461977124823665d81d0181e09909eb0209294e",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -143,6 +152,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "128bc54f355617191332edd1051ce42d586d80d0",
+      "integrationBranch": "main",
+      "integrationBaseSha": "128bc54f355617191332edd1051ce42d586d80d0",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -176,6 +188,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "f53b48cb3c9a7c50700da4b2cced192d9b44faf7",
+      "integrationBranch": "main",
+      "integrationBaseSha": "f53b48cb3c9a7c50700da4b2cced192d9b44faf7",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [
         {
           "number": 2,
@@ -245,6 +260,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "ea12d84a86df416c7f3ce27495241d2cec54f228",
+      "integrationBranch": "main",
+      "integrationBaseSha": "ea12d84a86df416c7f3ce27495241d2cec54f228",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -272,6 +290,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "8b2ef02b14a6774eb72aa987f367fe37b96358cc",
+      "integrationBranch": "main",
+      "integrationBaseSha": "8b2ef02b14a6774eb72aa987f367fe37b96358cc",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -305,6 +326,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "742d4d2a641d30e1b22bf9b08ebe77ac146578e8",
+      "integrationBranch": "main",
+      "integrationBaseSha": "742d4d2a641d30e1b22bf9b08ebe77ac146578e8",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -338,6 +362,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "ad842a4f56427871ccb4386d1ff125a99ab9850a",
+      "integrationBranch": "main",
+      "integrationBaseSha": "ad842a4f56427871ccb4386d1ff125a99ab9850a",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [
         {
           "number": 2,
@@ -397,6 +424,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "b33c5a3af5c42ac148355745d3a524463745dc05",
+      "integrationBranch": "develop",
+      "integrationBaseSha": "449b19e74961547ea9f68d46bb788529e10703cc",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -628,6 +658,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "7cf9088bc09c099c01e25e4054c01b31f3209fee",
+      "integrationBranch": "develop",
+      "integrationBaseSha": "9c7f14ba6e1ab9a294230bfde2e3a80107076435",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [
         {
           "number": 25,
@@ -688,7 +721,9 @@
             }
           ],
           "fileProbeStatus": "success",
-          "fileListMayBeTruncated": true
+          "fileListMayBeTruncated": false,
+          "fileMetadataCount": 110,
+          "fileProbePaginated": true
         },
         {
           "number": 17,
@@ -768,10 +803,28 @@
             {
               "file": ".github/workflows/validate.yml",
               "status": "modified"
+            },
+            {
+              "file": "scripts/secrets-scan.baseline.mjs",
+              "status": "added"
+            },
+            {
+              "file": "scripts/secrets-scan.baseline.test.mjs",
+              "status": "added"
+            },
+            {
+              "file": "scripts/secrets-scan.mjs",
+              "status": "modified"
+            },
+            {
+              "file": "web/package.json",
+              "status": "modified"
             }
           ],
           "fileProbeStatus": "success",
-          "fileListMayBeTruncated": true
+          "fileListMayBeTruncated": false,
+          "fileMetadataCount": 988,
+          "fileProbePaginated": true
         },
         {
           "number": 10,
@@ -804,7 +857,9 @@
             }
           ],
           "fileProbeStatus": "success",
-          "fileListMayBeTruncated": true
+          "fileListMayBeTruncated": false,
+          "fileMetadataCount": 318,
+          "fileProbePaginated": true
         },
         {
           "number": 8,
@@ -2073,6 +2128,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "1ee56fb8663f540a48e4783ce24b5a9fb503698b",
+      "integrationBranch": "main",
+      "integrationBaseSha": "1ee56fb8663f540a48e4783ce24b5a9fb503698b",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [
         {
           "number": 10,
@@ -2279,6 +2337,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "03c78c55dcab61fe4350e78e4b5e5237e31f0052",
+      "integrationBranch": "main",
+      "integrationBaseSha": "03c78c55dcab61fe4350e78e4b5e5237e31f0052",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [
         {
           "number": 10,
@@ -2455,6 +2516,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "42e4bb71f344dea6d91d421f40cfcd2e93513134",
+      "integrationBranch": "main",
+      "integrationBaseSha": "42e4bb71f344dea6d91d421f40cfcd2e93513134",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -2614,6 +2678,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "7d77d44d369ecf67b561fdcc1ef0a55b639fb059",
+      "integrationBranch": "develop",
+      "integrationBaseSha": "75a73b44a3b1895ea950eb2483d93fa73ac2797c",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -2659,6 +2726,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "f8b70bfb3c2e9d408d3374ede9b5d2e6adcb7313",
+      "integrationBranch": "develop",
+      "integrationBaseSha": "9d3ad7483bf359207fef54f044e5001131822bd1",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -2692,6 +2762,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "0f5a4b17b84d165ab32dcfa3e0331113a55d63c1",
+      "integrationBranch": "main",
+      "integrationBaseSha": "0f5a4b17b84d165ab32dcfa3e0331113a55d63c1",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -2725,6 +2798,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "42db9601c331f210b84e12584ee71be8711970ba",
+      "integrationBranch": "main",
+      "integrationBaseSha": "42db9601c331f210b84e12584ee71be8711970ba",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -2770,6 +2846,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "9709ce27fef54b60f653c7e05d040042e835e748",
+      "integrationBranch": "main",
+      "integrationBaseSha": "9709ce27fef54b60f653c7e05d040042e835e748",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -2803,6 +2882,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "f58b02b9b4764849f0d1a5cc35aa080686bcd3d0",
+      "integrationBranch": "main",
+      "integrationBaseSha": "f58b02b9b4764849f0d1a5cc35aa080686bcd3d0",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
@@ -2842,6 +2924,9 @@
       },
       "defaultBranch": "main",
       "remoteDefaultHead": "bddce441575de15585323dbfed644da29cafcf0d",
+      "integrationBranch": "develop",
+      "integrationBaseSha": "c732afaa050d58cdc913d43a40327aa711732814",
+      "integrationReason": "existing scanner operating branch; feature checkout commits excluded",
       "openPullRequests": [],
       "preview": {
         "type": "all-tracked local structural preparation, not real CI acceptance",
