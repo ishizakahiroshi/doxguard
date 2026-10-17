@@ -1,0 +1,2925 @@
+{
+  "taskId": "P-20261018-007",
+  "observedAt": "2026-10-17T18:15:08.274399+00:00",
+  "scope": "confirmed public origin repositories except the separate docsweep pilot",
+  "requiredDoxguardVersion": "0.2.0",
+  "candidateReleaseSource": "281b95444b46048d7a024a4a049fa4bed30a6a55",
+  "publicationStateAtPreparation": "main integrated, publication/fresh package acceptance pending",
+  "repositories": [
+    {
+      "repo": "ai-audit-prompts",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/ai-audit-prompts"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "2d957dd93dae011cf5d595d8d2b96bef01bf2aa0",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "dbd0e751d26d7dabc55f50630ea5ac012540dc2d",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "ai-log-clean",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/ai-log-clean"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "f633e6cab98c3e8df2a499e48fcd3460892105e0",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "f633e6cab98c3e8df2a499e48fcd3460892105e0",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 8,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "LICENSE",
+            "line": 3,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/note/2026-06-30_AICLIのログ誰も掃除しない_DRAFT_退避_zenn移行のため/2026-06-30_ai-log-clean_infographic.log.json",
+            "line": 8,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/note/2026-06-30_AICLIのログ誰も掃除しない_DRAFT_退避_zenn移行のため/2026-06-30_ai-log-clean_infographic.log.json",
+            "line": 11,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/note/2026-06-30_AICLIのログ誰も掃除しない_DRAFT_退避_zenn移行のため/2026-06-30_ai-log-clean_infographic.log.json",
+            "line": 13,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "package.json",
+            "line": 17,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "tests/c4-install-errors.test.mjs",
+            "line": 72,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "always-pinned",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/always-pinned"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "4461977124823665d81d0181e09909eb0209294e",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "4461977124823665d81d0181e09909eb0209294e",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 1,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 46,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "claude-code-context-diet",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/claude-code-context-diet"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "128bc54f355617191332edd1051ce42d586d80d0",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "128bc54f355617191332edd1051ce42d586d80d0",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "deskly",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/deskly"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "f53b48cb3c9a7c50700da4b2cced192d9b44faf7",
+      "openPullRequests": [
+        {
+          "number": 2,
+          "title": "chore: preserve all pending handoffs and harden scan reporting",
+          "url": "https://github.com/ishizakahiroshi/deskly/pull/2",
+          "headRef": "docs/grand-design-20261009",
+          "headSha": "5f5593ea6034ed1837ab9b050a314f168afb9969",
+          "baseRef": "develop",
+          "draft": true,
+          "updatedAt": "2026-10-12T14:22:22Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".githooks/pre-commit",
+              "status": "modified"
+            },
+            {
+              "file": "scripts/secrets-scan.mjs",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        }
+      ],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "5f5593ea6034ed1837ab9b050a314f168afb9969",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 4,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "README.md",
+            "line": 95,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "pyproject.toml",
+            "line": 13,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 48,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "doorpost",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/doorpost"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "ea12d84a86df416c7f3ce27495241d2cec54f228",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "ea12d84a86df416c7f3ce27495241d2cec54f228",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 1,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "heartpost",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/heartpost"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "8b2ef02b14a6774eb72aa987f367fe37b96358cc",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "8b2ef02b14a6774eb72aa987f367fe37b96358cc",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "heatfolio",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/heatfolio"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "742d4d2a641d30e1b22bf9b08ebe77ac146578e8",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "742d4d2a641d30e1b22bf9b08ebe77ac146578e8",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "kinko",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/kinko"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "ad842a4f56427871ccb4386d1ff125a99ab9850a",
+      "openPullRequests": [
+        {
+          "number": 2,
+          "title": "Protect vault updates and complete practical CLI validation",
+          "url": "https://github.com/ishizakahiroshi/kinko/pull/2",
+          "headRef": "dots/practical-cli-construction-P-20261011-012",
+          "headSha": "503c7d9f10536a06ed1581e93f597fe8913bd94b",
+          "baseRef": "main",
+          "draft": true,
+          "updatedAt": "2026-10-11T15:40:14Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".githooks/pre-commit",
+              "status": "modified"
+            },
+            {
+              "file": ".github/workflows/ci.yml",
+              "status": "added"
+            },
+            {
+              "file": ".github/workflows/secrets-scan.yml",
+              "status": "modified"
+            },
+            {
+              "file": "scripts/secrets-scan.mjs",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        }
+      ],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "503c7d9f10536a06ed1581e93f597fe8913bd94b",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 1,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "manabi-map",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/manabi-map"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "b33c5a3af5c42ac148355745d3a524463745dc05",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "449b19e74961547ea9f68d46bb788529e10703cc",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 35,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "CHANGELOG.md",
+            "line": 206,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "DATA.md",
+            "line": 272,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "README.md",
+            "line": 46,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "README.md",
+            "line": 67,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/admission/official-fetch.mjs",
+            "line": 26,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 79,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/package.json",
+            "line": 5,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/deviation-methodology.md",
+            "line": 38,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/privacy.md",
+            "line": 10,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/privacy.md",
+            "line": 11,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/privacy.md",
+            "line": 80,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/privacy.md",
+            "line": 89,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/terms.md",
+            "line": 12,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/terms.md",
+            "line": 13,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/terms.md",
+            "line": 60,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/legal/terms.md",
+            "line": 68,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/maintenance.html",
+            "line": 136,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/public/press/listing-checklist.html",
+            "line": 42,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/scripts/gen-seo-pages.mjs",
+            "line": 801,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/scripts/gen-seo-pages.mjs",
+            "line": 806,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/scripts/gen-seo-pages.mjs",
+            "line": 812,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/scripts/gen-seo-pages.mjs",
+            "line": 888,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/scripts/gen-seo-pages.mjs",
+            "line": 1105,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/scripts/gen-seo-pages.mjs",
+            "line": 1106,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/scripts/lib/public-api.mjs",
+            "line": 320,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/components/ErrorBoundary.tsx",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/AboutPage.tsx",
+            "line": 116,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/AboutPage.tsx",
+            "line": 120,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/DataPage.tsx",
+            "line": 176,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/PressPage.tsx",
+            "line": 143,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/PressPage.tsx",
+            "line": 200,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/PressPage.tsx",
+            "line": 241,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/PressPage.tsx",
+            "line": 245,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/pages/PressPage.tsx",
+            "line": 254,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "many-ai-cli",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/many-ai-cli"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "7cf9088bc09c099c01e25e4054c01b31f3209fee",
+      "openPullRequests": [
+        {
+          "number": 25,
+          "title": "#P-20261016-013 指揮者による子セッションの close を追加",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/25",
+          "headRef": "dots/orchestrate-close-child-P-20261016-013",
+          "headSha": "3c7e3535ae1a9526abea39164fa1e7b773fd18a9",
+          "baseRef": "dots/orchestrate-close-child",
+          "draft": true,
+          "updatedAt": "2026-10-16T11:51:48Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 23,
+          "title": "#P-20261016-012: custom provider add/list/remove と orchestrate 対応",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/23",
+          "headRef": "dots/custom-provider-add-P-20261016-012",
+          "headSha": "4532bb908fea76f3e5b0a06c8338c03d003a0021",
+          "baseRef": "dots/custom-provider-add",
+          "draft": true,
+          "updatedAt": "2026-10-16T11:30:33Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 21,
+          "title": "feat(ui): Usage と Hub を設定画面へ統合",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/21",
+          "headRef": "dots/P-20261013-001-settings-usage-hub-nav",
+          "headSha": "757101a08bfed9a7dbca6175c621deb31c62d07b",
+          "baseRef": "wt/rust-ui-publication-20261011",
+          "draft": true,
+          "updatedAt": "2026-10-13T17:47:23Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 18,
+          "title": "refactor(ui): 共通部品と操作別の確認文言へ統一",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/18",
+          "headRef": "wt/rust-ui-publication-20261011",
+          "headSha": "d95effb70cf550ff93ca593160ee8aa827abc28b",
+          "baseRef": "dots/rust-recovery-resume-3",
+          "draft": true,
+          "updatedAt": "2026-10-13T12:25:48Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/validate.yml",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": true
+        },
+        {
+          "number": 17,
+          "title": "docs: #P-20261011-005 Rust UI部品統一のC1棚卸し",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/17",
+          "headRef": "dots/P-20261011-005-rust-ui-inventory",
+          "headSha": "1440d53de16f9bbb9e9221dbb26eb259ccccf03f",
+          "baseRef": "wt/rust-ui-c1-20261011",
+          "draft": true,
+          "updatedAt": "2026-10-11T10:43:05Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 15,
+          "title": "#P-20261010-003 many-ai-cli：画面なし実行の払い方と進み",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/15",
+          "headRef": "dots/P-20261010-003-headless-billing-progress",
+          "headSha": "fd74a49aecdfd4b2f6edf8a3355f8942544becd3",
+          "baseRef": "dots/rust-recovery-resume-3",
+          "draft": true,
+          "updatedAt": "2026-10-11T03:50:13Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/rust-windows-check.yml",
+              "status": "modified"
+            },
+            {
+              "file": "web/package.json",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 13,
+          "title": "セッション一覧タブとRust起動時のタブ所属を追加",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/13",
+          "headRef": "dots/P-20261008-007-session-list-tabs",
+          "headSha": "c2302880e10226aeeb3a64812ad263e7beefcc1c",
+          "baseRef": "dots/rust-recovery-resume-3",
+          "draft": true,
+          "updatedAt": "2026-10-09T01:05:47Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": "web/package.json",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 11,
+          "title": "feat: #3 many-ai-cli rust 復旧候補の継続（WIP）",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/11",
+          "headRef": "dots/rust-recovery-resume-3",
+          "headSha": "6da3d69371fa4068f908887b7f35f926f52dfc9f",
+          "baseRef": "develop",
+          "draft": true,
+          "updatedAt": "2026-10-16T12:18:14Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/rust-migration.yml",
+              "status": "added"
+            },
+            {
+              "file": ".github/workflows/rust-windows-check.yml",
+              "status": "added"
+            },
+            {
+              "file": ".github/workflows/validate.yml",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": true
+        },
+        {
+          "number": 10,
+          "title": "feat: C2共通bridgeのオフライン実装とfake検証",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/10",
+          "headRef": "feat/dots-bridge-c2-offline-20261003",
+          "headSha": "0eb7411c920ed10b0b4f63f3b962d4c210737ad3",
+          "baseRef": "develop",
+          "draft": true,
+          "updatedAt": "2026-10-03T11:32:58Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 9,
+          "title": "feat: #3 many-ai-cli rust 全面移行（WIP）",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/9",
+          "headRef": "feat/rust-migration",
+          "headSha": "9992696cc6cdc62725acd7987f835644f1535452",
+          "baseRef": "develop",
+          "draft": true,
+          "updatedAt": "2026-10-03T14:32:39Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/rust-migration.yml",
+              "status": "added"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": true
+        },
+        {
+          "number": 8,
+          "title": "docs: dots連携比較と複数経路のC2試験を設計",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/8",
+          "headRef": "docs/dots-bridge-c1-comparison-20261003",
+          "headSha": "d5e0d022490d55ef26b446f5317bba06be5798b4",
+          "baseRef": "develop",
+          "draft": true,
+          "updatedAt": "2026-10-03T10:15:59Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 7,
+          "title": "test: PTY replay の Go/Rust 比較キットを追加（Rust化構想）",
+          "url": "https://github.com/ishizakahiroshi/many-ai-cli/pull/7",
+          "headRef": "develop-rust-replay-comparison-20261003",
+          "headSha": "81834163089b904d3a822d291a07e65807f922b7",
+          "baseRef": "develop",
+          "draft": true,
+          "updatedAt": "2026-10-03T00:03:24Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        }
+      ],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "9c7f14ba6e1ab9a294230bfde2e3a80107076435",
+        "legacyExit": 1,
+        "legacyHits": 156,
+        "newExit": 1,
+        "newHits": 203,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".goreleaser.yaml",
+            "line": 189,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "CLAUDE/development.md",
+            "line": 167,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "CLAUDE/development.md",
+            "line": 169,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "CLAUDE/operations.md",
+            "line": 25,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "CLAUDE/operations.md",
+            "line": 48,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "CLAUDE/windows_setup.md",
+            "line": 68,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "CLAUDE/windows_setup.md",
+            "line": 104,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "SECURITY.md",
+            "line": 18,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "THIRD_PARTY_NOTICES.md",
+            "line": 426,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "THIRD_PARTY_NOTICES.md",
+            "line": 529,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "THIRD_PARTY_NOTICES.md",
+            "line": 679,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "THIRD_PARTY_NOTICES.md",
+            "line": 1157,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "deploy/docker/users/example.yaml",
+            "line": 39,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_docker-multiuser.md",
+            "line": 146,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_docker-multiuser.md",
+            "line": 253,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_docker-multiuser.md",
+            "line": 255,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 16,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 17,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 85,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 98,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 146,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 147,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 153,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 154,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 172,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 180,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 214,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_local-llm-hyperv-host.md",
+            "line": 218,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_ollama-cloud-routing.md",
+            "line": 163,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_ollama-cloud-routing.md",
+            "line": 171,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_remote-server-agent-docker.md",
+            "line": 37,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_remote-server-agent-docker.md",
+            "line": 128,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_remote-server-agent-single.md",
+            "line": 24,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_remote-server-ssh-tunnel.md",
+            "line": 82,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_slash_commands_update.md",
+            "line": 9,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/manual_slash_commands_update.md",
+            "line": 159,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_docker-multiuser.vi.md",
+            "line": 155,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_docker-multiuser.vi.md",
+            "line": 262,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_docker-multiuser.vi.md",
+            "line": 264,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 25,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 26,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 94,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 107,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 155,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 156,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 162,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 163,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 180,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 187,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 220,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_local-llm-hyperv-host.vi.md",
+            "line": 224,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_ollama-cloud-routing.vi.md",
+            "line": 172,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_ollama-cloud-routing.vi.md",
+            "line": 179,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_release.vi.md",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_remote-server-agent-docker.vi.md",
+            "line": 46,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_remote-server-agent-docker.vi.md",
+            "line": 137,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_remote-server-agent-single.vi.md",
+            "line": 33,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_remote-server-ssh-tunnel.vi.md",
+            "line": 91,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "docs/vi/manual_slash_commands_update.vi.md",
+            "line": 19,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/attach/store_test.go",
+            "line": 185,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/attach/store_test.go",
+            "line": 192,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/clitrust/codex_test.go",
+            "line": 163,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/clitrust/grant_test.go",
+            "line": 53,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/audit_dns_rebinding_test.go",
+            "line": 54,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/audit_host_guard_test.go",
+            "line": 94,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/audit_host_guard_test.go",
+            "line": 96,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/audit_notify_backend_test.go",
+            "line": 23,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/audit_spawn_validation_test.go",
+            "line": 59,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/audit_spawn_validation_test.go",
+            "line": 59,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/audit_spawn_validation_test.go",
+            "line": 62,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/banner_test.go",
+            "line": 103,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/banner_test.go",
+            "line": 104,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/banner_test.go",
+            "line": 109,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/banner_test.go",
+            "line": 110,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/bug_report_handler_test.go",
+            "line": 104,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/bug_report_handler_test.go",
+            "line": 225,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/bug_report_handler_test.go",
+            "line": 253,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/bug_report_handler_test.go",
+            "line": 482,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/c4_audit_test.go",
+            "line": 65,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/c4_audit_test.go",
+            "line": 66,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/git_push_test.go",
+            "line": 48,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/git_refs.go",
+            "line": 126,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/git_refs.go",
+            "line": 129,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/git_refs.go",
+            "line": 136,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/git_refs.go",
+            "line": 162,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/misc_handlers.go",
+            "line": 391,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/misc_handlers.go",
+            "line": 422,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 52,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 58,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 104,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 152,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 162,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 179,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 183,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 197,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 206,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 240,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 247,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 255,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 269,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 270,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 277,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 278,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 292,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/path_expand_windows_test.go",
+            "line": 295,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/push.go",
+            "line": 252,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/push.go",
+            "line": 336,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 11,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 11,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 13,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 26,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 26,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 31,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 32,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 39,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 50,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/runtime_test.go",
+            "line": 50,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 178,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 180,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 190,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 222,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 225,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 251,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 254,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 335,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 337,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 338,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 701,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 702,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/security_test.go",
+            "line": 824,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/server_test.go",
+            "line": 637,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/server_test.go",
+            "line": 716,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/server_test.go",
+            "line": 720,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/server_test.go",
+            "line": 727,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/server_test.go",
+            "line": 730,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/server_test.go",
+            "line": 737,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/server_test.go",
+            "line": 740,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/slash_cmd_fetch_test.go",
+            "line": 212,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/slash_cmd_fetch_test.go",
+            "line": 218,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/slash_cmd_fetch_test.go",
+            "line": 240,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/hub/workflow_task_detail_test.go",
+            "line": 49,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/launcher/audit_ssh_arginjection_test.go",
+            "line": 156,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/launcher/connector_wsl_windows.go",
+            "line": 87,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/launcher/profile_test.go",
+            "line": 368,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/provider/compatibility_fixture_test.go",
+            "line": 151,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact.go",
+            "line": 116,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 122,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 123,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 123,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 124,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 125,
+            "source": "structural: POSIX home path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 136,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 137,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 138,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 146,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 152,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 152,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 154,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 159,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/redact_test.go",
+            "line": 169,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/report/report_test.go",
+            "line": 20,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/sessionlog/transcript_test.go",
+            "line": 11,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/sessionstore/store_test.go",
+            "line": 143,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/sessionstore/store_test.go",
+            "line": 156,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/wrapper/diagnose_test.go",
+            "line": 19,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "internal/wrapper/usage_hooks_test.go",
+            "line": 29,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 76,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/approval-parser-fixtures.ts",
+            "line": 689,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/approval-parser-fixtures.ts",
+            "line": 693,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/approval-parser.ts",
+            "line": 92,
+            "source": "structural: Private IPv4 (RFC1918)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/cli-availability-fixtures.ts",
+            "line": 115,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/cli-availability-fixtures.ts",
+            "line": 121,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/cli-availability-fixtures.ts",
+            "line": 127,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/cli-availability-fixtures.ts",
+            "line": 133,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/detached-view-mode-fixtures.ts",
+            "line": 23,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/detached-view-mode-fixtures.ts",
+            "line": 30,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/detached-view-mode-fixtures.ts",
+            "line": 31,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/live-status-fixtures.ts",
+            "line": 47,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 21,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 97,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 98,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 99,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 100,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 101,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 102,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 105,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 106,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 107,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 138,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 142,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 144,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 161,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/app/spawn-panel-fixtures.ts",
+            "line": 217,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/vendor/THIRD_PARTY_LICENSES.txt",
+            "line": 143,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/src/vendor/highlight.min.js",
+            "line": 3,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "web/tests/handoff-store.test.ts",
+            "line": 211,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/tests/handoff-store.test.ts",
+            "line": 231,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/tests/memo-model.test.ts",
+            "line": 96,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/tests/memo-model.test.ts",
+            "line": 106,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/tests/memo-model.test.ts",
+            "line": 107,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/tests/memo-model.test.ts",
+            "line": 107,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "web/tests/memo-model.test.ts",
+            "line": 112,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "many-ai-usage",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/many-ai-usage"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "1ee56fb8663f540a48e4783ce24b5a9fb503698b",
+      "openPullRequests": [
+        {
+          "number": 10,
+          "title": "chore(deps): bump preact from 10.29.7 to 11.0.1",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/10",
+          "headRef": "dependabot/npm_and_yarn/preact-11.0.1",
+          "headSha": "3d6d84cc4677f2e82299e140afd072724274b1ed",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-10-11T22:44:26Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": "package.json",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 8,
+          "title": "chore(deps): bump valibot from 1.4.2 to 1.5.0",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/8",
+          "headRef": "dependabot/npm_and_yarn/valibot-1.5.0",
+          "headSha": "39c5c5736af31b3642714ebc1a933370e8c50ccb",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-09-13T22:43:04Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": "package.json",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 7,
+          "title": "chore(deps): bump actions/download-artifact from 4.3.0 to 8.0.1",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/7",
+          "headRef": "dependabot/github_actions/actions/download-artifact-8.0.1",
+          "headSha": "c2da0a21aade415a0d5508a8c857da77935360ba",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-09-06T23:13:42Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/release.yml",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 5,
+          "title": "chore(deps-dev): bump the dev-dependencies group across 1 directory with 5 updates",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/5",
+          "headRef": "dependabot/npm_and_yarn/dev-dependencies-7349e656c9",
+          "headSha": "47f8f1b172e62da8f9dce1ae78922e80b42bcdfa",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-10-11T22:44:57Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": "package.json",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 4,
+          "title": "chore(deps): bump actions/upload-artifact from 4.6.2 to 7.0.1",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/4",
+          "headRef": "dependabot/github_actions/actions/upload-artifact-7.0.1",
+          "headSha": "1bde87164633ec0f5cd3e43494ee9ad8f86ef9fb",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-09-06T23:13:41Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/release.yml",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 3,
+          "title": "chore(deps): bump actions/setup-node from 4.4.0 to 7.0.0",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/3",
+          "headRef": "dependabot/github_actions/actions/setup-node-7.0.0",
+          "headSha": "4ac4548ffb0b5ce8b043a8d0a206350d524540d1",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-09-06T23:13:42Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "status": "modified"
+            },
+            {
+              "file": ".github/workflows/release.yml",
+              "status": "modified"
+            },
+            {
+              "file": ".github/workflows/secrets-scan.yml",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 2,
+          "title": "chore(deps): bump actions/checkout from 4.4.0 to 7.0.1",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/2",
+          "headRef": "dependabot/github_actions/actions/checkout-7.0.1",
+          "headSha": "573178e89018695a8590db8ac5b56fa0e13f780f",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-09-06T23:13:41Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "status": "modified"
+            },
+            {
+              "file": ".github/workflows/release.yml",
+              "status": "modified"
+            },
+            {
+              "file": ".github/workflows/secrets-scan.yml",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 1,
+          "title": "chore(deps): bump pnpm/action-setup from 4.3.0 to 6.0.10",
+          "url": "https://github.com/ishizakahiroshi/many-ai-usage/pull/1",
+          "headRef": "dependabot/github_actions/pnpm/action-setup-6.0.10",
+          "headSha": "4dfec9cc7e607b7a2e823bee25f4e76b6d67028f",
+          "baseRef": "main",
+          "draft": false,
+          "updatedAt": "2026-09-06T23:13:42Z",
+          "potentialMigrationConflict": true,
+          "conflictingSourceRefs": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "status": "modified"
+            },
+            {
+              "file": ".github/workflows/release.yml",
+              "status": "modified"
+            }
+          ],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        }
+      ],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "1ee56fb8663f540a48e4783ce24b5a9fb503698b",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "omitnix",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/omitnix"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "03c78c55dcab61fe4350e78e4b5e5237e31f0052",
+      "openPullRequests": [
+        {
+          "number": 10,
+          "title": "docs: triage 124 synthetic recall misses (#20261005-008)",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/10",
+          "headRef": "dots/truth-miss-triage-20261005-008",
+          "headSha": "89c6952b3eaeb6f40a29685986b345c07c73ec83",
+          "baseRef": "dots/truth-miss-triage",
+          "draft": true,
+          "updatedAt": "2026-10-05T05:29:05Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 7,
+          "title": "WIP: prepare SQL behavior corpus; measured results pending",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/7",
+          "headRef": "rewrite-sqlbehavior",
+          "headSha": "f8227531674f31bc8e27c2028c24c0325d465be1",
+          "baseRef": "rewrite-spec",
+          "draft": true,
+          "updatedAt": "2026-10-02T08:58:54Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 6,
+          "title": "bench: C# accepted-range walk (BLOCKED / UNMEASURED)",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/6",
+          "headRef": "bench-walk-csharp",
+          "headSha": "fe0d5c3d2a9054e5d4628f2cacad94eff1ad015a",
+          "baseRef": "main",
+          "draft": true,
+          "updatedAt": "2026-10-01T16:51:08Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 5,
+          "title": "bench: add TypeScript (Node) containment walk benchmark",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/5",
+          "headRef": "bench-walk-typescript",
+          "headSha": "c4c65a1a747df035911f679d63946a8f795a0b7f",
+          "baseRef": "main",
+          "draft": true,
+          "updatedAt": "2026-10-01T16:43:52Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 4,
+          "title": "bench(java): measure containment walk and report native binding failure",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/4",
+          "headRef": "bench-walk-java",
+          "headSha": "5f0d93d6a6f479cc6c4db149a3bd9329cfdf529d",
+          "baseRef": "main",
+          "draft": true,
+          "updatedAt": "2026-10-01T16:50:52Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 3,
+          "title": "bench: add Rust containment walk benchmark",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/3",
+          "headRef": "bench-walk-rust",
+          "headSha": "a0c69145fcba94e2d7beb013c06c281d5023efc9",
+          "baseRef": "main",
+          "draft": true,
+          "updatedAt": "2026-10-01T16:24:30Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 2,
+          "title": "bench(go): blocked unmeasured containment benchmark draft",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/2",
+          "headRef": "bench-walk-go",
+          "headSha": "614a3c6fe6fa036a1b034dcb6130b26834c96ee1",
+          "baseRef": "main",
+          "draft": true,
+          "updatedAt": "2026-10-01T17:00:53Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        },
+        {
+          "number": 1,
+          "title": "bench: add standalone Python containment walk benchmarks",
+          "url": "https://github.com/ishizakahiroshi/omitnix/pull/1",
+          "headRef": "bench-walk-python",
+          "headSha": "576e97b78050dfe7c6fdafb5703921ed1d94bfdf",
+          "baseRef": "main",
+          "draft": true,
+          "updatedAt": "2026-10-01T16:04:00Z",
+          "potentialMigrationConflict": false,
+          "conflictingSourceRefs": [],
+          "fileProbeStatus": "success",
+          "fileListMayBeTruncated": false
+        }
+      ],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "03c78c55dcab61fe4350e78e4b5e5237e31f0052",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 7,
+        "coverageSkips": 1,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "pyproject.toml",
+            "line": 12,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "rewrite/tools/run_golden.py",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "rewrite/tools/run_golden.py",
+            "line": 47,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "tests/test_cli.py",
+            "line": 62,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "tests/test_gate.py",
+            "line": 56,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "qiita-content",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/qiita-content"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "42e4bb71f344dea6d91d421f40cfcd2e93513134",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "42e4bb71f344dea6d91d421f40cfcd2e93513134",
+        "legacyExit": 1,
+        "legacyHits": 21,
+        "newExit": 1,
+        "newHits": 23,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/2026-07-23_codex-vs-claude-mcp-browser-delegate.md",
+            "line": 97,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/2026-07-24_ai-visual-loop-vs-tool.md",
+            "line": 101,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/2026-07-24_ai-visual-loop-vs-tool.md",
+            "line": 274,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260620-write-article-skill-platform-recommendation.md",
+            "line": 80,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260620-write-article-skill-platform-recommendation.md",
+            "line": 88,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260620-write-article-skill-platform-recommendation.md",
+            "line": 93,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260707-ai-agent-datetime-native.md",
+            "line": 44,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260707-ai-agent-datetime-native.md",
+            "line": 79,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260707-ai-agent-datetime-native.md",
+            "line": 82,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260707-onedrive-desktop-known-folder.md",
+            "line": 30,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260707-onedrive-desktop-known-folder.md",
+            "line": 36,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260707-onedrive-desktop-known-folder.md",
+            "line": 54,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260710-claude-code-doctor.md",
+            "line": 117,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260710-cross-cli-skill-shelf.md",
+            "line": 45,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260712-claude-code-temp-leak-40gb.md",
+            "line": 29,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260724-claude-code-3model-resume-metrics.md",
+            "line": 49,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260803-doxguard-release.md",
+            "line": 21,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260805-config-to-drive.md",
+            "line": 152,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260807-agent-plugins-not-adopted.md",
+            "line": 102,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260830-tab-title-prefix-v020.md",
+            "line": 123,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "public/20260901-manabi-map-v090-address-minimization.md",
+            "line": 203,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "RemoteAudio",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/RemoteAudio"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "7d77d44d369ecf67b561fdcc1ef0a55b639fb059",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "75a73b44a3b1895ea950eb2483d93fa73ac2797c",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 4,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "Cargo.toml",
+            "line": 17,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packaging/msix/SUBMITTING.md",
+            "line": 102,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "setpanel",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/setpanel"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "f8b70bfb3c2e9d408d3374ede9b5d2e6adcb7313",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "9d3ad7483bf359207fef54f044e5001131822bd1",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "syncway",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/syncway"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "0f5a4b17b84d165ab32dcfa3e0331113a55d63c1",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "0f5a4b17b84d165ab32dcfa3e0331113a55d63c1",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "tab-title-prefix",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/tab-title-prefix"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "42db9601c331f210b84e12584ee71be8711970ba",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "42db9601c331f210b84e12584ee71be8711970ba",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 4,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 46,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "src/extension/manifest.firefox.json",
+            "line": 31,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "typo-humanizer",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/typo-humanizer"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "9709ce27fef54b60f653c7e05d040042e835e748",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "9709ce27fef54b60f653c7e05d040042e835e748",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 2,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "vite-plugin-git-version",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/vite-plugin-git-version"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "f58b02b9b4764849f0d1a5cc35aa080686bcd3d0",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "f58b02b9b4764849f0d1a5cc35aa080686bcd3d0",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 3,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "package.json",
+            "line": 20,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    },
+    {
+      "repo": "vtype",
+      "origin": {
+        "host": "github.com",
+        "repository": "ishizakahiroshi/vtype"
+      },
+      "defaultBranch": "main",
+      "remoteDefaultHead": "bddce441575de15585323dbfed644da29cafcf0d",
+      "openPullRequests": [],
+      "preview": {
+        "type": "all-tracked local structural preparation, not real CI acceptance",
+        "localSourceSha": "c732afaa050d58cdc913d43a40327aa711732814",
+        "legacyExit": 0,
+        "legacyHits": 0,
+        "newExit": 1,
+        "newHits": 11,
+        "coverageSkips": 0,
+        "findings": [
+          {
+            "file": ".github/workflows/secrets-scan.yml",
+            "line": 7,
+            "source": "structural: Windows personal absolute path",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/core/package.json",
+            "line": 6,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/extension/package.json",
+            "line": 7,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/native/Cargo.toml",
+            "line": 8,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/native/Cargo.toml",
+            "line": 50,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/native/npm/vtype-darwin-arm64/package.json",
+            "line": 6,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/native/npm/vtype-darwin-x64/package.json",
+            "line": 6,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/native/npm/vtype-linux-x64/package.json",
+            "line": 6,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/native/npm/vtype-win32-x64/package.json",
+            "line": 6,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "packages/native/npm/vtype/package.json",
+            "line": 6,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          },
+          {
+            "file": "scripts/secrets-scan.mjs",
+            "line": 45,
+            "source": "structural: Email address (not on public allowlist)",
+            "kind": "structural"
+          }
+        ]
+      }
+    }
+  ]
+}
