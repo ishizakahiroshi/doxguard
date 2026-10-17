@@ -96,14 +96,45 @@ fn npm_root_package_is_strictly_allowlisted() {
 fn release_workflow() -> String {
     fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(".github/workflows/release.yml"))
         .unwrap()
+        .replace("\r\n", "\n")
 }
 
-fn npm_publish_job() -> String {
-    release_workflow()
+fn npm_publish_job_from(workflow: &str) -> String {
+    workflow
+        .replace("\r\n", "\n")
         .split_once("  npm-publish:\n")
         .expect("npm publish job must exist")
         .1
         .to_owned()
+}
+
+fn npm_publish_job() -> String {
+    npm_publish_job_from(&release_workflow())
+}
+
+fn npm_oidc_preflight_script(job: &str) -> String {
+    job.replace("\r\n", "\n")
+        .split_once("          node <<'NODE'\n")
+        .unwrap()
+        .1
+        .split_once("          NODE\n")
+        .unwrap()
+        .0
+        .to_owned()
+}
+
+#[test]
+fn release_job_and_oidc_heredoc_extraction_accept_lf_and_crlf() {
+    let lf = release_workflow();
+    let crlf = lf.replace('\n', "\r\n");
+    assert!(crlf.contains("\r\n"));
+    let lf_job = npm_publish_job_from(&lf);
+    let crlf_job = npm_publish_job_from(&crlf);
+    assert_eq!(lf_job, crlf_job);
+    assert_eq!(
+        npm_oidc_preflight_script(&lf_job),
+        npm_oidc_preflight_script(&crlf_job.replace('\n', "\r\n"))
+    );
 }
 
 #[test]
@@ -170,14 +201,8 @@ for (const [version, minimum, expected] of cases) {{
 #[test]
 fn npm_oidc_preflight_rejects_missing_permissions_and_unsupported_tools() {
     let job = npm_publish_job();
-    let script = job
-        .split_once("          node <<'NODE'\n")
-        .unwrap()
-        .1
-        .split_once("          NODE\n")
-        .unwrap()
-        .0;
-    let encoded = serde_json::to_string(script).unwrap();
+    let script = npm_oidc_preflight_script(&job);
+    let encoded = serde_json::to_string(&script).unwrap();
     let harness = format!(
         r#"const vm = require('node:vm');
 const script = {encoded};
