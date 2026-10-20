@@ -37,7 +37,7 @@ doxguard init
 
 `pnpm add --global doxguard` and `bun install --global doxguard` use the same npm registry package.
 
-Supported v0.2.0 targets:
+Supported v0.2.1 targets:
 
 - Windows x64 and ARM64
 - Linux x64 and ARM64

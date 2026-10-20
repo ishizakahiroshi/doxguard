@@ -2,7 +2,7 @@
 
 All notable changes to doxguard are documented here.
 
-## [0.2.1] - Unreleased
+## [0.2.1] - 2026-10-20
 
 Detection scope is unchanged. One false positive and one binary type were fixed.
 検出の範囲は変えていません。誤検出1種と binary 1種を直しました。
@@ -82,3 +82,4 @@ Detection scope is unchanged. One false positive and one binary type were fixed.
 
 [0.1.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.1.0
 [0.2.0]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.2.0
+[0.2.1]: https://github.com/ishizakahiroshi/doxguard/releases/tag/v0.2.1
