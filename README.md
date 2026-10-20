@@ -221,7 +221,7 @@ Built-in structural checks detect:
 - personal Windows absolute-path prefixes
 - POSIX user home paths
 - RFC1918 private IPv4 addresses
-- email addresses not covered by the public allowlist
+- email addresses not covered by the public allowlist (image names like `icon@2x.png` are not treated as emails)
 
 For instruction files, enable allowlist checks in a **local config**:
 
@@ -298,7 +298,8 @@ doxguard は、本名・家族名・勤務先・顧客名・社内ホスト名�
 監視語はAho–Corasickで一括検索し、ファイルは並列走査します。`init` / `install-hooks` 後の
 pre-commitは `.git` 内に保存したネイティブバイナリを直接起動するため、日常のコミットで
 Node・npm・Cargoの起動待ちは発生しません。watchlistは手元から出ず、CIでは構造パターンだけが
-動作します。APIキーを検知するgitleaks等とは競合せず、補完関係です。
+動作します。APIキーを検知するgitleaks等とは競合せず、補完関係です。構造検査のメールでは、
+`icon@2x.png` のような `@2x` 形式の画像名は対象外です。
 
 ## Development
 

@@ -2,6 +2,16 @@
 
 All notable changes to doxguard are documented here.
 
+## [0.2.1] - Unreleased
+
+Detection scope is unchanged. One false positive and one binary type were fixed.
+検出の範囲は変えていません。誤検出1種と binary 1種を直しました。
+
+### Fixed
+
+- Image file names with a pixel-density suffix, such as `icon@2x.png` or `AppIcon-20x20@2x-1.png`, are no longer reported as email addresses. Only `@<digits>x` (optionally `-<digits>`) followed by an image extension and nothing else is exempt; a domain that merely starts like a density suffix (a non-image extension, or a longer domain after the image extension) is still reported. / `icon@2x.png` のような `@2x` 形式の画像名を、メールとして検出しないようにしました。
+- `.icns`, `.cur`, `.avif` and `.heic` are now skipped as binary extensions, so such files no longer become non-UTF-8 coverage skips that fail a strict gate. / これらの拡張子を binary として扱い、非 UTF-8 の coverage skip で strict が失敗しないようにしました。
+
 ## [0.2.0] - 2026-10-18
 
 ### Added
