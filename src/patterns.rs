@@ -66,9 +66,44 @@ impl StructuralPattern {
                 !before.is_some_and(|c| c.is_ascii_digit() || c == '.')
                     && !after.is_some_and(|c| c.is_ascii_digit() || c == '.')
             }
+            Some(AllowRule::Email) => {
+                let trailing_domain = after == Some('.')
+                    && line[span.end + 1..].starts_with(|c: char| c.is_ascii_alphanumeric());
+                trailing_domain || !is_density_image_name(&line[span.clone()])
+            }
             _ => true,
         }
     }
+}
+
+const IMAGE_EXTENSIONS: &[&str] = &[
+    "png", "jpg", "jpeg", "gif", "webp", "avif", "heic", "bmp", "ico", "svg",
+];
+
+/// True for image file names such as `icon@2x.png` or `AppIcon-20x20@2x-1.png`
+/// that the email regex reads as `local@domain`. Only `@<digits>x` (optionally
+/// `-<digits>`) followed by an image extension and nothing else qualifies, so
+/// `someone@2x.com` and `a@3x.png.example.com` still count as emails.
+fn is_density_image_name(matched: &str) -> bool {
+    let Some((_, domain)) = matched.split_once('@') else {
+        return false;
+    };
+    let domain = domain.to_ascii_lowercase();
+    let Some((stem, extension)) = domain.rsplit_once('.') else {
+        return false;
+    };
+    if !IMAGE_EXTENSIONS.contains(&extension) {
+        return false;
+    }
+    let (density, suffix) = match stem.split_once('-') {
+        Some((density, suffix)) => (density, Some(suffix)),
+        None => (stem, None),
+    };
+    let Some(digits) = density.strip_suffix('x') else {
+        return false;
+    };
+    let numeric = |s: &str| !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit());
+    numeric(digits) && suffix.is_none_or(numeric)
 }
 
 fn ipv4_address(value: &str) -> Option<u32> {
