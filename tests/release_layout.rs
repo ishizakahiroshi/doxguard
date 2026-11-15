@@ -380,3 +380,26 @@ fn npm_recovery_preserves_platform_order_retry_and_existing_version_skip() {
         );
     }
 }
+
+#[test]
+fn attestation_subjects_match_the_downloaded_artifact_layout() {
+    // Each native artifact is downloaded into its own directory and contains
+    // <slug>/<binary>, so the glob needs two directory levels. One level matches nothing and
+    // fails the release after every build succeeded.
+    let workflow = release_workflow();
+    assert!(
+        workflow.contains(
+            "artifacts/*/*/doxguard
+"
+        ),
+        "missing unix subject glob"
+    );
+    assert!(
+        workflow.contains("artifacts/*/*/doxguard.exe"),
+        "missing windows subject glob"
+    );
+    assert!(
+        !workflow.contains("artifacts/*/doxguard"),
+        "single-level subject glob"
+    );
+}

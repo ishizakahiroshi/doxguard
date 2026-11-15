@@ -167,9 +167,11 @@ jobs:
           merge-multiple: false
       - uses: actions/attest-build-provenance@v4
         with:
+          # download-artifact (merge-multiple: false) puts each artifact in its own
+          # directory, and each artifact holds <slug>/<binary>, hence two levels.
           subject-path: |
-            artifacts/*/doxguard
-            artifacts/*/doxguard.exe
+            artifacts/*/*/doxguard
+            artifacts/*/*/doxguard.exe
 
   github-release:
     name: GitHub Release
