@@ -88,6 +88,10 @@ jobs:
     needs: [resolve-source, preflight]
     if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -139,6 +143,11 @@ jobs:
           if [[ "${{ matrix.binary }}" != *.exe ]]; then
             chmod +x "staging/${{ matrix.slug }}/${{ matrix.binary }}"
           fi
+      # Build provenance so release consumers can `gh attestation verify` the
+      # native binary, not just the unsigned checksums file.
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: staging/${{ matrix.slug }}/${{ matrix.binary }}
       - uses: actions/upload-artifact@v4
         with:
           name: native-${{ matrix.slug }}
