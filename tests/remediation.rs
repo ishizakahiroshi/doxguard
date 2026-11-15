@@ -190,8 +190,11 @@ fn fail_on_empty_watchlist_flag_stops_the_scan() {
     let temp = tempdir().unwrap();
     let cwd = temp.path();
     repo(cwd);
-    config(cwd, "# empty by choice
-");
+    config(
+        cwd,
+        "# empty by choice
+",
+    );
     fs::write(cwd.join("policy.md"), "safe").unwrap();
     let output = run(
         cwd,
@@ -208,11 +211,20 @@ fn fail_on_empty_watchlist_flag_stops_the_scan() {
     assert!(stderr.contains("no active terms"), "{stderr}");
     assert!(!stderr.contains("needles.txt"), "{stderr}");
     // A non-empty watchlist is unaffected by the flag.
-    config(cwd, "SyntheticNeedle
-");
+    config(
+        cwd,
+        "SyntheticNeedle
+",
+    );
     let ok = run(
         cwd,
-        &["scan", "--path", "policy.md", "--block", "--fail-on-empty-watchlist"],
+        &[
+            "scan",
+            "--path",
+            "policy.md",
+            "--block",
+            "--fail-on-empty-watchlist",
+        ],
     );
     assert_eq!(ok.status.code(), Some(0));
     assert!(!String::from_utf8_lossy(&ok.stderr).contains("no active terms"));
@@ -718,8 +730,11 @@ fn linked_ancestor_of_explicit_path_is_read_with_one_notice() {
     fs::create_dir_all(&cwd).unwrap();
     fs::create_dir_all(&outer).unwrap();
     repo(&cwd);
-    config(&cwd, "SyntheticNeedle
-");
+    config(
+        &cwd,
+        "SyntheticNeedle
+",
+    );
     fs::write(outer.join("memo.txt"), "SyntheticNeedle").unwrap();
     if !make_dir_link(&outer, &cwd.join("linked-dir")) {
         eprintln!("skipped: cannot create a directory link here");
@@ -742,7 +757,11 @@ fn linked_ancestor_of_explicit_path_is_read_with_one_notice() {
     let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(json["hits"].as_array().unwrap().len(), 1);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert_eq!(stderr.matches("through a linked directory").count(), 1, "{stderr}");
+    assert_eq!(
+        stderr.matches("through a linked directory").count(),
+        1,
+        "{stderr}"
+    );
     assert!(!stderr.contains("linked-dir"), "{stderr}");
     let mut shown = vec!["--show-paths"];
     shown.extend_from_slice(&args);
