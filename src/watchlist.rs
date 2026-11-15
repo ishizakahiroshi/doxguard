@@ -284,16 +284,31 @@ fn directory_values(
     Ok(values)
 }
 
-fn read_values(source: &WatchlistSource, path: &Path) -> Result<Vec<String>> {
+/// Read at most `limit` bytes. The size check before this call can be outrun by a file
+/// that is replaced afterwards, so the read itself is bounded too (fail closed).
+fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    fs::File::open(path)?
+        .take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
+        bail!("watchlist source grew past the size limit while reading");
+    }
+    Ok(bytes)
+}
+
+fn read_values(source: &WatchlistSource, path: &Path, limit: u64) -> Result<Vec<String>> {
     match source {
         WatchlistSource::Lines { .. } => {
-            let text = fs::read_to_string(path)?;
+            let text = String::from_utf8(read_bounded(path, limit)?)?;
             Ok(parse_lines(&text))
         }
         WatchlistSource::Csv {
             column, columns, ..
         } => {
-            let mut reader = csv::Reader::from_path(path)?;
+            let bytes = read_bounded(path, limit)?;
+            let mut reader = csv::Reader::from_reader(bytes.as_slice());
             let headers = reader.headers()?.clone();
             let indices: Vec<usize> = column
                 .iter()
@@ -433,7 +448,7 @@ pub fn load(
         // cannot shrink silently.
         // Reader errors (including CSV records) can contain private cell values.
         // Report only the source number and actionable reason at this boundary.
-        let values = read_values(source, &path).map_err(|_| anyhow!(
+        let values = read_values(source, &path, limit).map_err(|_| anyhow!(
             "failed to read watchlist source #{source_number}; check readability, UTF-8/CSV columns, directory limits, and symbolic links"
         ))?;
         let paren_variants = matches!(

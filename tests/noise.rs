@@ -279,9 +279,29 @@ fn baseline_git_failure_stops_and_external_diff_is_disabled() {
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     let error = String::from_utf8(output.stderr).unwrap();
+    // By default git's own error text is hidden; only a fixed message is shown.
     assert!(
-        error.contains("diff.algorithm") || error.contains("cannot determine staged baseline"),
+        error.contains("details hidden") || error.contains("cannot determine staged baseline"),
         "{error}"
     );
+    assert!(!error.contains("diff.algorithm"), "{error}");
     assert!(!error.contains("fixture_private"));
+    let shown = run(
+        temp.path(),
+        &[
+            "--show-paths",
+            "scan",
+            "--staged",
+            "--block",
+            "--format",
+            "json",
+        ],
+    );
+    assert_eq!(shown.status.code(), Some(2));
+    let shown = String::from_utf8(shown.stderr).unwrap();
+    assert!(
+        shown.contains("diff.algorithm") || shown.contains("cannot determine staged baseline"),
+        "{shown}"
+    );
+    assert!(!shown.contains("fixture_private"));
 }
