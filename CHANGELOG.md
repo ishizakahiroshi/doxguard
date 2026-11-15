@@ -2,6 +2,14 @@
 
 All notable changes to doxguard are documented here.
 
+## Unreleased
+
+### Added
+
+- `doxguard review --staged` writes an offline HTML review of detected words, locations and staged context, distinguishing added lines from existing lines using Git's diff and rename detection.
+- Private reports require an ignored, untracked `.doxguard/reports/` directory; report publication refuses links, tracked output and overwrites, and terminal output contains counts rather than finding values.
+- HTML reviews support search, filters, snapshot-bound browser notes and JSON import/export. Decisions are notes only and never edit source, exceptions or the Git index.
+
 ## [0.2.1] - 2026-10-20
 
 Detection scope is unchanged. One false positive and one binary type were fixed.

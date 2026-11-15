@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'">
+<title>doxguard 検出内容の確認</title>
+<style>
+:root{color-scheme:light dark;font-family:system-ui,sans-serif;background:#f5f6f8;color:#202938}body{max-width:1100px;margin:auto;padding:24px}h1{font-size:1.65rem;margin-bottom:8px}p{line-height:1.7}.note{background:#fff1ce;border-left:4px solid #bd8423;padding:14px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}input,select,textarea,button{font:inherit;border:1px solid #a8b1bf;border-radius:6px;padding:9px;background:white;color:inherit}input[type=search]{flex:1;min-width:180px}button{cursor:pointer}article{background:white;border:1px solid #d4dbe5;border-radius:10px;margin:14px 0;padding:18px;overflow-wrap:anywhere}article h2{font-size:1.1rem;margin:0 0 12px}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f4f8;padding:12px;font-size:.9rem}code{white-space:pre-wrap}label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}textarea{width:100%;box-sizing:border-box;min-height:65px;margin-top:10px}.badge{display:inline-block;background:#e6edf8;border-radius:4px;padding:3px 7px;margin-right:8px;font-size:.85rem}.meta{font-size:.85rem;overflow-wrap:anywhere;color:#526077}#status{min-height:1.5em}#empty{padding:20px}a{color:inherit}
+@media(prefers-color-scheme:dark){:root{background:#111820;color:#e3eaf4}article,input,select,textarea,button{background:#202b38;border-color:#506079}pre{background:#141e29}.note{background:#302918}.badge{background:#30425e}.meta{color:#aab8ca}}
+@media(max-width:500px){body{padding:12px}article{padding:12px}.toolbar>*{width:100%;box-sizing:border-box}}
+</style></head><body>
+<h1>doxguard 検出内容の確認</h1>
+<p class="note">非公開の検出語と周辺の文章を含むローカル資料です。Git除外は暗号化や同期の停止ではありません。判断欄はメモであり、検査の許可設定やソースを変更しません。</p>
+<p class="meta" id="meta"></p><p id="summary"></p><details><summary>検査の警告・走査不能の詳細</summary><pre id="warnings"></pre></details>
+<p>「追加・変更行」は今回のGit差分上の位置です。その言葉が履歴へ初めて登場したことを意味しません。文脈は各行2,000文字までです。</p>
+<div class="toolbar"><input id="search" type="search" aria-label="検索" placeholder="検出語・ファイル・理由を検索">
+<select id="change" aria-label="差分区分"><option value="">すべての行</option value="added">追加・変更行</option><option value="existing">既存行</option><option value="unknown">比較不能</option></select>
+<select id="kind" aria-label="検出種別"><option value="">すべての検出</option><option value="watchlist">監視語</option><option value="structural">構造パターン</option></select>
+<select id="decision" aria-label="判断状態"><option value="">すべての判断</option><option value="unreviewed">未判断</option><option value="public">公開可能</option><option value="replace">置換必要</option><option value="hold">保留</option></select></div>
+<div class="toolbar"><button id="save">判断をブラウザに保存</button><button id="export">判断JSONを保存</button><label>判断JSONを読み込む<input id="import" type="file" accept=".json,application/json"></label><button id="copy">AI向け要約をコピー</button></div>
+<p class="meta">ブラウザへの保存はこのレポートの内容識別子ごとです。JSONはブラウザの保存先へダウンロードされます。Git管理内へ移す場合は、必ず除外済みのレポートディレクトリに置いてください。JSONには検出語・文脈・メモ本文を自動転記しませんが、入力したメモは含みます。</p>
+<p id="status" role="status"></p><div id="list"></div><p id="empty" hidden>この条件に該当する検出はありません。</p>
+<p>置換が必要な内容を修正した後は、通常の <code>doxguard scan --staged --block --strict</code> を再実行してください。公開可能の判断だけでは検査は通過しません。</p>
+<script type="application/json" id="data">/*REVIEW_DATA*/null</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('data').textContent);
+const $=id=>document.getElementById(id);
+const labels={added:'追加・変更行',existing:'既存行',unknown:'比較不能',unreviewed:'未判断',public:'公開可能',replace:'置換必要',hold:'保留'};
+const key='doxguard-review-v1:'+data.snapshot;
+let answers=data.findings.map(()=>({decision:'unreviewed',note:''}));
+const status=text=>{$('status').textContent=text;};
+function validate(doc){
+ if(!doc||doc.version!==1||doc.snapshot!==data.snapshot||doc.repository!==data.repository||!Array.isArray(doc.answers)||doc.answers.length!==answers.length)throw Error('このレポートと内容が一致しない判断ファイルです。');
+ return doc.answers.map(a=>{if(!a||!['unreviewed','public','replace','hold'].includes(a.decision)||typeof a.note!=='string'||a.note.length>10000)throw Error('判断データの形式が正しくありません。');return {decision:a.decision,note:a.note};});
+}
+try{const saved=localStorage.getItem(key);if(saved){answers=validate(JSON.parse(saved));status('この内容に一致する判断を復元しました。');}}catch{status('ブラウザ保存を利用できません。判断JSONの保存・読込を使ってください。');}
+const doc=()=>({version:1,snapshot:data.snapshot,repository:data.repository,answers});
+$('meta').textContent='対象: '+data.repository+' / モード: staged / 内容識別子: '+data.snapshot+' / 生成: '+new Date(data.generated_at*1000).toISOString();
+$('warnings').textContent=data.warnings.join('\n')||'警告はありません。';
+function el(tag,text){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;}
+function draw(){
+ const counts={unreviewed:0,public:0,replace:0,hold:0};answers.forEach(a=>counts[a.decision]++);
+ $('summary').textContent='検査 '+data.scanned+'ファイル / 検出 '+data.findings.length+'件 / 走査不能 '+data.coverage_skips+'件 / 警告 '+data.warning_count+'件 / '+Object.entries(counts).map(([k,v])=>labels[k]+' '+v).join('・');
+ const q=$('search').value.toLocaleLowerCase();$('list').replaceChildren();let shown=0;
+ data.findings.forEach((f,i)=>{
+  const a=answers[i];if(($('change').value&&f.change!==$('change').value)||($('kind').value&&f.hit.kind!==$('kind').value)||($('decision').value&&a.decision!==$('decision').value))return;
+  if(q&&![f.hit.matched,f.hit.file,f.hit.source,f.context].join('\n').toLocaleLowerCase().includes(q))return;
+  shown++;const card=el('article');card.append(el('h2',f.hit.file+':'+f.hit.line_number));
+  const badges=el('p');for(const text of [labels[f.change],f.hit.kind==='watchlist'?'監視語':'構造パターン']){const b=el('span',text);b.className='badge';badges.append(b);}card.append(badges);
+  const word=el('p','検出語: ');word.append(el('code',f.hit.matched));card.append(word,el('p','理由: '+f.hit.source),el('pre',f.context));
+  const label=el('label','判断: '),select=el('select');select.setAttribute('aria-label','検出 '+(i+1)+' の判断');
+  for(const v of ['unreviewed','public','replace','hold']){const o=el('option',labels[v]);o.value=v;select.append(o);}select.value=a.decision;
+  select.addEventListener('change',()=>{a.decision=select.value;status('変更は未保存です。保存ボタンを押してください。');draw();});label.append(select);
+  const note=el('textarea');note.setAttribute('aria-label','検出 '+(i+1)+' のメモ');note.placeholder='判断理由（非公開のメモ）';note.maxLength=10000;note.value=a.note;
+  note.addEventListener('input',()=>{a.note=note.value;status('変更は未保存です。保存ボタンを押してください。');});card.append(label,note);$('list').append(card);
+ });$('empty').hidden=shown!==0;
+}
+for(const id of ['search','change','kind','decision'])$(id).addEventListener('input',draw);
+$('save').onclick=()=>{try{localStorage.setItem(key,JSON.stringify(doc()));status('この内容の判断をブラウザに保存しました。');}catch{status('ブラウザ保存に失敗しました。判断JSONを保存してください。');}};
+$('export').onclick=()=>{const blob=new Blob([JSON.stringify(doc(),null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=el('a');a.href=url;a.download='review-'+data.snapshot.slice(0,12)+'-decisions.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('判断JSONをダウンロードしました。Git除外された場所かリポジトリ外で保管してください。');};
+$('import').onchange=async()=>{try{const file=$('import').files[0];if(!file)return;if(file.size>5000000)throw Error('判断ファイルが大きすぎます。');const next=validate(JSON.parse(await file.text()));answers=next;draw();status('内容が一致する判断を読み込みました。ブラウザ保存は保存ボタンを押してください。');}catch(e){status(e.message||'判断の読み込みに失敗しました。');}finally{$('import').value='';}};
+$('copy').onclick=async()=>{const lines=answers.map((a,i)=>'検出 '+(i+1)+': '+labels[a.decision]);try{await navigator.clipboard.writeText('doxguard review '+data.snapshot+'\n'+lines.join('\n'));status('検出語・文脈・メモを含まない要約をコピーしました。');}catch{status('コピーを利用できません。判断JSONを保存してください。');}};
+draw();
+</script></body></html>

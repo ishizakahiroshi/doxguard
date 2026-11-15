@@ -1,6 +1,6 @@
 use std::{
     cell::OnceCell,
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fs,
     io::{BufRead, BufReader, Read, Write},
     ops::Range,
@@ -124,6 +124,13 @@ enum LinesEnd {
     Complete { bytes: u64, replaced: bool },
     NonUtf8,
     OverLimit,
+}
+
+/// Content captured from a staged snapshot, scanned in place of a file read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ContentLoad {
+    Text(String),
+    CoverageSkip(&'static str),
 }
 
 const BINARY_EXTENSIONS: &[&str] = &[
@@ -1232,6 +1239,7 @@ struct ScanContext<'a> {
     matcher: &'a WatchlistMatcher,
     patterns: &'a [StructuralPattern],
     staged_sizes: Option<&'a HashMap<String, u64>>,
+    snapshot: Option<&'a BTreeMap<String, ContentLoad>>,
 }
 
 fn scan_file(
@@ -1285,14 +1293,23 @@ fn scan_file(
             }
         }
     };
-    let read = read_scan_lines(
-        context.mode,
-        path,
-        context.cwd,
-        config.max_file_size,
-        context.staged_sizes,
-        &mut on_line,
-    );
+    let read = match context.snapshot.and_then(|snapshot| snapshot.get(path)) {
+        Some(ContentLoad::Text(content)) => {
+            for (index, line) in content.lines().enumerate() {
+                on_line(index + 1, line);
+            }
+            LineRead::Complete
+        }
+        Some(ContentLoad::CoverageSkip(reason)) => LineRead::Skipped(reason),
+        None => read_scan_lines(
+            context.mode,
+            path,
+            context.cwd,
+            config.max_file_size,
+            context.staged_sizes,
+            &mut on_line,
+        ),
+    };
     Ok(match read {
         LineRead::Complete => FileScanOutcome {
             hits,
@@ -1329,6 +1346,29 @@ pub fn scan_paths(
     )
 }
 
+/// Scan staged paths from content already captured from the index, so a
+/// review reads exactly the bytes it later reports on.
+pub(crate) fn scan_snapshot(
+    paths: Vec<String>,
+    cwd: &Path,
+    config: &Config,
+    matcher: &WatchlistMatcher,
+    patterns: &[StructuralPattern],
+    warnings: Vec<String>,
+    contents: &BTreeMap<String, ContentLoad>,
+) -> Result<ScanResult> {
+    scan_targets_inner(
+        ScanMode::Staged,
+        paths.into_iter().map(ScanTarget::from).collect(),
+        cwd,
+        config,
+        matcher,
+        patterns,
+        warnings,
+        Some(contents),
+    )
+}
+
 /// Like `scan_paths`, but findings and skip warnings name each target by its
 /// `display` path.
 pub fn scan_targets(
@@ -1339,6 +1379,22 @@ pub fn scan_targets(
     matcher: &WatchlistMatcher,
     patterns: &[StructuralPattern],
     warnings: Vec<String>,
+) -> Result<ScanResult> {
+    scan_targets_inner(
+        mode, targets, cwd, config, matcher, patterns, warnings, None,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn scan_targets_inner(
+    mode: ScanMode,
+    targets: Vec<ScanTarget>,
+    cwd: &Path,
+    config: &Config,
+    matcher: &WatchlistMatcher,
+    patterns: &[StructuralPattern],
+    warnings: Vec<String>,
+    snapshot: Option<&BTreeMap<String, ContentLoad>>,
 ) -> Result<ScanResult> {
     let total_files = targets.len();
     let mut warnings = warnings;
@@ -1356,7 +1412,7 @@ pub fn scan_targets(
         }
     }
     // One batched size probe for the whole staged set instead of one per file.
-    let staged_sizes = if mode == ScanMode::Staged && !files.is_empty() {
+    let staged_sizes = if mode == ScanMode::Staged && snapshot.is_none() && !files.is_empty() {
         let staged: Vec<String> = files
             .iter()
             .map(|(target, _)| target.path.clone())
@@ -1372,6 +1428,7 @@ pub fn scan_targets(
         matcher,
         patterns,
         staged_sizes: staged_sizes.as_ref(),
+        snapshot,
     };
     let outcomes: Result<Vec<FileScanOutcome>> = if files.len() <= 4 {
         files

@@ -45,6 +45,8 @@ enum Command {
     /// clean (or matches reported without --block), 1 = blocked, 2 = usage or
     /// configuration error (the ERROR line says what to change).
     Scan(ScanArgs),
+    /// Write a private offline HTML review of staged findings. Requires an ignored output directory.
+    Review(ReviewArgs),
     /// Create a config, pre-commit hook, and structural-only CI workflow.
     ///
     /// Use this once per repository. Existing files are left unchanged (reported as
@@ -105,6 +107,16 @@ struct WatchAddArgs {
 enum OutputFormat {
     Text,
     Json,
+}
+
+#[derive(Debug, Args)]
+struct ReviewArgs {
+    #[arg(long, required = true)]
+    staged: bool,
+    #[arg(long)]
+    config: Option<PathBuf>,
+    #[arg(long)]
+    strict: bool,
 }
 
 #[derive(Debug, Args)]
@@ -686,6 +698,33 @@ fn try_run(cli: Cli) -> Result<u8> {
             command: WatchCommand::Add(args),
         } => run_watch_add(&args),
         Command::Scan(args) => run_scan(&args),
+        Command::Review(args) => {
+            let cwd = std::env::current_dir()?;
+            let config = args.config.as_ref().map(|path| {
+                if path.is_absolute() {
+                    path.clone()
+                } else {
+                    cwd.join(path)
+                }
+            });
+            let dir = crate::review::destination(&cwd)?;
+            let root = dir
+                .parent()
+                .and_then(|p| p.parent())
+                .ok_or_else(|| anyhow::anyhow!("invalid review directory"))?;
+            let review = crate::review::collect(root, config.as_deref(), args.strict)?;
+            // No finding values or context are written to terminal output.
+            let path = crate::review::write(&dir, &review)?;
+            println!(
+                "Review saved: {} ({} findings; {} coverage skips)",
+                path.display(),
+                review.findings.len(),
+                review.coverage_skips
+            );
+            Ok(u8::from(
+                !review.findings.is_empty() || review.coverage_skips > 0,
+            ))
+        }
         Command::Init => {
             print_actions(&scaffold::initialize(&std::env::current_dir()?)?);
             Ok(0)

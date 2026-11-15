@@ -1,5 +1,51 @@
 # doxguard
 
+## Private HTML review of staged findings
+
+Add `/.doxguard/reports/` to the repository's `.gitignore`, then run:
+
+```sh
+doxguard review --staged --strict
+# An explicit configuration is also supported:
+doxguard review --staged --config doxguard.local.json --strict
+```
+
+Open the reported HTML file locally. It shows detected values, file and line,
+staged context, detection reasons and whether Git reports the line as added or
+existing. Unstaged edits are not used. Rename classification follows Git's rename
+detection: a rename below Git's similarity threshold is an added file. This is
+not a claim that a word first appeared in repository history. Unavailable
+comparisons are marked unknown. Changed index or HEAD during collection aborts
+the review; rerun it after staging finishes. Alternate `GIT_INDEX_FILE` is honored.
+
+The report uses immutable blob IDs captured from the index and has no external
+assets or network requests. Warnings and coverage gaps remain visible. Terminal
+output contains the generated path and counts, not detected values or context.
+Exit codes: `0` = no findings or coverage gaps, `1` = report created with findings
+or coverage gaps, `2` = output/configuration/Git error. Existing scan modes and
+commit hooks are unchanged; a review is never a replacement for their gate.
+
+Review output requires Git exclusion and refuses tracked output directories,
+symlinks/reparse points and existing filenames. The complete report is published
+without overwriting an existing file. Unix directories/files use 0700/0600;
+Windows uses inherited directory permissions. Git exclusion does not encrypt a
+report or prevent cloud synchronization. Review HTML contains private values;
+keep it local and do not attach it to issues or upload it to an AI conversation.
+Reports are not opened automatically.
+
+Each finding has an unreviewed/public/replace/hold decision and a memo. Save in
+browser storage, or export/import a decisions JSON file. Browser storage can be
+unavailable for local files; JSON import/export remains available. JSON downloads
+use the browser's download location, not a CLI-controlled destination. Keep them
+outside Git or in the ignored report directory. JSON contains entered memos but
+does not automatically copy detected words/context. Imports require the exact
+repository and content fingerprint, so changed snapshots do not inherit stale
+decisions. The AI summary copies only finding numbers and decision states.
+
+Decisions never edit source, allowlists, baseline, ignore rules or the Git index.
+After making any intended source changes, stage them and rerun
+`doxguard scan --staged --block --strict`. A “public” memo does not bypass scanning.
+
 > Keep *you* out of your public repos — at native speed.
 
 doxguard is a Rust-powered pre-commit and pre-publish gate that stops personal identity data from
