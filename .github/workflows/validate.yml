@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # Weekly so `cargo audit` keeps running even while push-triggered runs are
+    # not delivered in this repo; schedule events are independent of push delivery.
+    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
