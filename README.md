@@ -280,6 +280,15 @@ Watchlist paths should use `${ENV_VAR}` expansion. Literal paths work but produc
 private path is not accidentally committed. `DOXGUARD_CONFIG` can point to an entirely local config
 when even the source layout should stay out of the repository.
 
+Each `exemptPaths` entry is a repository-relative exact file or directory subtree. An exempt path
+skips the built-in **structural** patterns (so synthetic fixtures with placeholder IPs or paths do
+not fail the scan), but **watchlist matching still runs** on it, so an exempt file cannot silently
+hide a real private identity. For example, `generated/` exempts `generated/report.txt` from
+structural checks, while `src/generated/report.txt` and `generated.json` stay fully scanned.
+Absolute paths and `.` / `..` path components are rejected. To exempt a directory subtree, end the
+entry with `/` (for example `generated/`). A bare `generated` (no trailing slash) matches only a
+file or path named exactly `generated`, not the `generated/` subtree.
+
 Built-in structural checks detect:
 
 - personal Windows absolute-path prefixes
