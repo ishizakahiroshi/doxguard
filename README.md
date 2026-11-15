@@ -37,6 +37,22 @@ doxguard init
 
 `pnpm add --global doxguard` and `bun install --global doxguard` use the same npm registry package.
 
+### Linux with npm 10 (bundled with Node 22)
+
+With npm 10.x on Linux, `npx doxguard` can fail with `sh: 1: doxguard: not found`
+because npm does not create the `.bin` link for packages that have
+`optionalDependencies`. Any of these works:
+
+```console
+npm install --global doxguard
+```
+
+```console
+npm install doxguard && npm rebuild doxguard
+```
+
+or use npm 11 or later.
+
 Supported v0.2.1 targets:
 
 - Windows x64 and ARM64
