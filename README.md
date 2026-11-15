@@ -341,6 +341,9 @@ MIT © Hiroshi Ishizaka (ishizakahiroshi)
   Explicit paths keep native operating-system resolution; a literal Unix backslash
   is not changed into a directory separator. Explicit paths can intentionally read
   outside the repository; recursive traversal still skips linked entries.
+  When a parent directory of an explicit path is a link (symlink or junction), the path
+  is still read and the result and exit code are unchanged, but one fixed `NOTE:` line
+  on stderr says a link was crossed (the location appears only with `--show-paths`).
 - Staged scans include file-type changes and scan regular index objects rather than
   worktree aliases. Links and gitlinks are coverage skips; use
   `--block --strict` to fail closed.

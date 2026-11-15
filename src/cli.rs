@@ -561,6 +561,16 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
                         .map(PathBuf::from),
                 );
             }
+            if let Some(root) = scan::first_root_through_linked_ancestor(&roots, &cwd) {
+                warnings.push(if config::show_paths() {
+                    format!(
+                        "NOTE: read an explicit --path through a linked directory ({}); links in parent directories are followed",
+                        root.display()
+                    )
+                } else {
+                    "NOTE: read an explicit --path through a linked directory; links in parent directories are followed (pass --show-paths to see where)".to_owned()
+                });
+            }
             scan::files_from_paths(&roots, &cwd, &loaded.config)?
         } else {
             let paths = if let Some(list) = &args.files_from_list {

@@ -692,3 +692,65 @@ fn literal_backslash_does_not_alias_default_lockfile_basename() {
         assert_eq!(report["exempt_or_skipped"], 1);
     }
 }
+
+fn make_dir_link(target: &Path, link: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        std::os::unix::fs::symlink(target, link).is_ok()
+    }
+    #[cfg(windows)]
+    {
+        std::os::windows::fs::symlink_dir(target, link).is_ok()
+            || Command::new("cmd")
+                .args(["/C", "mklink", "/J"])
+                .arg(link)
+                .arg(target)
+                .output()
+                .is_ok_and(|out| out.status.success())
+    }
+}
+
+#[test]
+fn linked_ancestor_of_explicit_path_is_read_with_one_notice() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path().join("repo");
+    let outer = temp.path().join("outer");
+    fs::create_dir_all(&cwd).unwrap();
+    fs::create_dir_all(&outer).unwrap();
+    repo(&cwd);
+    config(&cwd, "SyntheticNeedle
+");
+    fs::write(outer.join("memo.txt"), "SyntheticNeedle").unwrap();
+    if !make_dir_link(&outer, &cwd.join("linked-dir")) {
+        eprintln!("skipped: cannot create a directory link here");
+        return;
+    }
+    let args = [
+        "scan",
+        "--block",
+        "--strict",
+        "--format",
+        "json",
+        "--show-matches",
+        "--path",
+        "linked-dir/memo.txt",
+        "--path",
+        "linked-dir/memo.txt",
+    ];
+    let output = run(&cwd, &args);
+    assert_eq!(output.status.code(), Some(1));
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(json["hits"].as_array().unwrap().len(), 1);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(stderr.matches("through a linked directory").count(), 1, "{stderr}");
+    assert!(!stderr.contains("linked-dir"), "{stderr}");
+    let mut shown = vec!["--show-paths"];
+    shown.extend_from_slice(&args);
+    let output = run(&cwd, &shown);
+    assert!(String::from_utf8_lossy(&output.stderr).contains("linked-dir/memo.txt"));
+    // A plain path produces no notice.
+    fs::write(cwd.join("plain.txt"), "safe").unwrap();
+    let output = run(&cwd, &["scan", "--path", "plain.txt", "--block"]);
+    assert_eq!(output.status.code(), Some(0));
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("linked directory"));
+}

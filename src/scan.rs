@@ -353,6 +353,32 @@ impl From<String> for ScanTarget {
     }
 }
 
+/// Explicit `--path` roots are read through any linked parent directory. Return the
+/// first root (as the user spelled it) whose ancestor is a link (symlink or junction),
+/// so the caller can say once that a link was crossed. The final component is not
+/// checked here: a linked target is already handled as a coverage skip.
+pub fn first_root_through_linked_ancestor(roots: &[PathBuf], cwd: &Path) -> Option<PathBuf> {
+    roots.iter().find_map(|root| {
+        let mut current = PathBuf::new();
+        let mut components = root.components().peekable();
+        while let Some(component) = components.next() {
+            current.push(component);
+            if components.peek().is_none() {
+                break;
+            }
+            let probe = if current.is_absolute() {
+                current.clone()
+            } else {
+                cwd.join(&current)
+            };
+            if fs::symlink_metadata(&probe).is_ok_and(|meta| is_link(&meta)) {
+                return Some(root.clone());
+            }
+        }
+        None
+    })
+}
+
 /// Expand literal paths outside git. Explicit missing paths and enumeration
 /// failures are errors. Links are retained as coverage skips, never followed.
 /// Each target is checked at the cwd-joined path, but reported as the user spelled
