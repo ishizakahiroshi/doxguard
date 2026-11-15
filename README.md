@@ -362,6 +362,7 @@ Husky is detected, doxguard leaves it untouched and prints the command to add to
 - Known binary extensions are skipped. Lockfiles retain structural checks, while `exemptPaths`
   retain watchlist checks. `includeDefaultExemptPaths: true` opts into the old built-in exemptions
   and lockfile skips. Text files are read in full unless `maxFileSize` is set.
+  A passing scan is not a verdict that large raw data (for example conversation logs) is safe to hand to a third party: set `maxFileSize` so oversized files are reported as coverage skips instead of being read whole, and review such data separately.
 
 ## 日本語
 
