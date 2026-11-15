@@ -31,7 +31,7 @@ jobs:
     outputs:
       commit: ${{ steps.source.outputs.commit }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Bind tag and event commit
@@ -60,7 +60,7 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: dtolnay/rust-toolchain@1.85.0
@@ -119,7 +119,7 @@ jobs:
             slug: darwin-arm64
             binary: doxguard
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: dtolnay/rust-toolchain@1.85.0
@@ -179,7 +179,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: actions/download-artifact@v4
@@ -236,7 +236,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.resolve-source.outputs.commit }}
       - uses: actions/setup-node@v4

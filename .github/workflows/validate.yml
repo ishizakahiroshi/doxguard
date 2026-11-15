@@ -21,7 +21,7 @@ jobs:
     name: Rust quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.EXPECTED_SOURCE_SHA }}
       - name: Verify checked-out source identity
@@ -58,7 +58,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ env.EXPECTED_SOURCE_SHA }}
@@ -86,7 +86,7 @@ jobs:
     name: Package and dogfood
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ env.EXPECTED_SOURCE_SHA }}
       - name: Verify checked-out source identity
