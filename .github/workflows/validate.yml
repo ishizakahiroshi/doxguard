@@ -70,7 +70,7 @@ jobs:
           test "$actual" = "$EXPECTED_SOURCE_SHA"
           printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
       - uses: dtolnay/rust-toolchain@1.85.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - uses: Swatinem/rust-cache@v2
@@ -98,7 +98,7 @@ jobs:
           printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
       - uses: dtolnay/rust-toolchain@1.85.0
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - name: Build release binary
