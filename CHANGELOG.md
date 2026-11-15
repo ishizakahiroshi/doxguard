@@ -9,6 +9,24 @@ All notable changes to doxguard are documented here.
 - `doxguard review --staged` writes an offline HTML review of detected words, locations and staged context, distinguishing added lines from existing lines using Git's diff and rename detection.
 - Private reports require an ignored, untracked `.doxguard/reports/` directory; report publication refuses links, tracked output and overwrites, and terminal output contains counts rather than finding values.
 - HTML reviews support search, filters, snapshot-bound browser notes and JSON import/export. Decisions are notes only and never edit source, exceptions or the Git index.
+- `scan --fail-on-empty-watchlist` exits `2` when watchlist sources are configured but hold no active terms. Without the flag, `requireWatchlists` still passes with a fixed warning. / 監視語の元が読めるのに有効な語が 0 件のとき、`--fail-on-empty-watchlist` で終了コード 2 にできます。付けない場合は、警告を出して通ります。
+- An explicit `--path` that is read through a linked parent directory now prints a one-line notice (pass `--show-paths` to see where). Linked leaf targets are still skipped. / `--path` の途中の親フォルダがリンクのとき、辿ったことを 1 行で知らせます（場所は `--show-paths` で表示）。
+
+### Changed
+
+- Git and npm error bodies are hidden by default and replaced by a fixed message, so file-system locations stay out of CI logs and transcripts. `--show-paths` restores the full text. / git と npm のエラー本文は、既定では固定の文面にして、場所が CI ログや会話に出ないようにしました。`--show-paths` で本文を表示できます。
+
+### Fixed
+
+- The watchlist file read itself is now bounded (it reads at most the size limit plus one byte and fails closed), so a file replaced by a larger one after the size check can no longer be read whole. / 監視語ファイルの読み込み自体にも上限を設け、サイズ確認のあとに大きいファイルへ差し替えられても全部は読まないようにしました（超えたら失敗）。
+
+### Documentation
+
+- README explains the Linux npm 10 case (`sh: 1: doxguard: not found`) and its workarounds (`npm install --global doxguard`, `npm rebuild doxguard`, or npm 11), and a synthetic-values table was added for contributors. SECURITY.md points to GitHub private vulnerability reporting. / Linux・npm 10 で `doxguard: not found` になる件と回避手順を README に追記し、貢献者向けに合成値の表を追加しました。SECURITY.md は GitHub の非公開の脆弱性報告を案内します。
+
+### Build and release
+
+- Release binaries carry build provenance attestations (generated in a separate job so the build job stays read-only), pre-release tags publish as GitHub pre-releases, and the packaged-content scan runs with `--strict`. CI runs a weekly schedule for `cargo audit`, and Dependabot tracks cargo and GitHub Actions. The guide page no longer loads Google Fonts. / リリースのバイナリに来歴証明（attestation）を付けました（build ジョブは読み取り専用のまま、別ジョブで生成）。プレリリースのタグは GitHub の pre-release として公開し、パッケージ内容の検査は `--strict` で実行します。CI に週 1 回の `cargo audit` と、cargo・GitHub Actions の Dependabot を追加し、案内ページの Google Fonts の読み込みをやめました。
 
 ## [0.2.1] - 2026-10-20
 
