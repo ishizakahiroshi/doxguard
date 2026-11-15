@@ -40,6 +40,8 @@ fn ignore(root: &Path) {
 fn staged_snapshot_and_context_never_use_unstaged_text() {
     let tmp = repo();
     let root = tmp.path();
+    // Make line-ending normalization identical on every platform (CI runs Linux/macOS).
+    git(root, &["config", "core.autocrlf", "true"]);
     fs::write(
         root.join("space 日本語.txt"),
         "old=192.168.50.9\r\nkeep\r\n",
