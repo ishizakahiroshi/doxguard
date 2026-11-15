@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.resolve-source.outputs.commit }}
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.120.0
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
@@ -122,7 +122,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.resolve-source.outputs.commit }}
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.120.0
         with:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2

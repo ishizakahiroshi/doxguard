@@ -31,7 +31,7 @@ jobs:
           actual=$(git rev-parse HEAD)
           test "$actual" = "$EXPECTED_SOURCE_SHA"
           printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.120.0
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
@@ -69,7 +69,7 @@ jobs:
           actual=$(git rev-parse HEAD)
           test "$actual" = "$EXPECTED_SOURCE_SHA"
           printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.120.0
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -96,7 +96,7 @@ jobs:
           actual=$(git rev-parse HEAD)
           test "$actual" = "$EXPECTED_SOURCE_SHA"
           printf 'VALIDATED_SOURCE_SHA=%s\n' "$actual"
-      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: dtolnay/rust-toolchain@1.120.0
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
