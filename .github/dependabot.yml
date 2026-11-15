@@ -1,0 +1,18 @@
+version: 2
+
+# Keeps Rust dependencies and the GitHub Actions used by CI and release current.
+# Each update arrives as a reviewable pull request that validate.yml checks before it can
+# reach the release workflow. The npm packages here only declare the platform binaries
+# that release.yml builds, so they are not tracked.
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

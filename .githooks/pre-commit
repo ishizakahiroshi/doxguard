@@ -1,10 +1,13 @@
 #!/usr/bin/env sh
 # doxguard dogfooding: prefer the cached native binary installed into the git dir.
-git_dir=$(git rev-parse --git-dir) || exit 2
+# Use the common git dir so linked worktrees resolve the same cached hook.
+git_dir=$(git rev-parse --git-common-dir) || exit 2
+# Every added check needs `|| exit 1`; without it the hook exits with the last command's
+# status and an earlier BLOCKED result is swallowed.
 if [ -x "$git_dir/doxguard/hooks/pre-commit" ]; then
-  "$git_dir/doxguard/hooks/pre-commit"
+  "$git_dir/doxguard/hooks/pre-commit" || exit 1
 elif command -v doxguard >/dev/null 2>&1; then
-  doxguard scan --staged --block
+  doxguard scan --staged --block --strict || exit 1
 else
-  cargo run --quiet -- scan --staged --block
+  cargo run --quiet -- scan --staged --block --strict || exit 1
 fi

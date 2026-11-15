@@ -521,4 +521,35 @@ mod tests {
             .collect();
         assert_eq!(matches, ["Acme", "Acme Labs"]);
     }
+
+    #[test]
+    fn bounded_read_returns_content_within_the_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("list.txt");
+        std::fs::write(
+            &path, b"alpha
+",
+        )
+        .unwrap();
+        assert_eq!(
+            read_bounded(&path, 6).unwrap(),
+            b"alpha
+"
+        );
+        assert_eq!(
+            read_bounded(&path, 1024).unwrap(),
+            b"alpha
+"
+        );
+    }
+
+    #[test]
+    fn bounded_read_fails_closed_when_the_file_outgrew_the_limit() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("list.txt");
+        // Simulates a file replaced by a larger one after the size check passed.
+        std::fs::write(&path, vec![b'x'; 2048]).unwrap();
+        let error = read_bounded(&path, 1024).unwrap_err().to_string();
+        assert!(error.contains("grew past the size limit"), "{error}");
+    }
 }
