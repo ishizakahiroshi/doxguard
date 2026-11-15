@@ -162,7 +162,9 @@ and binary exclusions apply either way.
 
 Set `requireWatchlists: true` when configured watchlist sources must all be
 available; unresolved environment variables and missing source files then exit
-with a configuration error instead of reducing watchlist coverage.
+with a configuration error instead of reducing watchlist coverage. Readable sources
+with no active terms only produce a warning; pass `--fail-on-empty-watchlist` to
+`scan` to stop with exit `2` in that case.
 
 Non-UTF-8 files remain coverage skips; path scans also check recoverable text
 for matches, without claiming that the complete file was inspected. A scan with
@@ -343,7 +345,9 @@ MIT © Hiroshi Ishizaka (ishizakahiroshi)
   worktree aliases. Links and gitlinks are coverage skips; use
   `--block --strict` to fail closed.
 - UTF-8 BOM is accepted at the beginning of a lines watchlist.
-  `requireWatchlists` requires readable configured sources, not nonempty contents.
+  `requireWatchlists` requires readable configured sources, not nonempty contents:
+  when they are readable but hold no active terms, the scan prints a fixed warning
+  on stderr and still exits `0`. Add `--fail-on-empty-watchlist` to exit `2` instead.
 - Default reports redact ASCII-case variants in hit metadata. `--show-matches`
   explicitly opts into original match metadata.
 - `--packaged` supports one standalone package at its own root. Workspace and

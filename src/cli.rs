@@ -154,6 +154,10 @@ struct ScanArgs {
     /// Include the detected value in output. This may expose private data in logs.
     #[arg(long, action = ArgAction::SetTrue)]
     show_matched: bool,
+    /// Exit 2 when watchlist sources are configured but contain no active terms
+    /// (otherwise `requireWatchlists` only prints a warning in that case).
+    #[arg(long, action = ArgAction::SetTrue)]
+    fail_on_empty_watchlist: bool,
 }
 
 fn mode(args: &ScanArgs) -> ScanMode {
@@ -526,6 +530,14 @@ fn run_scan(args: &ScanArgs) -> Result<u8> {
     }
     let watchlist_root = if explicit_config { &cwd } else { &scan_root };
     let watchlists = watchlist::load(&loaded.config, watchlist_root, &process_env())?;
+    if args.fail_on_empty_watchlist
+        && !loaded.config.watchlists.is_empty()
+        && watchlists.matcher.is_empty()
+    {
+        anyhow::bail!(
+            "watchlist sources are configured but contain no active terms (--fail-on-empty-watchlist). Add terms to the watchlist or remove the flag"
+        );
+    }
     let patterns = patterns::build(&loaded.config)?;
     let mut warnings = loaded.warnings;
     warnings.extend(watchlists.warnings);

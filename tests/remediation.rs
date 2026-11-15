@@ -167,7 +167,7 @@ fn bom_first_watchlist_needle_is_active() {
 }
 
 #[test]
-fn required_available_but_empty_watchlist_keeps_existing_contract() {
+fn required_available_but_empty_watchlist_warns_and_passes() {
     let temp = tempdir().unwrap();
     let cwd = temp.path();
     repo(cwd);
@@ -178,8 +178,44 @@ fn required_available_but_empty_watchlist_keeps_existing_contract() {
         &["scan", "--path", "policy.md", "--block", "--format", "json"],
     );
     assert!(output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("no active terms"), "{stderr}");
+    assert!(!stderr.contains("needles.txt"), "{stderr}");
     let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(json["watchlist_needles"], 0);
+}
+
+#[test]
+fn fail_on_empty_watchlist_flag_stops_the_scan() {
+    let temp = tempdir().unwrap();
+    let cwd = temp.path();
+    repo(cwd);
+    config(cwd, "# empty by choice
+");
+    fs::write(cwd.join("policy.md"), "safe").unwrap();
+    let output = run(
+        cwd,
+        &[
+            "scan",
+            "--path",
+            "policy.md",
+            "--block",
+            "--fail-on-empty-watchlist",
+        ],
+    );
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("no active terms"), "{stderr}");
+    assert!(!stderr.contains("needles.txt"), "{stderr}");
+    // A non-empty watchlist is unaffected by the flag.
+    config(cwd, "SyntheticNeedle
+");
+    let ok = run(
+        cwd,
+        &["scan", "--path", "policy.md", "--block", "--fail-on-empty-watchlist"],
+    );
+    assert_eq!(ok.status.code(), Some(0));
+    assert!(!String::from_utf8_lossy(&ok.stderr).contains("no active terms"));
 }
 
 #[test]

@@ -472,6 +472,12 @@ pub fn load(
         }
     }
 
+    if config.require_watchlists && !config.watchlists.is_empty() && items.is_empty() {
+        warnings.push(
+            "WARN: requireWatchlists is on, but the readable watchlist sources contain no active terms; only structural patterns are checked (use --fail-on-empty-watchlist to stop instead)"
+                .to_owned(),
+        );
+    }
     let mut matcher = WatchlistMatcher::new(items)?;
     matcher.statistics = statistics;
     Ok(LoadedWatchlists { matcher, warnings })
