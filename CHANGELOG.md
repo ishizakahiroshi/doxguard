@@ -2,7 +2,7 @@
 
 All notable changes to doxguard are documented here.
 
-## Unreleased
+## [0.3.0] - 2026-11-15
 
 ### Added
 
