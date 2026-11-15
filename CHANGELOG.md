@@ -2,6 +2,12 @@
 
 All notable changes to doxguard are documented here.
 
+## [0.3.1] - 2026-11-15
+
+### Fixed
+
+- The HTML review JSON import file input now stays within the toolbar on narrow screens. / 狭い画面で HTML review の JSON 読み込み欄がツールバーからはみ出さないようにしました。
+
 ## [0.3.0] - 2026-11-15
 
 ### Added

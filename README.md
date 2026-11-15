@@ -99,7 +99,7 @@ npm install doxguard && npm rebuild doxguard
 
 or use npm 11 or later.
 
-Supported v0.3.0 targets:
+Supported v0.3.1 targets:
 
 - Windows x64 and ARM64
 - Linux x64 and ARM64
