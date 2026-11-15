@@ -186,7 +186,11 @@ jobs:
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" release/* --clobber
           else
-            gh release create "$tag" release/* --generate-notes --title "$tag"
+            # A pre-release tag (v1.2.3-rc.1) must not become the GitHub "Latest"
+            # release; npm already routes it to the `next` dist-tag.
+            prerelease=
+            case "$tag" in *-*) prerelease=--prerelease ;; esac
+            gh release create "$tag" release/* --generate-notes --title "$tag" $prerelease
           fi
           gh release view "$tag" --json body -q .body \
             | awk '/^## SHA256 checksums/{exit} {print}' > release-notes.md
