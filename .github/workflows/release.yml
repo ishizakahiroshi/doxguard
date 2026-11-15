@@ -90,8 +90,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
-      id-token: write
-      attestations: write
     strategy:
       fail-fast: false
       matrix:
@@ -143,20 +141,39 @@ jobs:
           if [[ "${{ matrix.binary }}" != *.exe ]]; then
             chmod +x "staging/${{ matrix.slug }}/${{ matrix.binary }}"
           fi
-      # Build provenance so release consumers can `gh attestation verify` the
-      # native binary, not just the unsigned checksums file.
-      - uses: actions/attest-build-provenance@v4
-        with:
-          subject-path: staging/${{ matrix.slug }}/${{ matrix.binary }}
       - uses: actions/upload-artifact@v4
         with:
           name: native-${{ matrix.slug }}
           path: staging
           if-no-files-found: error
 
+  # Build provenance so release consumers can `gh attestation verify` the native
+  # binaries. Kept out of the build job: the job that compiles code never holds
+  # id-token or attestations write permission.
+  attest:
+    name: Attest build provenance
+    needs: [resolve-source, build]
+    if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: artifacts
+          merge-multiple: false
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            artifacts/*/doxguard
+            artifacts/*/doxguard.exe
+
   github-release:
     name: GitHub Release
-    needs: [resolve-source, build]
+    needs: [resolve-source, build, attest]
     if: ${{ github.event_name == 'push' || inputs.npm_only == false }}
     runs-on: ubuntu-latest
     permissions:
