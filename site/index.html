@@ -20,11 +20,14 @@ docsweep_policy: archive_with_release
   <meta property="og:url" content="https://ishizakahiroshi.github.io/doxguard/">
   <link rel="canonical" href="https://ishizakahiroshi.github.io/doxguard/">
   <title>doxguard ユーザー導入ガイド — 2026-07-16</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- No web fonts on purpose: a privacy tool's guide page should not hand a
+       visitor's IP address to a third-party font CDN. System fonts only. -->
   <style>
     :root {
+      --font-ui: system-ui, -apple-system, "Segoe UI", "Hiragino Sans",
+        "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", Meiryo, sans-serif;
+      --font-display: "Segoe UI Variable Display", system-ui, -apple-system, "Segoe UI",
+        "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif;
       --bg: #f7f3ea;
       --ink: #241f1a;
       --ink-soft: #837a6c;
@@ -47,7 +50,7 @@ docsweep_policy: archive_with_release
       margin: 0;
       color: var(--ink);
       background: var(--bg);
-      font-family: "Zen Maru Gothic", sans-serif;
+      font-family: var(--font-ui);
       line-height: 1.75;
     }
 
@@ -78,7 +81,7 @@ docsweep_policy: archive_with_release
       align-items: center;
       gap: 9px;
       color: var(--ink);
-      font-family: "Baloo 2", sans-serif;
+      font-family: var(--font-display);
       font-size: 22px;
       font-weight: 700;
       letter-spacing: 0.02em;
@@ -233,7 +236,7 @@ docsweep_policy: archive_with_release
       border-radius: 50%;
       background: var(--ink);
       color: white;
-      font-family: "Baloo 2", sans-serif;
+      font-family: var(--font-display);
       font-size: 23px;
       font-weight: 700;
     }
@@ -293,7 +296,7 @@ docsweep_policy: archive_with_release
       border-radius: 17px;
       color: white;
       background: var(--ink);
-      font-family: "Baloo 2", sans-serif;
+      font-family: var(--font-display);
       font-size: 26px;
       font-weight: 700;
       box-shadow: 4px 4px 0 var(--accent);
@@ -322,7 +325,7 @@ docsweep_policy: archive_with_release
       display: block;
     }
 
-    .diagram text { font-family: "Zen Maru Gothic", sans-serif; fill: var(--ink); }
+    .diagram text { font-family: var(--font-ui); fill: var(--ink); }
     .diagram .muted { fill: var(--ink-soft); }
     .diagram .white { fill: white; }
     .diagram .label { font-size: 14px; font-weight: 700; }
@@ -636,7 +639,7 @@ docsweep_policy: archive_with_release
       border-radius: 12px;
       color: white;
       background: var(--blue);
-      font-family: "Baloo 2", sans-serif;
+      font-family: var(--font-display);
       font-size: 18px;
     }
 
@@ -701,7 +704,7 @@ docsweep_policy: archive_with_release
     .finish-steps span {
       display: block;
       color: var(--accent);
-      font-family: "Baloo 2", sans-serif;
+      font-family: var(--font-display);
       font-size: 22px;
     }
 
