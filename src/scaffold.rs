@@ -569,10 +569,15 @@ pub fn install_hooks(cwd: &Path) -> Result<Vec<ScaffoldAction>> {
         .output()
         .context("failed to start git")?;
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        // git's own error text can contain file-system locations; show it only with
+        // `--show-paths`.
+        let detail = if crate::config::show_paths() {
+            String::from_utf8_lossy(&output.stderr).trim().to_owned()
+        } else {
+            "(details hidden; pass --show-paths to show them)".to_owned()
+        };
         bail!(
-            "could not configure git hooks; is this a git repository? Run `git init` or change into one, then run again. {}",
-            stderr.trim()
+            "could not configure git hooks; is this a git repository? Run `git init` or change into one, then run again. {detail}"
         );
     }
 

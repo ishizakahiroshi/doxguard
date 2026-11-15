@@ -192,11 +192,25 @@ fn run_command(program: &Path, args: &[&str], cwd: &Path, strip_env: &[&str]) ->
         )
     })?;
     if !output.status.success() {
-        let message = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+        // The tool's own error text can contain file-system locations, so the body is
+        // shown only with `--show-paths`.
+        let message = if crate::config::show_paths() {
+            String::from_utf8_lossy(&output.stderr).trim().to_owned()
+        } else {
+            String::new()
+        };
         bail!(
             "{}",
             if message.is_empty() {
-                format!("{tool} {} failed", args.join(" "))
+                format!(
+                    "{tool} {} failed{}",
+                    args.join(" "),
+                    if crate::config::show_paths() {
+                        ""
+                    } else {
+                        " (details hidden; pass --show-paths to show them)"
+                    }
+                )
             } else {
                 message
             }
